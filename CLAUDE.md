@@ -65,8 +65,14 @@ Training logs save to `logs/rsl_rl/<experiment_name>/<timestamp>/`.
 ## Repository Structure
 
 ```text
-hexapod-assets/              # Hexapod USD model and reference gait CSVs (repo-tracked)
+hexapod-assets/              # Hexapod USD model, OBJ meshes, and reference gait CSVs (repo-tracked)
   USD/Hexapod_Flattened.usd
+  OBJ/                         # Per-link OBJ meshes for offline PyVista rendering
+    CenterLink.obj  BackLink.obj  FrontLink.obj
+    MiddleLeft.obj  MiddleRight.obj
+    BackLeft.obj  BackRight.obj  FrontLeft.obj  FrontRight.obj
+    local_fix.json               # Blender world-rotation matrices (generated; not needed for current pipeline)
+    extract_blender_rotations.py # Blender scripting-tab helper to regenerate local_fix.json
   Sim Gaits/forward3_lleg30_amp65_sim.csv
 source/
   isaaclab/          # Core framework: env managers, sensors, controllers, terrain
@@ -75,7 +81,7 @@ source/
   isaaclab_rl/       # RL-specific wrappers (RslRlVecEnvWrapper, export utilities)
   isaaclab_mimic/    # Imitation learning support
 scripts/
-  reinforcement_learning/rsl_rl/  # train.py, play.py, playReal.py (primary scripts)
+  reinforcement_learning/rsl_rl/  # train.py, play.py, playReal.py, playpyvista.py, render_pyvista.py
   environments/                   # Utility scripts: list_envs, random_agent, zero_agent
 ```
 
@@ -195,6 +201,57 @@ PPO tuning rationale for mimic: `init_noise_std=0.25` (down from default 1.0) pr
 - Joint positions (rad) → `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_*.csv`
 - Displacement tracking → `sim_displacement_log_*.csv`
 - Reward breakdown printed at end of episode
+
+## Offline PyVista Rendering Pipeline
+
+GPU driver 596.36 causes RTX scenedb crashes in Isaac Sim's normal rendering path on this machine. This driver **cannot be rolled back** due to enterprise security policy. The offline rendering pipeline bypasses Isaac Sim's RTX renderer entirely by logging per-frame body world poses during play and replaying them through VTK/PyVista on the CPU.
+
+**Two-step workflow:**
+
+**Step 1 — Log body poses** (runs under Isaac Sim Python, requires GPU for physics):
+
+```bat
+:: Runs the RL policy for N steps and saves body_poses_<timestamp>.npz alongside the checkpoint
+isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/playpyvista.py ^
+    --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --num_steps 500
+```
+
+NPZ layout: `body_pos_w` (T, 9, 3), `body_quat_w` (T, 9, 4 wxyz), `body_names`, `dt`.
+Saved to `<checkpoint_dir>/body_pose_log/body_poses_<timestamp>.npz`.
+
+**Step 2 — Render to MP4** (plain Python, no Isaac Sim, no GPU required):
+
+```bat
+pip install pyvista numpy imageio imageio-ffmpeg
+python scripts/reinforcement_learning/rsl_rl/render_pyvista.py ^
+    --npz <path/to/body_poses_*.npz> ^
+    --obj-up-axis Y --camera-distance 1.8 --ground --out hexapod_render.mp4
+```
+
+Key `render_pyvista.py` arguments:
+
+- `--npz` — required; path to the NPZ from playpyvista.py
+- `--obj-up-axis Y` — always use `Y` for OBJ files exported from Blender 5.x (Y-up legacy convention)
+- `--camera-distance SCALE` — multiplies the auto-fitted camera distance; >1 zooms out (default 1.0)
+- `--ground` — adds a static ground plane at z=0 centered at the robot's frame-0 position
+- `--ground-size M` — ground plane side length in meters (default 5.0)
+- `--grid-spacing M` — ground grid line spacing in meters (default 0.25); requires `--ground`
+- `--grid-color STR` — grid line color (default "gray")
+- `--diagnose` — renders frame 0 from four camera angles as a PNG montage (use to debug orientations)
+- `--local-fix JSON` — per-body Blender matrix_world correction; **not needed** for this robot (USD body frames already match OBJ local frames)
+- `--frames` — write PNG sequence instead of MP4
+
+**OBJ mesh coordinate system:**
+
+- Blender 5.x OBJ export uses Y-up: OBJ +Y = Blender local +Z (up), OBJ +Z = Blender local -Y (depth)
+- `render_pyvista.py` pre-applies `M_to_blender = [[1,0,0],[0,0,-1],[0,1,0]]` to all rest_points at load time
+- The USD body frames happen to match the OBJ local frames for this robot; no additional per-body correction is needed
+- Body ordering in NPZ (matches `asset.data.body_names` and Isaac DOF order):
+  `CenterLink, BackLink, FrontLink, MiddleLeft, MiddleRight, BackLeft, BackRight, FrontLeft, FrontRight`
+
+**playpyvista.py vs play.py:**
+
+`playpyvista.py` is a fork of `play.py` kept as a separate file so `play.py` can be merged from upstream cleanly. Differences: always logs body poses (no flag), adds `--num_steps` to stop after a fixed count. The hardcoded output paths in `play.py`/`playpyvista.py` (CSV joint log, displacement log) still point to `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/` and must be updated if the machine changes.
 
 ## Actuator Tuning Notes
 
