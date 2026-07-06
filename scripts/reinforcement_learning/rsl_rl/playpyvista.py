@@ -3,13 +3,23 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Script to play a checkpoint if an RL agent from RSL-RL."""
+"""Script to play a checkpoint of an RL agent from RSL-RL and log per-frame body world
+poses (position + quaternion) to an .npz file for offline PyVista rendering.
+
+This is a fork of play.py kept as a separate file so play.py can stay close to the
+upstream Isaac Lab version and be updated/merged without conflicts. Differences from
+play.py:
+  - Always logs body poses (no flag needed) to <log_dir>/body_pose_log/.
+  - Adds --num_steps to stop the play loop after a fixed number of steps instead of
+    running indefinitely (play.py only stops early when --video is used).
+"""
 
 """Launch Isaac Sim Simulator first."""
 
 import argparse
 import sys
 import csv
+import numpy as np
 
 from isaaclab.app import AppLauncher
 
@@ -17,7 +27,7 @@ from isaaclab.app import AppLauncher
 import cli_args  # isort: skip
 
 # add argparse arguments
-parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
+parser = argparse.ArgumentParser(description="Play an RL agent with RSL-RL and log body poses for PyVista.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument(
@@ -35,6 +45,16 @@ parser.add_argument(
     help="Use the pre-trained checkpoint from Nucleus.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+parser.add_argument(
+    "--num_steps",
+    type=int,
+    default=None,
+    help=(
+        "Stop the play loop after this many env steps. If --video is also set, the video"
+        " still stops at --video_length steps; whichever limit is hit first ends the run."
+        " If omitted, the loop runs until the window is closed (same as play.py)."
+    ),
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -134,6 +154,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # set the log directory for the environment (works for all environment types)
     env_cfg.log_dir = log_dir
 
+    # Body pose log setup (same level as videos/)
+    body_pos_frames: list = []
+    body_quat_frames: list = []
+    body_pose_log_dir = os.path.join(log_dir, "body_pose_log")
+    os.makedirs(body_pose_log_dir, exist_ok=True)
+    print(f"[INFO] Body pose logging enabled. Output: {body_pose_log_dir}")
+
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
@@ -199,7 +226,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     dt = env.unwrapped.step_dt
     device = env.unwrapped.device
-    
+
     # ---------- NEW: setup for saving joint positions (radians) ----------
     # File where we'll store joint positions (not raw actions)
     actionFileName = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_5-3-26_actiontest.csv"
@@ -219,12 +246,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         header = [f"joint_{i}_pos_rad" for i in range(num_joints)]
         writer.writerow(header)
 
-    #os.makedirs(os.path.dirname(commandFileName), exist_ok=True)
-    #with open(commandFileName, "w", newline="") as f:
-    #    writer = csv.writer(f)
-    #    header = [f"joint_{i}_pos_rad" for i in range(num_joints)]
-    #    writer.writerow(header)
-
     # ---- sanity prints ----
     print("[INFO] sim dt:", env.unwrapped.step_dt)
     try:
@@ -233,7 +254,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             print("[INFO] robot joint names (first 8):", robot.data.joint_names[:8])
     except Exception as e:
         print("[WARN] Couldn't print robot joint names:", e)
-    
+
     # open file to track displacement
     disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_5-5-26_test.csv"
     os.makedirs(os.path.dirname(disp_log_path), exist_ok=True)
@@ -266,39 +287,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     except Exception as e:
         print("[WARN] Couldn't print action dim:", e)
     # -----------------------
-    # --------------------------------------------------------------------
-    
-    """
-    # ---------- Logging setup ----------
-    logFileName = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/Hexapod_sin_cmd_vs_actual_stiff20.19_12-17-25.csv"
-    num_joints = 8
 
-    q_default_list = [0.0, 0.0] + [0.35] * (num_joints - 2)
-    q_default = torch.tensor(q_default_list, device=env.device, dtype=torch.float32)
-
-    os.makedirs(os.path.dirname(logFileName), exist_ok=True)
-    with open(logFileName, "w", newline="") as f:
-        writer = csv.writer(f)
-        header = ["t_s"]
-        header += [f"cmd_j{i}_rad" for i in range(num_joints)]
-        header += [f"act_j{i}_rad" for i in range(num_joints)]
-        writer.writerow(header)
-    # -----------------------------------
-
-    # ---------- Sine command parameters ----------
-    A = 0.3          # amplitude in radians (keep <= your joint limits!)
-    freq_hz = 1.0    # sine frequency (Hz)
-    phase = 0.0       # phase (rad)
-    action_scale = 0.5  # from your comment: q = q_default + 0.5 * action
-    t = 0.0
-    # which joints to excite (example: first motor only)
-    excite = torch.zeros(num_joints, device=env.device, dtype=torch.float32)
-    excite[[1, 2, 5]] = 1.0 # set to 1.0 for joints you want to move
-    # e.g., excite[:] = 1.0 to move all first 8 joints
-    # --------------------------------------------
-    log_f = open(logFileName, "a", newline="")
-    writer = csv.writer(log_f)
-    """
     reward_sum_per_env = torch.zeros(env.num_envs, device=device, dtype=torch.float32)
 
     rm = getattr(env.unwrapped, "reward_manager", None)
@@ -317,33 +306,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            actions = policy(obs) #-- uncomment for normal running
-            # actions = actionsList[index] -- create actions list corresponding to the gait, scale and shift
-            # Write the list of actions to a file - actions is a torch tensor
-            # deploy at the same hz as the physical robot, and angle scaling/shifting, joint order
-            # Build commanded joint positions (rad)
-            """
-            # sin_val = np.sin(freq_hz * t + phase) # 
-            # q_cmd = q_default + (A * sin_val) * excite  # shape [8]
-
-            # Convert commanded joint positions -> actions
-            # q = q_default + action_scale * action  => action = (q_cmd - q_default)/action_scale
-            # action_8 = (q_cmd - q_default) / action_scale
-            # action_8 = torch.clamp(action_8, -1.0, 1.0)
-
-            # Build full action tensor: [num_envs, action_dim]
-            # Get action dimension robustly (works with the wrapper)
-
-            if hasattr(env, "num_actions"):
-                action_dim = env.num_actions
-            else:
-                action_dim = int(env.action_space.shape[0])
-
-            device = env.unwrapped.device if hasattr(env, "unwrapped") else env.device
-
-            actions = torch.zeros((env.num_envs, action_dim), device=device, dtype=torch.float32)
-            actions[:, :num_joints] = action_8
-            """
+            actions = policy(obs)
 
             # env stepping
             obs, rew, dones, _ = env.step(actions)
@@ -352,14 +315,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 policy.reset(dones)
             else:
                 policy_nn.reset(dones)
-            # obs, _, _, _ = env.step(actions)
-            # obs, rew, _, _ = env.step(actions)
 
             # Access the underlying robot in the scene
             robot = env.unwrapped.scene["robot"]  # adjust name if needed
 
             reward_sum_per_env += rew
-            
+
             rm = getattr(env.unwrapped, "reward_manager", None)
             if rm is not None:
                 step_reward_terms = rm._step_reward  # [num_envs, num_terms]
@@ -367,20 +328,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 for term_idx, name in enumerate(term_names):
                     reward_term_sums[name] += step_reward_terms[:, term_idx] * dt
 
-            # Get the joint target positions that Isaac is actually using
-            # This is a tensor of shape [num_envs, num_joints]
-            #joint_targets = robot.data.joint_pos_target[0, :8]  # env 0, first 8 joints
-            # actual joint positions (env 0, first 8)
-            #act = robot.data.joint_pos[0, :num_joints].detach().cpu().numpy().tolist()
-
-            #joint_targets = robot.data.joint_pos_target[0, :8]  # env 0, first 8 joints
-
-            #joint_positions_list = [float(x.item()) for x in joint_targets]
-
-            #with open(actionFileName, "a", newline="") as f:
-            #    writer = csv.writer(f)
-            #    writer.writerow(joint_positions_list)
-            
             # actual joint positions (env 0, first 8)
             joint_positions = robot.data.joint_pos[0, :num_joints]
             joint_positions_list = joint_positions.detach().cpu().numpy().tolist()
@@ -388,6 +335,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             with open(actionFileName, "a", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow(joint_positions_list)
+
+            # Body pose logging (env 0 only)
+            body_pos_frames.append(robot.data.body_pos_w[0].detach().cpu().numpy())
+            body_quat_frames.append(robot.data.body_quat_w[0].detach().cpu().numpy())
 
             # -----Added to track the displacement of robot --------------
             # ---- step / cycle bookkeeping (warmup-aware) ----
@@ -420,15 +371,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     forward_disp_x,
                 ])
 
-            
-
-        if args_cli.video:
-            timestep += 1
-            # Exit the play loop after recording one video
-            if timestep == args_cli.video_length:
-                break
-
-        # t += dt #COMMENT THIS OUT WHEN NOT USING
+        # advance the step counter once per loop iteration (covers video and num_steps limits)
+        timestep += 1
+        if args_cli.video and timestep == args_cli.video_length:
+            break
+        if args_cli.num_steps is not None and timestep >= args_cli.num_steps:
+            break
 
         # time delay for real-time evaluation
         sleep_time = dt - (time.time() - start_time)
@@ -441,6 +389,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     for name in term_names:
         print(f"{name}:")
         print("  sum_per_env:", reward_term_sums[name].detach().cpu().numpy())
+
+    # Save body pose log to npz
+    if body_pos_frames:
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        npz_path = os.path.join(body_pose_log_dir, f"body_poses_{timestamp}.npz")
+        np.savez(
+            npz_path,
+            body_pos_w=np.array(body_pos_frames),    # (T, num_bodies, 3)
+            body_quat_w=np.array(body_quat_frames),  # (T, num_bodies, 4) wxyz
+            body_names=np.array(robot.data.body_names),
+            dt=np.float32(dt),
+        )
+        print(f"[INFO] Body pose log saved: {npz_path}  ({len(body_pos_frames)} frames)")
 
     # close the simulator
     env.close()
