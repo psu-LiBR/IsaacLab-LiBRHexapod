@@ -85,3 +85,27 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_mimic_cfg:HexapodMimicPPORunnerCfg",
     },
 )
+
+# ---------------------------------------------------------------------------
+# Goal-reaching environment (reach 5m forward, as fast as possible)
+# ---------------------------------------------------------------------------
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_goal_env_cfg:HexapodGoalEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_goal_cfg:HexapodGoalPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_goal_env_cfg:HexapodGoalEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_goal_cfg:HexapodGoalPPORunnerCfg",
+    },
+)
