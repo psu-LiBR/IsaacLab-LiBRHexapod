@@ -45,7 +45,7 @@ class HexapodFlatPPORunnerCfg(HexapodRoughPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.max_iterations = 5000
+        self.max_iterations = 2500
         self.experiment_name = "hexapod_flat"
         self.policy.actor_hidden_dims = [128, 128, 128]
         self.policy.critic_hidden_dims = [128, 128, 128]

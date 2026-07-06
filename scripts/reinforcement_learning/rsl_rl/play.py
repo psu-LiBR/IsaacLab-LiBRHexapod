@@ -10,7 +10,6 @@
 import argparse
 import sys
 import csv
-import numpy as np
 
 from isaaclab.app import AppLauncher
 
@@ -442,7 +441,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     for name in term_names:
         print(f"{name}:")
         print("  sum_per_env:", reward_term_sums[name].detach().cpu().numpy())
-
 
     # close the simulator
     env.close()
