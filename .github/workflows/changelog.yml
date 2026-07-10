@@ -1,0 +1,82 @@
+# Lightweight changelog for this fork. Upstream's nightly-changelog.yml
+# compiles per-package changelog.d/ fragments via tools/changelog/cli.py
+# across develop/release branches with a GitHub App token — none of that
+# tooling, those branches, or that App exist in this repo. Instead, this
+# just appends each push's commit subjects to a single root CHANGELOG.md
+# using the default GITHUB_TOKEN.
+
+name: Changelog
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'CHANGELOG.md'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: changelog-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+    # Belt-and-suspenders alongside paths-ignore above: also skip if this
+    # push *is* a prior run of this workflow (e.g. paths-ignore didn't
+    # apply because a human commit touched CHANGELOG.md too).
+    if: ${{ !contains(github.event.head_commit.message, '[CI][Changelog]') }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Append pushed commits to CHANGELOG.md
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          # First-ever push to main (or a force-push rewriting history) has
+          # no valid BEFORE commit to diff against — fall back to just the
+          # tip commit instead of failing.
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            COMMITS=$(git log -1 --no-merges --pretty='- %s (%h)' "$AFTER")
+          else
+            COMMITS=$(git log --no-merges --pretty='- %s (%h)' "$BEFORE..$AFTER")
+          fi
+
+          # Drop this workflow's own prior commits so the changelog never
+          # records itself.
+          COMMITS=$(echo "$COMMITS" | grep -v '^- \[CI\]\[Changelog\]' || true)
+
+          if [ -z "$COMMITS" ]; then
+            echo "No new non-bot commits to record — skipping."
+            exit 0
+          fi
+
+          TMP=$(mktemp)
+          {
+            echo "## $(date -u +%Y-%m-%d)"
+            echo
+            echo "$COMMITS"
+            echo
+            if [ -f CHANGELOG.md ]; then
+              cat CHANGELOG.md
+            fi
+          } > "$TMP"
+          mv "$TMP" CHANGELOG.md
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md unchanged — nothing to commit."
+            exit 0
+          fi
+          git add CHANGELOG.md
+          git commit -m "[CI][Changelog] Update CHANGELOG.md for $(git rev-parse --short "$GITHUB_SHA")"
+          git pull --rebase origin main
+          git push origin HEAD:refs/heads/main
