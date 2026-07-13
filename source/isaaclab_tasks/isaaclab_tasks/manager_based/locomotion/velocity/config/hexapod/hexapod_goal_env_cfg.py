@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Hexapod goal-reaching env: learn progressively to reach 5 m as fast as possible.
+"""Hexapod goal-reaching env: learn distance-proportional forward progress.
 
 Inherits HexapodFlatEnvCfg (scene, robot, terrain, actions, and base events) and overrides:
 - commands.base_velocity → commands.pose_command (curriculum from 1 m to 5 m)
@@ -14,22 +14,18 @@ Inherits HexapodFlatEnvCfg (scene, robot, terrain, actions, and base events) and
 """
 
 from isaaclab.envs.mdp.commands import UniformPose2dCommandCfg
-from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.utils import configclass
 
 from . import hexapod_goal_rewards as goal_rewards
-from .hexapod_goal_curriculum import goal_distance_curriculum
 from .flat_env_cfg import HexapodFlatEnvCfg
 from .hexapod_goal_obs_cfg import HexapodGoalObservationsCfg
 
 
-GOAL_DISTANCES = (1.0, 2.0, 3.5, 5.0)
+GOAL_DISTANCE_RANGE = (1.0, 10.0)
 REACH_RADIUS = 0.3
 EPISODE_LENGTH_S = 45.0
-CURRICULUM_SUCCESS_THRESHOLD = 0.7
-CURRICULUM_WINDOW_SIZE = 4096
 
 
 @configclass
@@ -50,7 +46,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
             resampling_time_range=(EPISODE_LENGTH_S, EPISODE_LENGTH_S),
             debug_vis=False,
             ranges=UniformPose2dCommandCfg.Ranges(
-                pos_x=(GOAL_DISTANCES[0], GOAL_DISTANCES[0]),
+                pos_x=GOAL_DISTANCE_RANGE,
                 pos_y=(0.0, 0.0),
                 heading=(0.0, 0.0),
             ),
@@ -70,9 +66,9 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # locomotion style.
         self.rewards.lin_vel_z_l2.weight = -3.0
         self.rewards.ang_vel_xy_l2.weight = -0.3
-        self.rewards.dof_torques_l2.weight = -2.0e-5
+        self.rewards.dof_torques_l2.weight = -2.0e-4
         self.rewards.dof_acc_l2.weight = -2.5e-7
-        self.rewards.action_rate_l2.weight = -0.02
+        self.rewards.action_rate_l2.weight = -5.0e-2
         self.rewards.feet_air_time = None
         self.rewards.undesired_contacts = None
         self.rewards.flat_orientation_l2.weight = -2.0
@@ -86,12 +82,10 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
             params={"command_name": "pose_command"},
         )
 
-        # At dt=0.02, these weights produce +50 success and -25 fall rewards.
-        self.rewards.reach_bonus = RewTerm(
-            func=goal_rewards.termination_signal,
-            weight=2500.0,
-            params={"termination_name": "reach_goal"},
-        )
+        # Keep total return approximately proportional to forward distance.
+        self.rewards.reach_bonus = None
+
+        # At dt=0.02, this weight produces -25 fall reward.
         self.rewards.fall_penalty = RewTerm(
             func=goal_rewards.termination_signal,
             weight=-1250.0,
@@ -117,18 +111,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
             params={"command_name": "pose_command", "radius": REACH_RADIUS},
         )
 
-        # Evaluate non-overlapping windows of completed episodes. Curriculum
-        # computation runs before command reset, so the next episodes sample the
-        # newly selected fixed distance.
-        self.curriculum.goal_distance = CurrTerm(
-            func=goal_distance_curriculum,
-            params={
-                "command_name": "pose_command",
-                "distances": GOAL_DISTANCES,
-                "success_threshold": CURRICULUM_SUCCESS_THRESHOLD,
-                "window_size": CURRICULUM_WINDOW_SIZE,
-            },
-        )
+        self.curriculum.goal_distance = None
 
 
 @configclass
@@ -137,14 +120,14 @@ class HexapodGoalEnvCfg_PLAY(HexapodGoalEnvCfg):
         super().__post_init__()
 
         self.scene.num_envs = 16
-        self.scene.env_spacing = 8.0  # wide enough to see 5m straight-line walk per env
-        self.commands.pose_command.ranges.pos_x = (GOAL_DISTANCES[-1], GOAL_DISTANCES[-1])
+        self.scene.env_spacing = 12.0  # wide enough to see 10m straight-line walk per env
+        self.commands.pose_command.ranges.pos_x = (GOAL_DISTANCE_RANGE[-1], GOAL_DISTANCE_RANGE[-1])
         self.curriculum.goal_distance = None
         self.observations.policy.enable_corruption = False
         self.events.base_external_force_torque = None
         self.events.push_robot = None
 
-        # Camera: fixed world view showing the full 5m goal-reaching path
+        # Camera: fixed world view showing the full 10m goal-reaching path
         self.viewer.eye = (-1.0, -6.0, 3.0)
-        self.viewer.lookat = (2.5, 0.0, 0.3)
+        self.viewer.lookat = (5.0, 0.0, 0.3)
         self.viewer.origin_type = "world"

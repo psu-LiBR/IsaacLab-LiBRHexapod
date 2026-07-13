@@ -16,6 +16,9 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 # Configuration
 ##
 
+MOTOR_STALL_TORQUE_NM = 1.4
+MOTOR_NO_LOAD_SPEED_RAD_S = 5.97
+
 HEXAPOD_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
@@ -24,9 +27,8 @@ HEXAPOD_CFG = ArticulationCfg(
             disable_gravity=False,
             max_depenetration_velocity=1.0,
             enable_gyroscopic_forces=True,
-            max_angular_velocity = 1000.0, #57 rev/min is max unloaded motor speed = 5.96 rad/s **@11.1 V
+            max_angular_velocity = 1000.0,
             max_linear_velocity = 1000.0,
-
             #enable_ccd=True,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
@@ -72,28 +74,21 @@ HEXAPOD_CFG = ArticulationCfg(
     ),
     soft_joint_pos_limit_factor = 0.9,
     actuators={
-        # Spine joints: sinusoidal body undulation sustains high torque at wave peaks against body inertia.
-        # Lower stiffness reduces peak torque demand (at stiffness=40, error=0.15 rad before saturation vs 0.075 at 80).
-        # The real servo's internal firmware handles gravity loading better than a pure PD controller.
+        # Spine joints use the same motor-rated output speed and stall torque caps as the legs.
         "body_joints": ImplicitActuatorCfg(
             joint_names_expr=["FrontLink", "BackLink"],
             stiffness = 40,
-            # stiffness = 80,   # too stiff -- small tracking lag generates huge torques; consistently saturates
             damping = 0.4,
-            velocity_limit_sim = 15.0,   # raised: if sin wave step changes require >5.5 rad/s, velocity cap accumulates lag → torque saturates regardless of effort limit
-            # velocity_limit_sim = 5.5,  # original -- may be binding constraint for body undulation
-            effort_limit_sim = 4.5,
+            velocity_limit_sim = MOTOR_NO_LOAD_SPEED_RAD_S,
+            effort_limit_sim = MOTOR_STALL_TORQUE_NM,
         ),
-        # Leg joints: intermittent ground contact, shorter duration at peak torque
+        # Leg joints: motor-rated hard limits keep RL from learning impossible ground impulses.
         "leg_joints": ImplicitActuatorCfg(
             joint_names_expr=["MiddleLeft", "MiddleRight", "BackLeft", "BackRight", "FrontLeft", "FrontRight"],
             stiffness = 80,
-            # stiffness = 37,   # original -- too low: max correctable error = 1.4/37 = 0.038 rad before torque saturation
             damping = 0.9,
-            # damping = 0.32,   # original
-            velocity_limit_sim = 6.0,
-            effort_limit_sim = 4.5,
-            # effort_limit_sim = 1.4,  # XL430-W250-T rated stall torque at 12V (physical spec)
+            velocity_limit_sim = MOTOR_NO_LOAD_SPEED_RAD_S,
+            effort_limit_sim = MOTOR_STALL_TORQUE_NM,
         ),
     },
 )

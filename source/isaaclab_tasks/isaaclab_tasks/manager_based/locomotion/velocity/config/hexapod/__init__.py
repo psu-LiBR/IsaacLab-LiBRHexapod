@@ -87,7 +87,7 @@ gym.register(
 )
 
 # ---------------------------------------------------------------------------
-# Goal-reaching environment (reach 5m forward, as fast as possible)
+# Goal-reaching environment (sample forward targets, maximize progress)
 # ---------------------------------------------------------------------------
 
 gym.register(

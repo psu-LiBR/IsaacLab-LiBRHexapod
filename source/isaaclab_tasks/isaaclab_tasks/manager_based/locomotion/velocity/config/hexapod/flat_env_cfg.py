@@ -108,7 +108,7 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         #self.rewards.base_yaw_drift_l2.weight = -0.12
 
         #standard
-        self.rewards.dof_torques_l2.weight = -5.0e-5 #was -2.5e-5s
+        self.rewards.dof_torques_l2.weight = -2.0e-4
 
         # Fixed-threshold air time: reward each leg for staying airborne >= threshold seconds.
         # Per-leg duty-cycle version produced only 0.027 sum (too weak to shape gait) -- reverted.
@@ -118,11 +118,11 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         self.rewards.feet_air_time.params["threshold"] = 0.1  # 0.1 s; shuffling air phases are typically <0.02 s
         
         self.rewards.dof_pos_limits.weight = -1.0
-        self.rewards.dof_acc_l2.weight= -8.5e-14
+        self.rewards.dof_acc_l2.weight = -2.5e-7
         self.rewards.ang_vel_xy_l2.weight = 0.0 #-0.00000001
         self.rewards.undesired_contacts.weight = -1.0
-        self.rewards.lin_vel_z_l2.weight = -0.00000001 #-0.0001
-        self.rewards.action_rate_l2.weight = -2.5e-2
+        self.rewards.lin_vel_z_l2.weight = -0.5
+        self.rewards.action_rate_l2.weight = -5.0e-2
 
         # change terrain to flat
         self.scene.terrain.terrain_type = "plane"

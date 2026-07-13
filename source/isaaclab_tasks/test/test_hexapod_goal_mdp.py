@@ -167,23 +167,28 @@ def test_curriculum_never_advances_past_five_meters():
 
 
 def test_phase_one_source_configuration():
-    env_source = (HEXAPOD_DIR / "hexapod_goal_env_cfg.py").read_text()
-    obs_source = (HEXAPOD_DIR / "hexapod_goal_obs_cfg.py").read_text()
-    agent_source = (HEXAPOD_DIR / "agents" / "rsl_rl_ppo_goal_cfg.py").read_text()
+    env_source = (HEXAPOD_DIR / "hexapod_goal_env_cfg.py").read_text(encoding="utf-8")
+    obs_source = (HEXAPOD_DIR / "hexapod_goal_obs_cfg.py").read_text(encoding="utf-8")
+    agent_source = (HEXAPOD_DIR / "agents" / "rsl_rl_ppo_goal_cfg.py").read_text(encoding="utf-8")
 
     for expected in (
-        "GOAL_DISTANCES = (1.0, 2.0, 3.5, 5.0)",
+        "GOAL_DISTANCE_RANGE = (1.0, 10.0)",
         "EPISODE_LENGTH_S = 45.0",
+        "pos_x=GOAL_DISTANCE_RANGE",
         "weight=10.0",
-        "weight=2500.0",
         "weight=-1250.0",
         "weight=-0.2",
-        "self.rewards.action_rate_l2 = None",
+        "self.rewards.dof_torques_l2.weight = -2.0e-4",
+        "self.rewards.dof_acc_l2.weight = -2.5e-7",
+        "self.rewards.action_rate_l2.weight = -5.0e-2",
         "self.rewards.feet_air_time = None",
         "self.rewards.dof_pos_limits.weight = -1.0",
         "self.curriculum.goal_distance = None",
     ):
         assert expected in env_source
+
+    assert "self.rewards.reach_bonus = None" in env_source
+    assert "self.curriculum.goal_distance = CurrTerm" not in env_source
 
     assert "class PolicyCfg" in obs_source and "self.enable_corruption = True" in obs_source
     assert "class CriticCfg" in obs_source and "self.enable_corruption = False" in obs_source
