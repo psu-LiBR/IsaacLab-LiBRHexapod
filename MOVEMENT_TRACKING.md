@@ -15,14 +15,14 @@
 - 最终位置（x, y坐标）
 - x方向移动距离
 - 二维平面总移动距离
-- 移动了多少个体长（体长≈0.1米，基于OBJ文件尺寸测量）
+- 移动了多少个体长（体长≈0.35米，基于OB文件精确测量）
 
 ### 实现细节
 ```python
 # 记录初始位置
 initial_pos = None
 final_pos = None
-HEXAPOD_BODY_LENGTH = 0.1  # 六足机器人的体长（米，基于OBJ文件的尺寸估计）
+HEXAPOD_BODY_LENGTH = 0.35  # 六足机器人的体长（米，基于OB文件的精确测量）
 
 # 在第0步获取初始位置
 if sim_steps == 0:
@@ -62,10 +62,13 @@ body_lengths = distance_2d / HEXAPOD_BODY_LENGTH
 最终位置：x=1.234m, y=0.056m
 x方向移动距离：1.234米
 二维平面总移动距离：1.235米
-相当于移动了：12.4个体长（体长≈0.1米，基于OBJ文件尺寸测量）
+相当于移动了：3.5个体长（体长≈0.35米，基于OB文件精确测量）
 ============================================================
 ```
 
 ## 六足机器人尺寸说明
-- 体长：0.1米（基于`hexapod-assets/OBJ/`目录下的OBJ文件尺寸测量，包括前Link、中心Link和后Link的总长度）
+- 体长：0.35米（基于`hexapod-assets/OBJ/`目录下的OBJ文件尺寸精确测量，包括前Link、中心Link和后Link的总长度）
+- 主体最大宽度：0.0965米
+- 主体最大高度：0.1057米
+- 详细尺寸信息请参考 [HEXAPOD_DIMENSIONS.md](file:///home/ubuntu/IsaacLab-LiBRHexapod/HEXAPOD_DIMENSIONS.md)
 - 如果你有更准确的尺寸数据，可以修改`HEXAPOD_BODY_LENGTH`变量的值
