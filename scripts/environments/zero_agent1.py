@@ -79,6 +79,11 @@ def main():
     print("[INFO]: 正在录制真实沙地环境中的机器人 RGB 帧...")
     print("[INFO]: 机器人将执行波浪式前进步态（左右交替摆动），向前行走...")
     print("[INFO]: RFT阻力已在环境中启用！")
+    
+    # 记录初始位置
+    initial_pos = None
+    final_pos = None
+    HEXAPOD_BODY_LENGTH = 0.5  # 估计六足机器人的体长（米）
 
     while simulation_app.is_running():
         with torch.inference_mode():
@@ -122,11 +127,41 @@ def main():
             # 转换为动作空间：action = (q_target - q_default) / ACTION_SCALE
             actions[0, :] = (q_target - q_default) / ACTION_SCALE
             
+            # 获取初始位置
+            if sim_steps == 0:
+                initial_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].clone()
+            
             env.step(actions)
+            
+            # 获取最终位置
+            if sim_steps == 299:
+                final_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].clone()
 
             sim_steps += 1
             if sim_steps >= 300:
                 print(f"[INFO]: 录制成功完成！MP4 已保存到: {video_output_dir}")
+                
+                # 计算并输出移动距离
+                if initial_pos is not None and final_pos is not None:
+                    # 计算 x 方向移动距离
+                    distance_x = abs(final_pos[0] - initial_pos[0])
+                    # 计算二维平面移动距离
+                    distance_2d = torch.sqrt((final_pos[0] - initial_pos[0])**2 + 
+                                             (final_pos[1] - initial_pos[1])**2)
+                    # 计算移动了多少个体长
+                    body_lengths = distance_2d / HEXAPOD_BODY_LENGTH
+                    
+                    print("\n" + "="*60)
+                    print("沙地环境（zero_agent1）移动统计")
+                    print("="*60)
+                    print(f"总模拟时间：300步 = 6.0秒")
+                    print(f"初始位置：x={initial_pos[0]:.3f}m, y={initial_pos[1]:.3f}m")
+                    print(f"最终位置：x={final_pos[0]:.3f}m, y={final_pos[1]:.3f}m")
+                    print(f"x方向移动距离：{distance_x:.3f}米")
+                    print(f"二维平面总移动距离：{distance_2d:.3f}米")
+                    print(f"相当于移动了：{body_lengths:.1f}个体长（体长≈{HEXAPOD_BODY_LENGTH}米）")
+                    print("="*60 + "\n")
+                
                 break
 
     env.close()
