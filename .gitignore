@@ -68,3 +68,13 @@ tests/
 # TacSL sensor
 **/tactile_record/*
 **/gelsight_r15_data/*
+
+# Temporary NvStreamer files
+*.etli
+
+# Temporary directories
+C:/
+my_videos/
+
+# Backup files
+*.bak

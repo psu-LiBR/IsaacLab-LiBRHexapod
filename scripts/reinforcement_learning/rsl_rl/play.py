@@ -85,7 +85,6 @@ from isaaclab_rl.rsl_rl import (
     export_policy_as_jit,
     export_policy_as_onnx,
     handle_deprecated_rsl_rl_cfg,
-    handle_deprecated_rsl_rl_checkpoint,
 )
 from isaaclab_rl.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
@@ -165,7 +164,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     else:
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
     # convert pre-5.0 published checkpoints to the layout expected by rsl-rl >= 5.0 (no-op otherwise)
-    resume_path = handle_deprecated_rsl_rl_checkpoint(resume_path, installed_version)
     runner.load(resume_path)
 
     # obtain the trained policy for inference

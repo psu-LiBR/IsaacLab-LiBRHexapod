@@ -142,10 +142,10 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
 
         # camera settings
         #self.viewer.eye = (-0.5, 0.0, 0.1)
-        self.viewer.eye = (0.5, 0.0, 1.0)
-        self.viewer.lookat = (0.5, 0.0, 0.0)
+        self.viewer.eye = (-1.2, 0.0, 0.6)
+        self.viewer.lookat = (0.0, 0.0, 0.1)
         self.viewer.origin_type = "asset_root"
-        #self.viewer.origin_type = "world"
+        #self.viewer.origin_type = "asset_root"
         self.viewer.asset_name = "robot"
         
 

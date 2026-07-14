@@ -109,3 +109,35 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_goal_cfg:HexapodGoalPPORunnerCfg",
     },
 )
+
+
+
+# =========================================================================
+# 🚀 注册沙地训练环境 (Hexapod Sand Train v0)
+# =========================================================================
+gym.register(
+    id="Isaac-Velocity-Sand-Hexapod-v0",
+    entry_point="isaaclab_tasks.manager_based.locomotion.velocity.config.hexapod.hexapod_sand_train_env:HexapodSandTrainEnv",
+    disable_env_checker=True,
+    kwargs={
+        # 📌【核心修正】：训练阶段的配置入口，指向真正的沙地配置类
+        "env_cfg_entry_point": f"{__name__}.sand_env_cfg:HexapodSandEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:HexapodFlatPPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_flat_ppo_cfg.yaml",
+    },
+)
+
+# =========================================================================
+# 🎥 注册沙地成果演示环境 (Hexapod Sand Play/Demo v0)
+# =========================================================================
+gym.register(
+    id="Isaac-Velocity-Sand-Hexapod-Play-v0",
+    entry_point="isaaclab_tasks.manager_based.locomotion.velocity.config.hexapod.hexapod_sand_play_env:HexapodSandPlayEnv",
+    disable_env_checker=True,
+    kwargs={
+        # 📌【核心修正】：成果演示的配置入口，必须指向 sand_env_cfg 文件中的 HexapodSandEnvCfg_PLAY 参数类！
+        "env_cfg_entry_point": f"{__name__}.sand_env_cfg:HexapodSandEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:HexapodFlatPPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_flat_ppo_cfg.yaml",
+    },
+)
