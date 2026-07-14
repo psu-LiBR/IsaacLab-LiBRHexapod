@@ -83,7 +83,7 @@ def main():
     # 记录初始位置
     initial_pos = None
     final_pos = None
-    HEXAPOD_BODY_LENGTH = 0.5  # 估计六足机器人的体长（米）
+    HEXAPOD_BODY_LENGTH = 0.1  # 六足机器人的体长（米，基于OBJ文件的尺寸估计）
 
     while simulation_app.is_running():
         with torch.inference_mode():
