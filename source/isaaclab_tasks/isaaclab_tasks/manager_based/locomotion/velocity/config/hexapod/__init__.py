@@ -141,3 +141,31 @@ gym.register(
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_flat_ppo_cfg.yaml",
     },
 )
+
+# =========================================================================
+# 🚀 注册改进版沙地训练环境 (Hexapod Sand Improved Train v0 - 使用 rft_generic_M 矩阵)
+# =========================================================================
+gym.register(
+    id="Isaac-Velocity-Sand-Improved-Hexapod-v0",
+    entry_point="isaaclab_tasks.manager_based.locomotion.velocity.config.hexapod.hexapod_sand_train_env_improved:HexapodSandImprovedTrainEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.sand_env_improved_cfg:HexapodSandImprovedEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:HexapodFlatPPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_flat_ppo_cfg.yaml",
+    },
+)
+
+# =========================================================================
+# 🎥 注册改进版沙地成果演示环境 (Hexapod Sand Improved Play/Demo v0 - 使用 rft_generic_M 矩阵)
+# =========================================================================
+gym.register(
+    id="Isaac-Velocity-Sand-Improved-Hexapod-Play-v0",
+    entry_point="isaaclab_tasks.manager_based.locomotion.velocity.config.hexapod.hexapod_sand_play_env_improved:HexapodSandImprovedPlayEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.sand_env_improved_cfg:HexapodSandImprovedEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:HexapodFlatPPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_flat_ppo_cfg.yaml",
+    },
+)
