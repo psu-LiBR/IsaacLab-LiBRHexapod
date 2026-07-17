@@ -1,0 +1,142 @@
+# Deployment config for the LiBR Hexapod real-robot inference pipeline.
+#
+# Copy this file to deployment.yaml (gitignored) and edit for your specific unit.
+# Fields marked "# CALIBRATE" are placeholders that must be verified against the
+# real robot before trusting them -- see CLAUDE.md's bring-up stage 4/5 notes.
+
+serial:
+  port: /dev/ttyUSB0
+  baud_rate: 1000000
+  protocol_version: 2.0
+
+joints:
+  # Sim DOF order -- matches asset.data.joint_names / the RL policy's action order.
+  sim_order:
+    - BackLink
+    - FrontLink
+    - MiddleLeft
+    - MiddleRight
+    - BackLeft
+    - BackRight
+    - FrontLeft
+    - FrontRight
+
+  # Real DOF order -- matches hexapod_tripod_adaptive.py's DXL_ID column order
+  # (DXL_ID_LINKS + DXL_ID_LEGS_FRONT + DXL_ID_LEGS_MIDDLE + DXL_ID_LEGS_BACK).
+  real_order:
+    - FrontLink
+    - BackLink
+    - FrontRight
+    - FrontLeft
+    - MiddleRight
+    - MiddleLeft
+    - BackRight
+    - BackLeft
+
+  motor_ids:
+    FrontLink: 3
+    BackLink: 6
+    FrontRight: 2
+    FrontLeft: 1
+    MiddleRight: 4
+    MiddleLeft: 5
+    BackRight: 7
+    BackLeft: 8
+
+  # Which correction formula applies to each real-order joint name when
+  # converting between sim radians and real radians (before tick conversion).
+  # "unchanged": real_rad = sim_rad
+  # "negate": real_rad = -sim_rad
+  # "leg_negate_plus_pi": real_rad = -sim_rad + pi
+  correction_group:
+    BackLink: unchanged
+    FrontLink: negate
+    FrontRight: leg_negate_plus_pi
+    FrontLeft: leg_negate_plus_pi
+    MiddleRight: leg_negate_plus_pi
+    MiddleLeft: leg_negate_plus_pi
+    BackRight: leg_negate_plus_pi
+    BackLeft: leg_negate_plus_pi
+
+  # Encoder tick <-> radian conversion, per real-order joint name.
+  # real_rad = (tick - zero_tick) / ticks_per_rad
+  # Body joints confirmed from imu_processor.py/gait_generator.py: 12-bit encoder,
+  # zero_tick=2048, ticks_per_rad=4096/(2*pi) ~= 651.9.
+  # Leg joints: gait_generator.py's tick convention does not obviously agree with
+  # the correction_group formula above -- CALIBRATE zero_tick/ticks_per_rad against
+  # the real robot at the known q_default=-0.47 rad rest pose before trusting these.
+  # NOTE: leg zero_tick is NOT 2048 here (unlike the body joints). Combined with
+  # the leg_negate_plus_pi correction above, q_default=-0.47 rad requires
+  # real_rad = 0.47+pi ~= 3.61 rad, which needs zero_tick well below 2048 to land
+  # inside the valid 0-4095 tick range at all -- 2048 would put q_default itself
+  # out of range and trip the control loop's tick-range safety check on the very
+  # first iteration. 1000 is only a placeholder that keeps the numbers in range
+  # for dry-run testing; CALIBRATE the real value against the physical robot.
+  encoder:
+    ticks_per_rev: 4096
+    zero_tick:
+      FrontLink: 2048
+      BackLink: 2048
+      FrontRight: 1000  # CALIBRATE
+      FrontLeft: 1000   # CALIBRATE
+      MiddleRight: 1000 # CALIBRATE
+      MiddleLeft: 1000  # CALIBRATE
+      BackRight: 1000   # CALIBRATE
+      BackLeft: 1000    # CALIBRATE
+
+  # Soft position limits, in sim radians, per sim-order joint name. Targets are
+  # clipped to these before every write. Starting values are the sim's own
+  # soft_joint_pos_limit_factor=0.9 applied around the USD joint limits --
+  # CALIBRATE against the physical robot's actual mechanical range of motion.
+  soft_limits_rad:
+    BackLink: [-1.2, 1.2]
+    FrontLink: [-1.2, 1.2]
+    MiddleLeft: [-1.4, 0.3]
+    MiddleRight: [-1.4, 0.3]
+    BackLeft: [-1.4, 0.3]
+    BackRight: [-1.4, 0.3]
+    FrontLeft: [-1.4, 0.3]
+    FrontRight: [-1.4, 0.3]
+
+imu:
+  topic: /imu
+  # Rotation applied to raw IMU angular_velocity/orientation to express them in
+  # the sim's body-frame convention. Identity until calibrated (bring-up stage 4:
+  # confirm projected_gravity reads ~[0,0,-1] when the robot is level).
+  # Format: [w, x, y, z] quaternion, IMU-frame -> sim-body-frame.
+  mount_offset_quat: [1.0, 0.0, 0.0, 0.0]  # CALIBRATE
+  negate_gyro_z: true  # per imu_processor.py: this IMU's z-axis points down
+  # Optional. Max age (seconds) of the last received /imu sample before
+  # RosImuReader.read() raises ImuStaleError instead of silently reusing a
+  # frozen reading forever (e.g. if the bno08x_driver process dies mid-run).
+  # The driver publishes at 100 Hz and the control loop runs at 50 Hz, so
+  # 0.25s is ~25 missed messages in a row -- unambiguous failure, not jitter.
+  # Safe to omit entirely; defaults to 0.25s if absent.
+  max_staleness_s: 0.25
+
+control:
+  rate_hz: 50.0
+  action_scale: 0.5
+  q_default_sim:
+    BackLink: 0.0
+    FrontLink: 0.0
+    MiddleLeft: -0.47
+    MiddleRight: -0.47
+    BackLeft: -0.47
+    BackRight: -0.47
+    FrontLeft: -0.47
+    FrontRight: -0.47
+  soft_start_seconds: 3.0
+  soft_stop_seconds: 2.0
+  action_scale_multiplier: 1.0  # bring-up damping knob, <1.0 to dampen motion
+
+commands:
+  velocity:
+    vx: 0.2
+    vy: 0.0
+    yaw_rate: 0.0
+  goal:
+    x: 5.0
+    y: 0.0
+    z: 0.0
+    heading: 0.0
