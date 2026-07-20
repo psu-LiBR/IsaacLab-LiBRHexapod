@@ -21,6 +21,14 @@ _CORRECTIONS: dict[str, tuple[float, float]] = {
     "unchanged": (1.0, 0.0),
     "negate": (-1.0, 0.0),
     "leg_negate_plus_pi": (-1.0, math.pi),
+    # Same sign flip as leg_negate_plus_pi (a=-1), but the other 2*pi-equivalent
+    # phase branch (b=-pi instead of +pi) -- same physical joint angle, but lands
+    # zero_tick on the other side of the ticks = zero_tick + real_rad*ticks_per_rad
+    # formula's [0, ticks_per_rev) window. Calibrated 2026-07-17: this robot's leg
+    # servos measured a physical rest-pose tick (~1720-1864) that only produces a
+    # valid zero_tick in [0, 4095] under this -pi branch, not +pi -- see
+    # tools/calibrate_encoders.py zero-tick output and CLAUDE.md.
+    "leg_negate_minus_pi": (-1.0, -math.pi),
 }
 
 

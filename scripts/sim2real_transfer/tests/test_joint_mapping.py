@@ -79,6 +79,27 @@ def test_leg_correction_formula():
     assert math.isclose(real_rad[REAL_ORDER.index("FrontLeft")], expected)
 
 
+def test_leg_negate_minus_pi_formula():
+    cfg = JointsCfg(
+        sim_order=SIM_ORDER,
+        real_order=REAL_ORDER,
+        motor_ids=MOTOR_IDS,
+        correction_group={**CORRECTION_GROUP, "FrontLeft": "leg_negate_minus_pi"},
+        ticks_per_rev=4096,
+        zero_tick=ZERO_TICK,
+        soft_limits_rad=SOFT_LIMITS,
+    )
+    jm = JointMapping(cfg)
+    sim_rad = np.zeros(len(SIM_ORDER))
+    sim_rad[SIM_ORDER.index("FrontLeft")] = -0.47
+    real_rad = jm.sim_rad_to_real_rad(sim_rad)
+    expected = -(-0.47) - math.pi
+    assert math.isclose(real_rad[REAL_ORDER.index("FrontLeft")], expected)
+    # Same physical angle as leg_negate_plus_pi's real_rad, just the other
+    # 2*pi-equivalent phase branch.
+    assert math.isclose(expected + 2 * math.pi, -(-0.47) + math.pi)
+
+
 def test_body_correction_formula():
     jm = make_mapping()
     sim_rad = np.zeros(len(SIM_ORDER))
