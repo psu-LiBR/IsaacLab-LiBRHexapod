@@ -1,0 +1,13 @@
+# Runs on the Raspberry Pi (or any machine driving the real hexapod), in a
+# *separate* Python environment from Isaac Lab's bundled Python. ROS2 (rclpy,
+# sensor_msgs) is not pip-installable -- it must already be set up on the robot
+# for the /imu topic to exist in the first place; see CLAUDE.md.
+
+numpy
+pyyaml
+onnxruntime
+dynamixel-sdk
+
+# Dev-only, for running scripts/sim2real_transfer/tests/:
+# pytest
+# torch    (only needed to export the tiny synthetic ONNX graphs used in tests)

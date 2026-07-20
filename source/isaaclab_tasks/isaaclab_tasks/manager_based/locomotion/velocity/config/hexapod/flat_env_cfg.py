@@ -18,6 +18,7 @@ from .hexapod_rewards import (
 )
 #import os
 import math
+import isaaclab.sim as sim_utils
 
 @configclass
 class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
@@ -108,13 +109,13 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         #self.rewards.base_yaw_drift_l2.weight = -0.12
 
         #standard
-        self.rewards.dof_torques_l2.weight = -5.0e-5 #was -2.5e-5s
+        self.rewards.dof_torques_l2.weight = -5.0e-8 #was -2.5e-5s
 
         # Fixed-threshold air time: reward each leg for staying airborne >= threshold seconds.
         # Per-leg duty-cycle version produced only 0.027 sum (too weak to shape gait) -- reverted.
         # self.rewards.feet_air_time.func = feet_air_time_per_leg  # per-leg version; kept for reference
         # self.rewards.feet_air_time.params = {"command_name": "base_velocity", "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["MiddleLeft","MiddleRight","BackLeft","BackRight","FrontLeft","FrontRight"]), "target_ratio": 0.9}
-        self.rewards.feet_air_time.weight = 0.5
+        self.rewards.feet_air_time.weight = 0.25
         self.rewards.feet_air_time.params["threshold"] = 0.1  # 0.1 s; shuffling air phases are typically <0.02 s
         
         self.rewards.dof_pos_limits.weight = -1.0
@@ -122,7 +123,7 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         self.rewards.ang_vel_xy_l2.weight = 0.0 #-0.00000001
         self.rewards.undesired_contacts.weight = -1.0
         self.rewards.lin_vel_z_l2.weight = -0.00000001 #-0.0001
-        self.rewards.action_rate_l2.weight = -2.5e-2
+        self.rewards.action_rate_l2.weight = -2.5e-6
 
         # change terrain to flat
         self.scene.terrain.terrain_type = "plane"
@@ -175,6 +176,10 @@ class HexapodFlatEnvCfg_PLAY(HexapodFlatEnvCfg):
         self.events.physics_material.params["dynamic_friction_range"] = (0.35, 0.45)
         #self.scene.terrain.physics_material.static_friction= 0.8
         #self.scene.terrain.physics_material.dynamic_friction= 0.6
+
+        # Bare performance mode: all RTX ray-tracing features disabled for
+        # maximum driver compatibility when recording video.
+        self.sim.render = sim_utils.RenderCfg(rendering_mode="performance")
 
         # camera settings -- follow robot from behind and above
         self.viewer.eye = (-1.0, 0.0, 0.5)

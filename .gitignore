@@ -59,12 +59,14 @@ _build
 # Teleop Recorded Dataset
 /datasets/
 
-# Tests
-tests/
-
 # Docker history
 .isaac-lab-docker-history
 
 # TacSL sensor
 **/tactile_record/*
 **/gelsight_r15_data/*
+
+# sim2real_transfer: real (calibrated) deployment config and staged policy
+# checkpoints are per-robot/per-run, not tracked -- only the .example.yaml is.
+scripts/sim2real_transfer/config/deployment.yaml
+scripts/sim2real_transfer/policies/

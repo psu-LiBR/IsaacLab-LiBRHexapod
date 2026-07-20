@@ -41,6 +41,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.utils import configclass
 
 import isaaclab.envs.mdp as mdp
+import isaaclab.sim as sim_utils
 
 from .flat_env_cfg import HexapodFlatEnvCfg, HexapodFlatEnvCfg_PLAY
 from .hexapod_mimic_rewards import joint_pos_imitation
@@ -52,7 +53,7 @@ from .hexapod_mimic_rewards import joint_pos_imitation
 
 # Path to a reference gait CSV.  Set to None to use the generated tripod gait.
 MIMIC_CSV_PATH: str | None = (
-    "hexapod-assets/Sim Gaits/forward3_lleg30_amp65_sim.csv"
+    "hexapod-assets/Sim Gaits/forward3_lleg35_amp65_sim.csv"
 )
 # Duration of one gait cycle in the reference (seconds).  Overridden by CSV
 # if the CSV contains a "time" column spanning exactly one cycle.
@@ -78,7 +79,7 @@ MIMIC_JOINT_SIGMA: float = 0.4   # per-joint sigma; ~±23° tolerance before rew
 # 0.0 = pure imitation (no RL signal at all during phase 1).
 # 0.1 = RL rewards at 10% — keeps a weak locomotion signal alongside imitation.
 # 1.0 = no scaling (original behaviour).
-MIMIC_RL_SCALE: float = 1.0
+MIMIC_RL_SCALE: float = 0.5
 
 # Reward terms to scale down during the imitation phase.
 # Safety/limit terms (dof_pos_limits, undesired_contacts) are intentionally
@@ -186,6 +187,8 @@ class HexapodMimicEnvCfg_PLAY(HexapodMimicEnvCfg):
 
         self.events.physics_material.params["static_friction_range"] = (0.5, 0.6)
         self.events.physics_material.params["dynamic_friction_range"] = (0.35, 0.45)
+
+        self.sim.render = sim_utils.RenderCfg(rendering_mode="performance")
 
         self.viewer.eye = (-1.0, 0.0, 0.5)
         self.viewer.lookat = (0.0, 0.0, 0.0)

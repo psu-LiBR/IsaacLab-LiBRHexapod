@@ -39,6 +39,12 @@ isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Velo
 :: Play open-loop gait from CSV (compare against RL policy rewards)
 isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/playReal.py --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --gait_csv <path_to_csv> --gait_mode pos --gait_dt <seconds_per_row> --warmup_time 1.0
 
+:: Train the goal-reaching curriculum (reach a fixed forward distance as fast as possible)
+isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096
+
+:: Play/evaluate a goal-reaching checkpoint
+isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/play.py --task Isaac-Goal-Flat-Hexapod-Play-v0 --num_envs 1
+
 :: List all registered environments
 isaaclab.bat -p scripts/environments/list_envs.py
 
@@ -58,9 +64,16 @@ ruff format source/
 ```bat
 :: Run tests (requires Isaac Sim Python)
 isaaclab.bat -p -m pytest source/ -m "not isaacsim_ci"
+
+:: Run a single test file
+isaaclab.bat -p -m pytest source/isaaclab_tasks/test/test_hexapod_goal_mdp.py -v
 ```
 
+`test_hexapod_goal_mdp.py` loads `hexapod_goal_rewards.py`/`hexapod_goal_curriculum.py` directly via `importlib` (not through the `isaaclab_tasks` package) and only depends on `torch`, so — unlike most tests here — it can also run under plain system Python: `python -m pytest source/isaaclab_tasks/test/test_hexapod_goal_mdp.py`.
+
 Training logs save to `logs/rsl_rl/<experiment_name>/<timestamp>/`.
+
+`scripts/sim2real_transfer/` is a separate plain-Python package (no Isaac Sim dependency, own `requirements.txt`) for running exported policies on the real robot — see **Sim-to-Real Deployment** below for its commands.
 
 ## Repository Structure
 
@@ -83,6 +96,7 @@ source/
 scripts/
   reinforcement_learning/rsl_rl/  # train.py, play.py, playReal.py, playpyvista.py, render_pyvista.py
   environments/                   # Utility scripts: list_envs, random_agent, zero_agent
+  sim2real_transfer/              # Standalone real-hardware deployment package; see below
 ```
 
 ## Architecture: How a Task is Defined
@@ -94,8 +108,10 @@ LocomotionVelocityRoughEnvCfg          # source/isaaclab_tasks/.../velocity_env_
   └── HexapodRoughEnvCfg               # config/hexapod/rough_env_cfg.py
         └── HexapodFlatEnvCfg          # config/hexapod/flat_env_cfg.py
               ├── HexapodFlatEnvCfg_PLAY
-              └── HexapodMimicEnvCfg   # config/hexapod/hexapod_mimic_env_cfg.py
-                    └── HexapodMimicEnvCfg_PLAY
+              ├── HexapodMimicEnvCfg   # config/hexapod/hexapod_mimic_env_cfg.py
+              │     └── HexapodMimicEnvCfg_PLAY
+              └── HexapodGoalEnvCfg    # config/hexapod/hexapod_goal_env_cfg.py
+                    └── HexapodGoalEnvCfg_PLAY
 ```
 
 The environment config holds nested sub-configs for:
@@ -130,6 +146,7 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `Isaac-Velocity-Flat-Hexapod-v0` / `Isaac-Velocity-Flat-Hexapod-Play-v0`
 - `Isaac-Velocity-Rough-Hexapod-v0` / `Isaac-Velocity-Rough-Hexapod-Play-v0`
 - `Isaac-Velocity-Flat-Hexapod-Mimic-v0` / `Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0`
+- `Isaac-Goal-Flat-Hexapod-v0` / `Isaac-Goal-Flat-Hexapod-Play-v0`
 
 **Flat env key settings** (`flat_env_cfg.py`):
 
@@ -152,6 +169,11 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `hexapod_mimic_rewards.py` — `joint_pos_imitation` and `spine_pos_imitation` reward functions; `MotionReference` is built lazily and cached in a module-level dict keyed by `(csv_path, gait_period, col_order)` so it is only constructed once across all envs
 - `hexapod_mimic_motion.py` — `MotionReference` class: loads a reference gait from CSV (headerless or headered) or falls back to a built-in sinusoidal tripod gait; resamples to a 200-point uniform phase grid; transfers to GPU lazily on first `get_reference()` call
 - `agents/rsl_rl_ppo_mimic_cfg.py` — `HexapodMimicPPORunnerCfg`: 3000 total iterations, `init_noise_std=0.25`, `entropy_coef=0.005`, logs to `logs/rsl_rl/hexapod_mimic/`
+- `hexapod_goal_env_cfg.py` — `HexapodGoalEnvCfg` and `HexapodGoalEnvCfg_PLAY`; see **Goal-Reaching System** below
+- `hexapod_goal_curriculum.py` — `goal_distance_curriculum`: success-rate-gated distance progression
+- `hexapod_goal_rewards.py` — `progress_to_goal`, `termination_signal`, `constant_per_step`, `reached_goal_done`
+- `hexapod_goal_obs_cfg.py` — `HexapodGoalObservationsCfg`: mirrors `HexapodFlatObservationsCfg` but swaps `velocity_commands` for `pose_command` (4-dim relative goal pose)
+- `agents/rsl_rl_ppo_goal_cfg.py` — `HexapodGoalPPORunnerCfg`: 3000 iterations, `num_steps_per_env=96`, `gamma=0.999`, `entropy_coef=0.003`, logs to `logs/rsl_rl/hexapod_goal/`
 
 **Mimic System** (`hexapod_mimic_env_cfg.py`, `hexapod_mimic_rewards.py`, `hexapod_mimic_motion.py`):
 
@@ -177,6 +199,18 @@ Tripod B (swing second half-cycle): indices 2, 5, 7 (MiddleLeft, BackRight, Fron
 
 PPO tuning rationale for mimic: `init_noise_std=0.25` (down from default 1.0) prevents the policy from getting imitation reward "for free" by saturating joints at their limits, which causes value-function divergence. `entropy_coef=0.005` (down from 0.01) allows action std to decrease once the gradient supports deterministic tracking.
 
+**Goal-Reaching System** (`hexapod_goal_env_cfg.py`, `hexapod_goal_curriculum.py`, `hexapod_goal_rewards.py`, `hexapod_goal_obs_cfg.py`):
+
+`HexapodGoalEnvCfg` inherits `HexapodFlatEnvCfg` and replaces the velocity-tracking task with "reach a fixed point N meters forward as fast as possible":
+
+- **Command**: `commands.base_velocity` is disabled; `commands.pose_command` (`UniformPose2dCommandCfg`) is pinned to a fixed `(distance, 0, heading=0)` per episode — resampling interval equals `episode_length_s` (45.0) so it never resamples mid-episode. Distance is set externally by the curriculum, not sampled randomly.
+- **Observations**: `HexapodGoalObservationsCfg` swaps `velocity_commands` for `pose_command` (4-dim: x, y, z, heading in robot base frame); otherwise identical actor/critic asymmetry as the flat task.
+- **Rewards**: velocity-tracking rewards (`track_lin_vel_xy_exp`, `track_ang_vel_z_exp`) are removed. Task reward = `progress_to_goal` (velocity component toward goal, weight 10.0 — the per-step integral telescopes to total displacement toward goal) + sparse `reach_bonus` (weight 2500.0, fires once via the `reach_goal` termination) + `fall_penalty` (weight −1250.0, fires via `base_contact`) + `time_penalty` (constant −0.2/step to select faster gaits). Anti-jump/anti-bounce shaping terms (`lin_vel_z_l2`, `ang_vel_xy_l2`, `flat_orientation_l2`, etc.) are kept but weakened relative to the flat template. `position_command_error_tanh`-style proximity rewards are deliberately **not** used — they reward lingering near the goal, incentivizing slow approaches.
+- **Termination**: `reach_goal` fires when the robot is within `REACH_RADIUS` (0.3 m) of the goal.
+- **Curriculum** (`goal_distance_curriculum`): tracks success/fall counts over non-overlapping windows of `CURRICULUM_WINDOW_SIZE` (4096) completed episodes; advances to the next stage in `GOAL_DISTANCES = (1.0, 2.0, 3.5, 5.0)` m once the windowed success rate reaches `CURRICULUM_SUCCESS_THRESHOLD` (0.7). State is stored as ad hoc attributes on the `env` object (`_goal_curriculum_stage`, etc.) rather than in a config field.
+- `HexapodGoalEnvCfg_PLAY` fixes distance at the final curriculum stage (5.0 m), disables the curriculum and domain randomization events, and sets a wide fixed-world camera to view the whole 5 m path across 16 envs.
+- PPO tuning (`rsl_rl_ppo_goal_cfg.py`): inherits `HexapodRoughPPORunnerCfg`, raises `gamma` to 0.999 (longer effective horizon needed for a 45 s sparse/shaped goal task vs. the flat task's short-horizon velocity tracking) and lowers `entropy_coef` to 0.003.
+
 **playReal.py** (`scripts/reinforcement_learning/rsl_rl/playReal.py`):
 
 - Extends play.py to support open-loop gait CSV playback for sim-to-real comparison
@@ -186,6 +220,8 @@ PPO tuning rationale for mimic: `init_noise_std=0.25` (down from default 1.0) pr
 - Prints applied torques (N·m) and base velocity (body frame, vx/vy/vz + yaw_rate) every 20 steps
 - Logs joint positions to CSV and displacement tracking per step
 - Reward breakdown printed at end of episode
+
+Distinct from `scripts/sim2real_transfer/` (see below): `playReal.py` replays a CSV gait open-loop *inside Isaac Sim* for reward comparison; `sim2real_transfer` runs a trained policy closed-loop on the *actual robot*.
 
 **MATLAB gait conversion** (external, not in repo):
 
@@ -253,6 +289,48 @@ Key `render_pyvista.py` arguments:
 
 `playpyvista.py` is a fork of `play.py` kept as a separate file so `play.py` can be merged from upstream cleanly. Differences: always logs body poses (no flag), adds `--num_steps` to stop after a fixed count. The hardcoded output paths in `play.py`/`playpyvista.py` (CSV joint log, displacement log) still point to `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/` and must be updated if the machine changes.
 
+## Sim-to-Real Deployment (`scripts/sim2real_transfer/`)
+
+Plain-Python package (**no Isaac Lab / Isaac Sim dependency**) that runs a trained, ONNX-exported hexapod policy on the real robot from its own host computer (e.g. a Raspberry Pi): real Dynamixel servos + real IMU (via ROS2 `/imu`), no simulator involved. Lives in its own environment — `pip install -r scripts/sim2real_transfer/requirements.txt` — separate from Isaac Lab's bundled Python; ROS2 (`rclpy`) must already be installed on that host for the `/imu` topic to exist. See `scripts/sim2real_transfer/README.md` for day-to-day usage.
+
+**Bring-up order** (each stage removes one more layer of risk before the next; run from `scripts/sim2real_transfer/`):
+
+```bash
+# 1-2. Unit tests, then offline ONNX validation against a sim-recorded trace — no hardware at all.
+python -m pytest tests/
+python tools/validate_onnx.py --trace <sim_trace.csv> --policy <policy.onnx> --profile velocity
+
+# 3. Full loop, no hardware attached at all.
+python run_policy.py --policy <policy.onnx> --profile velocity --dry-run --fake-imu --duration 5
+
+# 4. Live IMU + live encoders, servos never move (zero physical risk).
+python run_policy.py --policy <policy.onnx> --profile velocity --config config/deployment.yaml --no-torque
+
+# 5. First real motion — robot propped with legs off the ground, damped action scale.
+python run_policy.py --policy <policy.onnx> --profile velocity --config config/deployment.yaml --action-scale-mult 0.2
+
+# 6+. Full scale, then tethered ground contact, then free running.
+python run_policy.py --policy <policy.onnx> --profile velocity --config config/deployment.yaml --log-csv run.csv
+```
+
+`config/deployment.yaml` is gitignored; copy it from `config/deployment.example.yaml` and calibrate every field marked `# CALIBRATE` (leg encoder `zero_tick` values, IMU `mount_offset_quat`) against the physical robot before trusting it — the example ships placeholder values only.
+
+**Architecture** (`sim2real/` package):
+
+- `profiles.py` — `ProfileSpec`/`ObsBuilder` for the `velocity` and `goal` profiles; builds the obs vector in the exact term order the RL policy was trained on — `gyro(3), gravity(3), command(3 or 4), joint_pos_rel(8), joint_vel(8), last_action(8)` — mirroring `HexapodFlatObservationsCfg.PolicyCfg` / `HexapodGoalObservationsCfg.PolicyCfg` from the main Isaac Lab config
+- `joint_mapping.py` — **the single most safety-critical file in the package**: converts between sim DOF order (matches `asset.data.joint_names` / the policy's action order) and real DOF order (matches physical wiring/motor IDs), applying a per-joint `correction_group` (`unchanged` / `negate` / `leg_negate_plus_pi`) before converting radians to encoder ticks. Reorder → sign/offset correction → tick conversion are kept as separate, independently testable steps rather than one fused formula
+- `deployment_config.py` — typed loader for `deployment.yaml`; every hardware fact (serial port, motor IDs, encoder zero ticks, soft joint limits, IMU mount offset, control rate) lives here and nowhere else — other modules never touch YAML directly
+- `policy_runner.py` — onnxruntime wrapper around policies exported by `isaaclab_rl.rsl_rl.exporter.export_policy_as_onnx`; validates the loaded graph's obs/action dims against the requested `--profile` at construction so a mismatched policy/profile pairing fails immediately instead of producing garbage actions
+- `control_loop.py` — the 50 Hz loop: reads IMU + encoder ticks, builds obs, runs inference, clips to soft limits, writes goal ticks. Runs `imu.RosImuReader`'s `rclpy` spin in a background thread while the servo/inference loop stays on the main thread (mirrors the real robot's own `hexapod_tripod_adaptive.py` + `combined_logger.py` threading split, which lives outside this repo). A `try`/`finally` guarantees `soft_stop_ramp` + `torque_enable(False)` run on normal exit, an unhandled exception, or Ctrl+C alike
+- `safety.py` — `Watchdog` (trips on comms silence or a failed sanity check — non-finite obs, out-of-range target tick) and `ramp_to_target` (linear interpolation used for both soft-start and soft-stop, so the robot never snaps to a target pose instantly)
+- `command_source.py` — swappable `CommandSource` interface; v1 only ships constant sources read from `deployment.yaml` (a future joystick/SSH-driven source can be added without touching `control_loop.py`)
+- `localization.py` — `DeadReckoningLocalizer`, **goal profile only, and the weakest link in the pipeline**: integrates gyro-z for heading and assumes a constant forward speed for position (the real robot has no GPS/mocap/AprilTag localization). Bring up the `velocity` profile first since it has zero dependency on this class; validate it separately (known-distance walk test) before trusting the `goal` profile
+- `tools/validate_onnx.py` — offline validation in two modes: `direct` (recorded obs → onnxruntime → diff vs. recorded action) and `pipeline` (additionally rebuilds obs from raw sensor fields via the real `ObsBuilder`, isolating obs-construction bugs from ONNX/export bugs); run on both the dev machine and the actual Pi since onnxruntime/opset behavior can differ by platform
+
+Swapping policies only requires pointing `--policy` at a different exported `.onnx` file of the same `--profile` — no config or code changes.
+
+**Tests**: `python -m pytest scripts/sim2real_transfer/tests/` (plain pytest, no Isaac Sim needed).
+
 ## Actuator Tuning Notes
 
 The `ImplicitActuatorCfg` in Isaac Lab applies: `torque = clip(stiffness*(q_target - q) - damping*q_dot, -effort_limit, effort_limit)`
@@ -289,3 +367,14 @@ When a config references e.g. `mdp.feet_air_time`, look in the locomotion mdp di
 - Python 3.11 type annotations (pyright strict mode)
 - Pre-commit hooks: ruff lint + ruff-format + trailing whitespace
 - No mock databases in tests; integration tests use live Isaac Sim physics
+
+## Claude Code Agent Delegation
+
+- Main session model is Sonnet (`.claude/settings.local.json`).
+- If you get stuck after a couple of failed attempts, hit a confusing bug, or want an
+  independent second opinion before committing to a risky approach, delegate to the
+  `fable-helper` subagent (runs on Fable 5) rather than continuing to guess.
+- For an objective that decomposes into several independent workstreams (e.g. review N
+  files, apply the same kind of change across N configs), use the `/fable-team` skill —
+  it delegates to `fable-orchestrator` (Fable 5), which plans the breakdown and fans it
+  out to up to 5 parallel Sonnet subagents, then integrates their results.
