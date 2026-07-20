@@ -35,6 +35,16 @@ parser.add_argument(
     help="Use the pre-trained checkpoint from Nucleus.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+parser.add_argument(
+    "--dump_obs_action_csv",
+    type=str,
+    default=None,
+    help="Optional path to dump per-step (obs, action) pairs to CSV, for offline "
+    "validation via scripts/sim2real_transfer/tools/validate_onnx.py. Only "
+    "meaningful for the hexapod flat/goal policy obs layout (gyro, gravity, "
+    "command, joint_pos_rel, joint_vel, last_action, in that fixed order) -- "
+    "use with --num_envs 1.",
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -311,6 +321,30 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # reset environment
     obs = env.get_observations()
     timestep = 0
+
+    # ---------- optional: dump (obs, action) pairs for sim2real_transfer/tools/validate_onnx.py ----------
+    dump_writer = None
+    dump_file = None
+    dump_step = 0
+    if args_cli.dump_obs_action_csv:
+        obs_dim = obs["policy"].shape[1]
+        cmd_dim = obs_dim - 3 - 3 - num_joints - num_joints - num_joints
+        action_dim = env.num_actions
+        os.makedirs(os.path.dirname(os.path.abspath(args_cli.dump_obs_action_csv)), exist_ok=True)
+        dump_file = open(args_cli.dump_obs_action_csv, "w", newline="")
+        dump_writer = csv.writer(dump_file)
+        dump_writer.writerow(
+            ["step", "t"]
+            + [f"gyro_{i}" for i in range(3)]
+            + [f"gravity_{i}" for i in range(3)]
+            + [f"command_{i}" for i in range(cmd_dim)]
+            + [f"joint_pos_{i}" for i in range(num_joints)]
+            + [f"joint_vel_{i}" for i in range(num_joints)]
+            + [f"last_action_{i}" for i in range(num_joints)]
+            + [f"obs_{i}" for i in range(obs_dim)]
+            + [f"action_{i}" for i in range(action_dim)]
+        )
+
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
@@ -318,6 +352,22 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         with torch.inference_mode():
             # agent stepping
             actions = policy(obs) #-- uncomment for normal running
+
+            if dump_writer is not None:
+                obs_row = obs["policy"][0].detach().cpu().numpy()
+                action_row = actions[0].detach().cpu().numpy()
+                gyro, gravity = obs_row[0:3], obs_row[3:6]
+                command = obs_row[6 : 6 + cmd_dim]
+                joint_pos = obs_row[6 + cmd_dim : 6 + cmd_dim + num_joints]
+                joint_vel = obs_row[6 + cmd_dim + num_joints : 6 + cmd_dim + 2 * num_joints]
+                last_action = obs_row[6 + cmd_dim + 2 * num_joints : 6 + cmd_dim + 3 * num_joints]
+                dump_writer.writerow(
+                    [dump_step, dump_step * dt]
+                    + list(gyro) + list(gravity) + list(command)
+                    + list(joint_pos) + list(joint_vel) + list(last_action)
+                    + list(obs_row) + list(action_row)
+                )
+                dump_step += 1
             # actions = actionsList[index] -- create actions list corresponding to the gait, scale and shift
             # Write the list of actions to a file - actions is a torch tensor
             # deploy at the same hz as the physical robot, and angle scaling/shifting, joint order
@@ -441,6 +491,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     for name in term_names:
         print(f"{name}:")
         print("  sum_per_env:", reward_term_sums[name].detach().cpu().numpy())
+
+    if dump_file is not None:
+        dump_file.close()
+        print(f"[INFO] wrote {dump_step} (obs, action) rows to {args_cli.dump_obs_action_csv}")
 
     # close the simulator
     env.close()
