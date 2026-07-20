@@ -18,19 +18,26 @@ any old CAD/mount assumption.
 
 TEST PROCEDURE (torque OFF; a human holds/tips the robot by hand)
 -------------------------------------------------------------------
-  1. LEVEL       -- hold the robot level and stationary (~3s)
+For each of the 7 steps below, `log` mode prints the prompt and then waits
+(unlimited time, no rush) for you to press Enter once the robot is actually
+in position -- only THEN does it start the timed recording hold (3s by
+default, override with --hold-seconds).
+  1. LEVEL       -- hold the robot level and stationary
   2. NOSE DOWN   -- tip the front of the robot down ~20-30 deg about the
-                    body's left-right axis and hold (~3s)
-  3. LEVEL       -- return level and hold (~3s)
-  4. NOSE UP     -- tip the front up ~20-30 deg and hold (~3s)
-  5. LEVEL       -- return level and hold (~3s)
+                    body's left-right axis and hold
+  3. LEVEL       -- return level and hold
+  4. NOSE UP     -- tip the front up ~20-30 deg and hold
+  5. LEVEL       -- return level and hold
   6. ROLL LEFT   -- (recommended, not required) tip the robot's LEFT side
-                    down ~20-30 deg and hold (~3s)
-  7. LEVEL       -- return level and hold (~3s)
+                    down ~20-30 deg and hold
+  7. LEVEL       -- return level and hold
 
 Run `log` mode ON THE ROBOT HOST (wherever `bno08x_driver`/the fusion node
 publishes `/imu`) while the driver is already running in another terminal;
-it prints timed prompts for each step above and logs everything to CSV.
+it prints a get-ready/Enter-to-start prompt then a timed hold for each step
+above, and logs everything to CSV throughout (including the untimed
+get-ready pauses, which `analyze` mode's stationary-segment auto-detection
+simply treats as motion and skips over).
 Run `analyze` mode ANYWHERE with just numpy (no ROS2/rclpy needed) against
 the resulting CSV.
 
@@ -169,15 +176,16 @@ def axis_label(v: np.ndarray) -> tuple[str, float]:
 # `analyze` mode keeps working on machines with no ROS2 install at all.
 # ---------------------------------------------------------------------------
 
-# (name, hold_seconds, operator prompt)
+# (name, operator prompt). Hold duration is uniform across segments and comes
+# from --hold-seconds at runtime, not hardcoded here.
 DEFAULT_SCHEDULE = [
-    ("LEVEL", 3.0, "LEVEL - hold the robot level and stationary"),
-    ("NOSE_DOWN", 3.0, "TIP NOSE DOWN ~20-30 deg about the left-right axis - hold"),
-    ("LEVEL", 3.0, "LEVEL - hold still"),
-    ("NOSE_UP", 3.0, "TIP NOSE UP ~20-30 deg about the left-right axis - hold"),
-    ("LEVEL", 3.0, "LEVEL - hold still"),
-    ("ROLL_LEFT_DOWN", 3.0, "ROLL: tip the LEFT side DOWN ~20-30 deg - hold"),
-    ("LEVEL", 3.0, "LEVEL - hold still - test complete"),
+    ("LEVEL", "LEVEL - hold the robot level and stationary"),
+    ("NOSE_DOWN", "TIP NOSE DOWN ~20-30 deg about the left-right axis - hold"),
+    ("LEVEL", "LEVEL - hold still"),
+    ("NOSE_UP", "TIP NOSE UP ~20-30 deg about the left-right axis - hold"),
+    ("LEVEL", "LEVEL - hold still"),
+    ("ROLL_LEFT_DOWN", "ROLL: tip the LEFT side DOWN ~20-30 deg - hold"),
+    ("LEVEL", "LEVEL - hold still - test complete"),
 ]
 
 # Same, without the (optional) roll segment -- pitch-only fallback.
@@ -239,17 +247,19 @@ def cmd_log(args: argparse.Namespace) -> None:
 
     schedule = NO_ROLL_SCHEDULE if args.skip_roll else DEFAULT_SCHEDULE
     print(f"Logging '{args.topic}' -> {args.out}. Torque should be OFF; a human holds/tips the robot by hand.")
-    print(f"{len(schedule)} segments, ~{sum(s[1] for s in schedule):.0f}s of holds "
-          f"(plus however long you take to move between them -- no rush).\n")
+    print(f"{len(schedule)} segments, {args.hold_seconds:.0f}s recorded hold each. Before each hold you'll be "
+          f"prompted to press Enter when ready -- take as long as you need to get into position, no rush.\n")
 
     try:
-        for name, hold_s, prompt in schedule:
+        for name, prompt in schedule:
             print(f"=== {name} ===\n{prompt}")
+            input("  Get into position, then press Enter to start recording this hold...")
+            print(f"  >>> RECORDING for {args.hold_seconds:.0f}s -- hold steady now <<<")
             seg_start = time.time()
-            while time.time() - seg_start < hold_s:
+            while time.time() - seg_start < args.hold_seconds:
                 time.sleep(0.1)
                 snap = state.snapshot()
-                remain = hold_s - (time.time() - seg_start)
+                remain = args.hold_seconds - (time.time() - seg_start)
                 if snap is None:
                     print("\r  [waiting for first IMU message...]", end="", flush=True)
                     continue
@@ -573,6 +583,10 @@ def main() -> None:
     p_log.add_argument("--out", default="imu_axis_alignment_log.csv", help="output CSV path")
     p_log.add_argument("--skip-roll", action="store_true",
                         help="omit the (optional) ROLL_LEFT_DOWN segment -- pitch-only test")
+    p_log.add_argument("--hold-seconds", type=float, default=3.0,
+                        help="seconds of steady-hold recording per segment, once you press Enter to start it "
+                             "(default: 3.0). Getting INTO position is untimed -- you always get an unlimited "
+                             "'press Enter when ready' pause before each hold starts.")
     p_log.set_defaults(func=cmd_log)
 
     p_an = sub.add_parser("analyze", help="Run ANYWHERE (plain numpy): analyze a CSV from `log` mode.")
