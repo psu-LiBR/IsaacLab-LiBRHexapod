@@ -9,12 +9,14 @@ import pytest
 
 from isaaclab.app import AppLauncher
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.usefixtures("mocker")
 def test_livestream_launch_with_argparser(mocker):
     """Test launching with argparser arguments."""
     # Mock the parse_args method
-    mocker.patch("argparse.ArgumentParser.parse_args", return_value=argparse.Namespace(livestream=1, headless=True))
+    mocker.patch("argparse.ArgumentParser.parse_args", return_value=argparse.Namespace(livestream=1))
     # create argparser
     parser = argparse.ArgumentParser()
     # add app launcher arguments
@@ -25,18 +27,39 @@ def test_livestream_launch_with_argparser(mocker):
     # parse args
     mock_args = parser.parse_args()
     # everything defaults to None
-    app = AppLauncher(mock_args).app
-
-    # import settings
-    import carb
-
-    # acquire settings interface
-    carb_settings_iface = carb.settings.get_settings()
-    # check settings
-    # -- no-gui mode
-    assert carb_settings_iface.get("/app/window/enabled") is False
-    # -- livestream
-    assert carb_settings_iface.get("/app/livestream/enabled") is True
+    app_launcher = AppLauncher(mock_args)
+    app = app_launcher.app
+    assert app_launcher._livestream == 1
+    assert app_launcher._headless is True
 
     # close the app on exit
     app.close()
+
+
+def test_visualizer_alias_parsing():
+    """Test that --viz alias maps to visualizer values."""
+    parser = argparse.ArgumentParser()
+    AppLauncher.add_app_launcher_args(parser)
+
+    args = parser.parse_args(["--viz", "kit,newton"])
+    assert args.visualizer == ["kit", "newton"]
+    assert args.visualizer_explicit is True
+
+
+def test_headless_deprecated_arg_parsing():
+    """Test that deprecated --headless is still accepted by the parser."""
+    parser = argparse.ArgumentParser()
+    AppLauncher.add_app_launcher_args(parser)
+
+    args = parser.parse_args(["--headless"])
+    assert args.headless is True
+    assert args.headless_explicit is True
+
+
+@pytest.mark.parametrize("value", ["none", "None"])
+def test_visualizer_none_parsing(value: str):
+    parser = argparse.ArgumentParser()
+    AppLauncher.add_app_launcher_args(parser)
+    args = parser.parse_args(["--viz", value])
+    assert args.visualizer is None
+    assert args.visualizer_explicit is True

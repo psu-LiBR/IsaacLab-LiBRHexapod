@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Static-tilt calibration test to determine which raw IMU axis is the robot
 body's FORWARD direction (and which is LEFT), for the *current* physical
 mount -- see CLAUDE.md's sim2real IMU bring-up notes.
@@ -125,7 +130,7 @@ def quat_apply_inverse(q_wxyz: np.ndarray, v: np.ndarray) -> np.ndarray:
 
 def rot_matrix_to_quat(R: np.ndarray) -> np.ndarray:
     """Rotation matrix -> quaternion [w, x, y, z]. Standard branch-selecting
-    (Shepperd) method; inverse of quat_to_rot_matrix above."""
+    (Shepherd) method; inverse of quat_to_rot_matrix above."""
     m00, m01, m02 = R[0]
     m10, m11, m12 = R[1]
     m20, m21, m22 = R[2]
@@ -222,7 +227,7 @@ def cmd_log(args: argparse.Namespace) -> None:
         ) from exc
 
     state = _State()
-    out_file = open(args.out, "w", newline="")
+    out_file = open(args.out, "w", newline="")  # noqa: SIM115 -- lives across the ROS callback loop, closed below
     writer = csv.writer(out_file)
     writer.writerow(["t_wall", "qw", "qx", "qy", "qz", "gyro_x", "gyro_y", "gyro_z", "acc_x", "acc_y", "acc_z"])
 
@@ -247,8 +252,10 @@ def cmd_log(args: argparse.Namespace) -> None:
 
     schedule = NO_ROLL_SCHEDULE if args.skip_roll else DEFAULT_SCHEDULE
     print(f"Logging '{args.topic}' -> {args.out}. Torque should be OFF; a human holds/tips the robot by hand.")
-    print(f"{len(schedule)} segments, {args.hold_seconds:.0f}s recorded hold each. Before each hold you'll be "
-          f"prompted to press Enter when ready -- take as long as you need to get into position, no rush.\n")
+    print(
+        f"{len(schedule)} segments, {args.hold_seconds:.0f}s recorded hold each. Before each hold you'll be "
+        f"prompted to press Enter when ready -- take as long as you need to get into position, no rush.\n"
+    )
 
     try:
         for name, prompt in schedule:
@@ -349,8 +356,10 @@ def cmd_analyze(args: argparse.Namespace) -> None:
 
     segments = find_stationary_segments(t, gyro_mag, args.gyro_thresh, args.min_hold_duration)
     print(f"Loaded {len(t)} samples over {t[-1] - t[0]:.1f}s from {args.csv}")
-    print(f"Auto-detected {len(segments)} stationary (held) segment(s) "
-          f"(gyro_thresh={args.gyro_thresh} rad/s, min_hold_duration={args.min_hold_duration}s).\n")
+    print(
+        f"Auto-detected {len(segments)} stationary (held) segment(s) "
+        f"(gyro_thresh={args.gyro_thresh} rad/s, min_hold_duration={args.min_hold_duration}s).\n"
+    )
 
     if len(segments) < 2:
         print("ERROR: need at least 2 held segments (a LEVEL baseline + at least one tip).")
@@ -361,8 +370,10 @@ def cmd_analyze(args: argparse.Namespace) -> None:
 
     print("Detected segments (chronological):")
     for k, ((i, j), m) in enumerate(zip(segments, means)):
-        print(f"  [{k}] t=({t[i]:.1f}-{t[j - 1]:.1f})s dur={t[j - 1] - t[i]:.1f}s "
-              f"gravity_imu_mean=({m[0]:+.4f}, {m[1]:+.4f}, {m[2]:+.4f})")
+        print(
+            f"  [{k}] t=({t[i]:.1f}-{t[j - 1]:.1f})s dur={t[j - 1] - t[i]:.1f}s "
+            f"gravity_imu_mean=({m[0]:+.4f}, {m[1]:+.4f}, {m[2]:+.4f})"
+        )
     print()
 
     # --- classify LEVEL vs TIPPED, refine baseline over all LEVEL-ish segs ---
@@ -375,10 +386,14 @@ def cmd_analyze(args: argparse.Namespace) -> None:
 
     up_in_imu = -baseline
     up_in_imu /= np.linalg.norm(up_in_imu)
-    print(f"LEVEL segments: {level_idxs} (baseline gravity_imu = "
-          f"({baseline[0]:+.4f}, {baseline[1]:+.4f}, {baseline[2]:+.4f}))")
-    print(f"up_in_imu (from -baseline) = ({up_in_imu[0]:+.4f}, {up_in_imu[1]:+.4f}, {up_in_imu[2]:+.4f}) "
-          f"[nearest raw axis: {axis_label(up_in_imu)[0]}, cos={axis_label(up_in_imu)[1]:.4f}]")
+    print(
+        f"LEVEL segments: {level_idxs} (baseline gravity_imu = "
+        f"({baseline[0]:+.4f}, {baseline[1]:+.4f}, {baseline[2]:+.4f}))"
+    )
+    print(
+        f"up_in_imu (from -baseline) = ({up_in_imu[0]:+.4f}, {up_in_imu[1]:+.4f}, {up_in_imu[2]:+.4f}) "
+        f"[nearest raw axis: {axis_label(up_in_imu)[0]}, cos={axis_label(up_in_imu)[1]:.4f}]"
+    )
     print(f"TIPPED segments (by detection order): {tipped_idxs}\n")
 
     if not tipped_idxs:
@@ -400,8 +415,10 @@ def cmd_analyze(args: argparse.Namespace) -> None:
             np.dot(nose_down_delta, nose_up_delta)
             / (np.linalg.norm(nose_down_delta) * np.linalg.norm(nose_up_delta) + 1e-12)
         )
-        print(f"Consistency check: nose-down delta vs nose-up delta cosine = {cos_opposite:+.3f} "
-              f"(expect close to -1.0, i.e. opposite directions)")
+        print(
+            f"Consistency check: nose-down delta vs nose-up delta cosine = {cos_opposite:+.3f} "
+            f"(expect close to -1.0, i.e. opposite directions)"
+        )
         forward_raw = (nose_down_delta - nose_up_delta) / 2.0
     elif nose_down_delta is not None:
         print("Only a NOSE_DOWN tip detected (no NOSE_UP) -- forward axis estimate is less averaged.")
@@ -413,8 +430,10 @@ def cmd_analyze(args: argparse.Namespace) -> None:
     forward_raw = project_out(forward_raw, up_in_imu)  # discard any up-axis leakage
     forward_in_imu = forward_raw / np.linalg.norm(forward_raw)
     fname, fcos = axis_label(forward_in_imu)
-    print(f"forward_in_imu = ({forward_in_imu[0]:+.4f}, {forward_in_imu[1]:+.4f}, {forward_in_imu[2]:+.4f}) "
-          f"[nearest raw axis: {fname}, cos={fcos:.4f}]\n")
+    print(
+        f"forward_in_imu = ({forward_in_imu[0]:+.4f}, {forward_in_imu[1]:+.4f}, {forward_in_imu[2]:+.4f}) "
+        f"[nearest raw axis: {fname}, cos={fcos:.4f}]\n"
+    )
 
     # --- left axis, from roll (gravity gains +left when left side dips down) ---
     if roll_delta is not None:
@@ -422,25 +441,33 @@ def cmd_analyze(args: argparse.Namespace) -> None:
         left_in_imu = left_raw / np.linalg.norm(left_raw)
         left_measured = True
     else:
-        print("No ROLL_LEFT_DOWN segment detected -- deriving left axis as up x forward "
-              "(right-handed completion). Re-run with the roll segment for an independently measured cross-check.")
+        print(
+            "No ROLL_LEFT_DOWN segment detected -- deriving left axis as up x forward "
+            "(right-handed completion). Re-run with the roll segment for an independently measured cross-check."
+        )
         left_in_imu = np.cross(up_in_imu, forward_in_imu)
         left_in_imu /= np.linalg.norm(left_in_imu)
         left_measured = False
     lname, lcos = axis_label(left_in_imu)
     tag = "(measured)" if left_measured else "(derived)"
-    print(f"left_in_imu {tag} = ({left_in_imu[0]:+.4f}, {left_in_imu[1]:+.4f}, {left_in_imu[2]:+.4f}) "
-          f"[nearest raw axis: {lname}, cos={lcos:.4f}]")
+    print(
+        f"left_in_imu {tag} = ({left_in_imu[0]:+.4f}, {left_in_imu[1]:+.4f}, {left_in_imu[2]:+.4f}) "
+        f"[nearest raw axis: {lname}, cos={lcos:.4f}]"
+    )
 
     # --- orthonormality / right-handedness check ---
     up_refined = np.cross(forward_in_imu, left_in_imu)
     up_refined /= np.linalg.norm(up_refined)
     up_angle_deg = math.degrees(math.acos(np.clip(np.dot(up_refined, up_in_imu), -1.0, 1.0)))
-    print(f"\nOrthogonality/right-handedness check: forward.left={np.dot(forward_in_imu, left_in_imu):+.4f}, "
-          f"angle between (forward x left) and measured up = {up_angle_deg:.2f} deg (expect ~0).")
+    print(
+        f"\nOrthogonality/right-handedness check: forward.left={np.dot(forward_in_imu, left_in_imu):+.4f}, "
+        f"angle between (forward x left) and measured up = {up_angle_deg:.2f} deg (expect ~0)."
+    )
     if up_angle_deg > 10.0:
-        print("  WARNING: large mismatch -- check the roll segment was really a LEFT-down roll, "
-              "not right-down, and that pitch/roll weren't mixed together.")
+        print(
+            "  WARNING: large mismatch -- check the roll segment was really a LEFT-down roll, "
+            "not right-down, and that pitch/roll weren't mixed together."
+        )
 
     # --- gyro cross-check on the tipping *transitions* (not the holds) ---
     print("\nGyro cross-check (transition windows between held segments):")
@@ -464,9 +491,11 @@ def cmd_analyze(args: argparse.Namespace) -> None:
             g_dir = g_trans / np.linalg.norm(g_trans)
             cos_left = float(np.dot(g_dir, left_in_imu))
             expected_sign = +1 if nose_down_delta is not None else -1
-            print(f"  LEVEL->tip[0] transition mean gyro direction . left_in_imu = {cos_left:+.3f} "
-                  f"(expect ~{expected_sign:+d}.0; nose-down is a +left-axis rotation, "
-                  f"right-hand rule)")
+            print(
+                f"  LEVEL->tip[0] transition mean gyro direction . left_in_imu = {cos_left:+.3f} "
+                f"(expect ~{expected_sign:+d}.0; nose-down is a +left-axis rotation, "
+                f"right-hand rule)"
+            )
             if abs(cos_left) < 0.6:
                 print("    WARNING: weak alignment -- transition window may be too short/noisy.")
             elif (cos_left > 0) != (expected_sign > 0):
@@ -487,8 +516,10 @@ def cmd_analyze(args: argparse.Namespace) -> None:
             if g_trans2 is not None and np.linalg.norm(g_trans2) > 1e-6:
                 g_dir2 = g_trans2 / np.linalg.norm(g_trans2)
                 cos_fwd = float(np.dot(g_dir2, forward_in_imu))
-                print(f"  LEVEL->ROLL transition mean gyro direction . forward_in_imu = {cos_fwd:+.3f} "
-                      f"(expect ~-1.0; left-down is a -forward-axis rotation, right-hand rule)")
+                print(
+                    f"  LEVEL->ROLL transition mean gyro direction . forward_in_imu = {cos_fwd:+.3f} "
+                    f"(expect ~-1.0; left-down is a -forward-axis rotation, right-hand rule)"
+                )
                 if abs(cos_fwd) < 0.6:
                     print("    WARNING: weak alignment -- transition window may be too short/noisy.")
                 elif cos_fwd > 0:
@@ -546,14 +577,20 @@ def cmd_analyze(args: argparse.Namespace) -> None:
     print("\n" + "=" * 78)
     print("SUGGESTED mount_offset_quat (wxyz)")
     print("=" * 78)
-    print(f"  composed (R_remap @ existing tilt-only R):  "
-          f"[{quat_composed[0]:.6f}, {quat_composed[1]:.6f}, {quat_composed[2]:.6f}, {quat_composed[3]:.6f}]")
-    print(f"  self-contained (from-scratch, no old tilt):  "
-          f"[{quat_selfcontained[0]:.6f}, {quat_selfcontained[1]:.6f}, {quat_selfcontained[2]:.6f}, "
-          f"{quat_selfcontained[3]:.6f}]")
-    print(f"  angle between the two candidate quats: {agree_deg:.2f} deg "
-          f"(should be small -- tilt correction is a near-identity nudge; large disagreement means "
-          f"something is inconsistent, re-check the segments above)")
+    print(
+        f"  composed (R_remap @ existing tilt-only R):  "
+        f"[{quat_composed[0]:.6f}, {quat_composed[1]:.6f}, {quat_composed[2]:.6f}, {quat_composed[3]:.6f}]"
+    )
+    print(
+        f"  self-contained (from-scratch, no old tilt):  "
+        f"[{quat_selfcontained[0]:.6f}, {quat_selfcontained[1]:.6f}, {quat_selfcontained[2]:.6f}, "
+        f"{quat_selfcontained[3]:.6f}]"
+    )
+    print(
+        f"  angle between the two candidate quats: {agree_deg:.2f} deg "
+        f"(should be small -- tilt correction is a near-identity nudge; large disagreement means "
+        f"something is inconsistent, re-check the segments above)"
+    )
     print()
     print("Recommended value to consider: the COMPOSED one (reuses the existing, already-averaged")
     print("tilt calibration for the 'up' axis; this test only supplies the missing horizontal remap).")
@@ -565,8 +602,10 @@ def cmd_analyze(args: argparse.Namespace) -> None:
 
     # --- caveat ---
     if len(tipped_idxs) < 3:
-        print("\nCAVEAT: no independent roll measurement -- left axis above was DERIVED (up x forward), "
-              "not measured. Re-run including the ROLL_LEFT_DOWN segment for a full cross-check.")
+        print(
+            "\nCAVEAT: no independent roll measurement -- left axis above was DERIVED (up x forward), "
+            "not measured. Re-run including the ROLL_LEFT_DOWN segment for a full cross-check."
+        )
     print("CAVEAT: this method recovers an ARBITRARY (not just 90-degree) yaw offset correctly -- forward/left")
     print("are computed as continuous unit vectors (via atan2-equivalent projection), not snapped to the")
     print("nearest cardinal axis. The '+X/-Y/...' labels above are only a human-readable diagnostic;")
@@ -577,34 +616,63 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
 
-    p_log = sub.add_parser("log", help="Run ON THE ROBOT HOST: guide the operator through the tilt procedure "
-                                        "and log raw IMU messages to CSV. Requires rclpy.")
+    p_log = sub.add_parser(
+        "log",
+        help="Run ON THE ROBOT HOST: guide the operator through the tilt procedure "
+        "and log raw IMU messages to CSV. Requires rclpy.",
+    )
     p_log.add_argument("--topic", default="/imu", help="IMU topic to subscribe to (default: /imu)")
     p_log.add_argument("--out", default="imu_axis_alignment_log.csv", help="output CSV path")
-    p_log.add_argument("--skip-roll", action="store_true",
-                        help="omit the (optional) ROLL_LEFT_DOWN segment -- pitch-only test")
-    p_log.add_argument("--hold-seconds", type=float, default=3.0,
-                        help="seconds of steady-hold recording per segment, once you press Enter to start it "
-                             "(default: 3.0). Getting INTO position is untimed -- you always get an unlimited "
-                             "'press Enter when ready' pause before each hold starts.")
+    p_log.add_argument(
+        "--skip-roll", action="store_true", help="omit the (optional) ROLL_LEFT_DOWN segment -- pitch-only test"
+    )
+    p_log.add_argument(
+        "--hold-seconds",
+        type=float,
+        default=3.0,
+        help="seconds of steady-hold recording per segment, once you press Enter to start it "
+        "(default: 3.0). Getting INTO position is untimed -- you always get an unlimited "
+        "'press Enter when ready' pause before each hold starts.",
+    )
     p_log.set_defaults(func=cmd_log)
 
     p_an = sub.add_parser("analyze", help="Run ANYWHERE (plain numpy): analyze a CSV from `log` mode.")
     p_an.add_argument("--csv", required=True, help="path to the CSV produced by `log` mode")
-    p_an.add_argument("--tilt-quat", type=float, nargs=4, default=list(DEFAULT_TILT_QUAT_WXYZ),
-                       metavar=("W", "X", "Y", "Z"),
-                       help="existing tilt-only mount_offset_quat (wxyz) to compose with (default: the value "
-                            "documented in this script's docstring -- pass the real one from your "
-                            "config/deployment.yaml if different)")
-    p_an.add_argument("--gyro-thresh", type=float, default=0.15,
-                       help="rad/s below which a sample counts as 'stationary' (default: 0.15)")
-    p_an.add_argument("--min-hold-duration", type=float, default=1.5,
-                       help="minimum seconds a stationary run must last to count as a held segment (default: 1.5)")
-    p_an.add_argument("--trim-seconds", type=float, default=0.4,
-                       help="seconds trimmed off each end of a held segment before averaging (default: 0.4)")
-    p_an.add_argument("--level-thresh", type=float, default=0.12,
-                       help="gravity_imu delta-from-baseline norm below which a segment counts as "
-                            "'level' rather than 'tipped' (default: 0.12)")
+    p_an.add_argument(
+        "--tilt-quat",
+        type=float,
+        nargs=4,
+        default=list(DEFAULT_TILT_QUAT_WXYZ),
+        metavar=("W", "X", "Y", "Z"),
+        help="existing tilt-only mount_offset_quat (wxyz) to compose with (default: the value "
+        "documented in this script's docstring -- pass the real one from your "
+        "config/deployment.yaml if different)",
+    )
+    p_an.add_argument(
+        "--gyro-thresh",
+        type=float,
+        default=0.15,
+        help="rad/s below which a sample counts as 'stationary' (default: 0.15)",
+    )
+    p_an.add_argument(
+        "--min-hold-duration",
+        type=float,
+        default=1.5,
+        help="minimum seconds a stationary run must last to count as a held segment (default: 1.5)",
+    )
+    p_an.add_argument(
+        "--trim-seconds",
+        type=float,
+        default=0.4,
+        help="seconds trimmed off each end of a held segment before averaging (default: 0.4)",
+    )
+    p_an.add_argument(
+        "--level-thresh",
+        type=float,
+        default=0.12,
+        help="gravity_imu delta-from-baseline norm below which a segment counts as "
+        "'level' rather than 'tipped' (default: 0.12)",
+    )
     p_an.set_defaults(func=cmd_analyze)
 
     args = parser.parse_args()

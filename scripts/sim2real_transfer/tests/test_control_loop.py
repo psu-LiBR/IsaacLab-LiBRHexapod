@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import csv
 
 import numpy as np
@@ -6,8 +11,9 @@ import pytest
 pytest.importorskip("torch")
 pytest.importorskip("onnxruntime")
 
-from _onnx_test_utils import export_tiny_mlp
+import os
 
+from _onnx_test_utils import export_tiny_mlp
 from sim2real import control_loop
 from sim2real.command_source import make_command_source
 from sim2real.deployment_config import load_deployment_config
@@ -18,8 +24,6 @@ from sim2real.localization import DeadReckoningLocalizer
 from sim2real.logging_utils import CsvRunLogger
 from sim2real.policy_runner import PolicyRunner
 from sim2real.profiles import PROFILES, make_obs_builder
-
-import os
 
 _EXAMPLE_CFG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "deployment.example.yaml")
 
@@ -44,8 +48,19 @@ def test_dry_run_velocity_profile_completes_and_logs(tmp_path):
 
     with CsvRunLogger(str(log_path), obs_dim=PROFILES["velocity"].obs_dim, action_dim=8) as logger:
         control_loop.run(
-            cfg, "velocity", policy, obs_builder, jm, bus, imu, command_source,
-            localizer=None, logger=logger, dry_run=True, rate_hz=50.0, duration_s=0.2,
+            cfg,
+            "velocity",
+            policy,
+            obs_builder,
+            jm,
+            bus,
+            imu,
+            command_source,
+            localizer=None,
+            logger=logger,
+            dry_run=True,
+            rate_hz=50.0,
+            duration_s=0.2,
         )
 
     with open(log_path, newline="") as f:
@@ -58,16 +73,36 @@ def test_dry_run_goal_profile_requires_localizer(tmp_path):
     cfg, jm, policy, obs_builder, bus, imu, command_source, localizer = _make_env(tmp_path, "goal")
     with pytest.raises(ValueError, match="localizer"):
         control_loop.run(
-            cfg, "goal", policy, obs_builder, jm, bus, imu, command_source,
-            localizer=None, dry_run=True, rate_hz=50.0, duration_s=0.1,
+            cfg,
+            "goal",
+            policy,
+            obs_builder,
+            jm,
+            bus,
+            imu,
+            command_source,
+            localizer=None,
+            dry_run=True,
+            rate_hz=50.0,
+            duration_s=0.1,
         )
 
 
 def test_dry_run_goal_profile_completes_with_localizer(tmp_path):
     cfg, jm, policy, obs_builder, bus, imu, command_source, localizer = _make_env(tmp_path, "goal")
     control_loop.run(
-        cfg, "goal", policy, obs_builder, jm, bus, imu, command_source,
-        localizer=localizer, dry_run=True, rate_hz=50.0, duration_s=0.1,
+        cfg,
+        "goal",
+        policy,
+        obs_builder,
+        jm,
+        bus,
+        imu,
+        command_source,
+        localizer=localizer,
+        dry_run=True,
+        rate_hz=50.0,
+        duration_s=0.1,
     )
     assert bus.torque_on is False
 
@@ -81,8 +116,18 @@ def test_torque_disabled_even_on_exception(tmp_path):
 
     with pytest.raises(RuntimeError, match="simulated IMU failure"):
         control_loop.run(
-            cfg, "velocity", policy, obs_builder, jm, bus, BoomImu(), command_source,
-            localizer=None, dry_run=True, rate_hz=50.0, duration_s=1.0,
+            cfg,
+            "velocity",
+            policy,
+            obs_builder,
+            jm,
+            bus,
+            BoomImu(),
+            command_source,
+            localizer=None,
+            dry_run=True,
+            rate_hz=50.0,
+            duration_s=1.0,
         )
     assert bus.torque_on is False
 
@@ -111,8 +156,18 @@ def test_stale_imu_trips_watchdog_and_stops_cleanly(tmp_path, capsys):
     # duration_s=5.0 @ 50Hz would be ~250 iterations if the loop ran to completion;
     # it must instead stop shortly after the IMU goes stale.
     control_loop.run(
-        cfg, "velocity", policy, obs_builder, jm, bus, stale_imu, command_source,
-        localizer=None, dry_run=True, rate_hz=50.0, duration_s=5.0,
+        cfg,
+        "velocity",
+        policy,
+        obs_builder,
+        jm,
+        bus,
+        stale_imu,
+        command_source,
+        localizer=None,
+        dry_run=True,
+        rate_hz=50.0,
+        duration_s=5.0,
     )
 
     assert stale_imu.calls == 4  # 3 good reads, then the failing 4th one that breaks the loop
@@ -128,25 +183,44 @@ def test_imu_never_going_stale_does_not_trip_watchdog_early(tmp_path):
     # all its intended iterations rather than being cut short spuriously.
     cfg, jm, policy, obs_builder, bus, imu, command_source, localizer = _make_env(tmp_path, "velocity")
     control_loop.run(
-        cfg, "velocity", policy, obs_builder, jm, bus, imu, command_source,
-        localizer=None, dry_run=True, rate_hz=50.0, duration_s=0.2,
+        cfg,
+        "velocity",
+        policy,
+        obs_builder,
+        jm,
+        bus,
+        imu,
+        command_source,
+        localizer=None,
+        dry_run=True,
+        rate_hz=50.0,
+        duration_s=0.2,
     )
     assert bus.torque_on is False
 
 
 def test_dry_run_policy_actions_never_reach_bus(tmp_path):
     cfg, jm, policy, obs_builder, bus, imu, command_source, localizer = _make_env(
-        tmp_path, "velocity", weight_scale=1000.0  # large action -> would clearly move the robot if applied
+        tmp_path,
+        "velocity",
+        weight_scale=1000.0,  # large action -> would clearly move the robot if applied
     )
-    start_positions = bus.read_positions().copy()
     control_loop.run(
-        cfg, "velocity", policy, obs_builder, jm, bus, imu, command_source,
-        localizer=None, dry_run=True, rate_hz=50.0, duration_s=0.1,
+        cfg,
+        "velocity",
+        policy,
+        obs_builder,
+        jm,
+        bus,
+        imu,
+        command_source,
+        localizer=None,
+        dry_run=True,
+        rate_hz=50.0,
+        duration_s=0.1,
     )
     # soft_start/soft_stop ramps still move the dry-run bus toward q_default (expected),
     # but the policy's own large actions must never have been written mid-loop.
     end_positions = bus.read_positions()
-    q_default_ticks = jm.sim_target_to_ticks(
-        np.array([cfg.control.q_default_sim[n] for n in jm.sim_order])
-    )
+    q_default_ticks = jm.sim_target_to_ticks(np.array([cfg.control.q_default_sim[n] for n in jm.sim_order]))
     assert np.max(np.abs(end_positions.astype(float) - q_default_ticks.astype(float))) < 2

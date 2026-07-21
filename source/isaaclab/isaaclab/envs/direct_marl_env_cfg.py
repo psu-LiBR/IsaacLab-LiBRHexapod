@@ -3,16 +3,21 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from dataclasses import MISSING
+from __future__ import annotations
 
-from isaaclab.devices.openxr import XrCfg
+from dataclasses import MISSING
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isaaclab.devices.openxr import XrCfg
+
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
-from isaaclab.utils import configclass
+from isaaclab.utils.configclass import configclass
 from isaaclab.utils.noise import NoiseModelCfg
 
 from .common import AgentID, SpaceType, ViewerCfg
-from .ui import BaseEnvWindow
+from .utils.video_recorder_cfg import VideoRecorderCfg
 
 
 @configclass
@@ -30,7 +35,7 @@ class DirectMARLEnvCfg:
     """Physics simulation configuration. Default is SimulationCfg()."""
 
     # ui settings
-    ui_window_class_type: type | None = BaseEnvWindow
+    ui_window_class_type: type | str | None = "isaaclab.envs.ui.base_env_window:BaseEnvWindow"
     """The class type of the UI window. Default is None.
 
     If None, then no UI window is created.
@@ -77,6 +82,20 @@ class DirectMARLEnvCfg:
     Note:
         The base :class:`ManagerBasedRLEnv` class does not use this flag directly. It is used by the environment
         wrappers to determine what type of done signal to send to the corresponding learning agent.
+    """
+
+    compute_final_obs: bool = False
+    """Whether to capture the per-agent terminal observation before a Same-Step autoreset and expose it.
+
+    Under Same-Step autoreset (see :attr:`~isaaclab.envs.DirectMARLEnv.metadata`), an agent whose
+    environment terminates is reset within the same :meth:`~isaaclab.envs.DirectMARLEnv.step` call, so
+    the returned observation belongs to the *new* episode. When this flag is True, the observation is
+    computed once more *before* the reset and stored per agent under ``extras[agent]["final_obs"]``
+    (with the same observation noise as the returned observation applied), so wrappers can report it as
+    the true terminal observation for value bootstrapping.
+
+    Defaults to False, which preserves the previous behavior: no terminal observation is captured,
+    ``extras[agent]["final_obs"]`` is not populated, and the extra observation computation is skipped.
     """
 
     episode_length_s: float = MISSING
@@ -230,3 +249,6 @@ class DirectMARLEnvCfg:
 
     log_dir: str | None = None
     """Directory for logging experiment artifacts. Defaults to None, in which case no specific log directory is set."""
+
+    video_recorder: VideoRecorderCfg = VideoRecorderCfg()
+    """Configuration for video recording when ``render_mode="rgb_array"`` (i.e. ``--video``)."""

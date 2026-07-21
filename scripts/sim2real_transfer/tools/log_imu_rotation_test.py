@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Log raw /imu messages while manually rotating the robot, for mount_offset_quat /
 negate_gyro_z calibration (see CLAUDE.md's sim2real IMU bring-up notes).
 
@@ -77,7 +82,7 @@ class _State:
 
 
 class ImuLoggerNode(Node):
-    def __init__(self, topic: str, writer: "csv._writer", state: _State):
+    def __init__(self, topic: str, writer: csv._writer, state: _State):
         super().__init__("imu_rotation_test_logger")
         self._writer = writer
         self._state = state
@@ -88,9 +93,7 @@ class ImuLoggerNode(Node):
         o = msg.orientation
         av = msg.angular_velocity
         la = msg.linear_acceleration
-        self._writer.writerow(
-            [f"{t:.6f}", o.w, o.x, o.y, o.z, av.x, av.y, av.z, la.x, la.y, la.z]
-        )
+        self._writer.writerow([f"{t:.6f}", o.w, o.x, o.y, o.z, av.x, av.y, av.z, la.x, la.y, la.z])
         self._state.update(quat_to_yaw_deg(o.w, o.x, o.y, o.z), av.z)
 
 
@@ -103,7 +106,7 @@ def main() -> None:
 
     state = _State()
 
-    out_file = open(args.out, "w", newline="")
+    out_file = open(args.out, "w", newline="")  # noqa: SIM115 -- lives across the ROS callback loop, closed below
     writer = csv.writer(out_file)
     writer.writerow(["t_wall", "qw", "qx", "qy", "qz", "gyro_x", "gyro_y", "gyro_z", "acc_x", "acc_y", "acc_z"])
 

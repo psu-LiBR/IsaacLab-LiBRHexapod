@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 from __future__ import annotations
 
 import importlib.util
@@ -6,16 +11,7 @@ from types import SimpleNamespace
 
 import torch
 
-
-HEXAPOD_DIR = (
-    Path(__file__).parents[1]
-    / "isaaclab_tasks"
-    / "manager_based"
-    / "locomotion"
-    / "velocity"
-    / "config"
-    / "hexapod"
-)
+HEXAPOD_DIR = Path(__file__).parents[1] / "isaaclab_tasks" / "contrib" / "velocity" / "config" / "hexapod"
 
 
 def load_module(name: str, filename: str):
@@ -33,9 +29,7 @@ goal_curriculum = load_module("hexapod_goal_curriculum", "hexapod_goal_curriculu
 class FakeCommandManager:
     def __init__(self, command: torch.Tensor):
         self.command = command
-        self.term = SimpleNamespace(
-            cfg=SimpleNamespace(ranges=SimpleNamespace(pos_x=(1.0, 1.0)))
-        )
+        self.term = SimpleNamespace(cfg=SimpleNamespace(ranges=SimpleNamespace(pos_x=(1.0, 1.0))))
 
     def get_command(self, _name: str) -> torch.Tensor:
         return self.command
@@ -58,9 +52,7 @@ class FakeEnv:
         self.device = "cpu"
         self.num_envs = 2
         self.episode_length_buf = torch.tensor([2, 2])
-        self.command_manager = FakeCommandManager(
-            torch.tensor([[5.0, 0.0, 0.0, 0.0], [5.0, 0.0, 0.0, 0.0]])
-        )
+        self.command_manager = FakeCommandManager(torch.tensor([[5.0, 0.0, 0.0, 0.0], [5.0, 0.0, 0.0, 0.0]]))
         self.termination_manager = FakeTerminationManager(
             {
                 "reach_goal": torch.tensor([True, False]),
@@ -74,9 +66,7 @@ def test_progress_reports_signed_speed_toward_goal():
     torch.testing.assert_close(goal_rewards.progress_to_goal(env, "pose_command"), torch.zeros(2))
     env.episode_length_buf[:] = 3
     env.command_manager.command[:, 0] = torch.tensor([4.8, 5.2])
-    torch.testing.assert_close(
-        goal_rewards.progress_to_goal(env, "pose_command"), torch.tensor([10.0, -10.0])
-    )
+    torch.testing.assert_close(goal_rewards.progress_to_goal(env, "pose_command"), torch.tensor([10.0, -10.0]))
 
 
 def test_progress_is_zero_on_first_step_after_individual_reset():
@@ -84,19 +74,13 @@ def test_progress_is_zero_on_first_step_after_individual_reset():
     goal_rewards.progress_to_goal(env, "pose_command")
     env.episode_length_buf[:] = torch.tensor([1, 3])
     env.command_manager.command[:, 0] = torch.tensor([1.0, 4.8])
-    torch.testing.assert_close(
-        goal_rewards.progress_to_goal(env, "pose_command"), torch.tensor([0.0, 10.0])
-    )
+    torch.testing.assert_close(goal_rewards.progress_to_goal(env, "pose_command"), torch.tensor([0.0, 10.0]))
 
 
 def test_terminal_signal_mirrors_named_termination_term():
     env = FakeEnv()
-    torch.testing.assert_close(
-        goal_rewards.termination_signal(env, "reach_goal"), torch.tensor([1.0, 0.0])
-    )
-    torch.testing.assert_close(
-        goal_rewards.termination_signal(env, "base_contact"), torch.tensor([0.0, 1.0])
-    )
+    torch.testing.assert_close(goal_rewards.termination_signal(env, "reach_goal"), torch.tensor([1.0, 0.0]))
+    torch.testing.assert_close(goal_rewards.termination_signal(env, "base_contact"), torch.tensor([0.0, 1.0]))
 
 
 def make_curriculum_env(success_count: int, episode_count: int = 10) -> FakeEnv:

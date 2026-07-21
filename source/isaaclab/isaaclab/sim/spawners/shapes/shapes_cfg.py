@@ -3,15 +3,15 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import MISSING
 from typing import Literal
 
 from isaaclab.sim.spawners import materials
 from isaaclab.sim.spawners.spawner_cfg import RigidObjectSpawnerCfg
-from isaaclab.utils import configclass
-
-from . import shapes
+from isaaclab.utils.configclass import configclass
 
 
 @configclass
@@ -37,8 +37,17 @@ class ShapeCfg(RigidObjectSpawnerCfg):
     If the path is relative, then it will be relative to the prim's path.
     This parameter is ignored if `physics_material` is not None.
     """
-    physics_material: materials.PhysicsMaterialCfg | None = None
+    physics_material: (
+        materials.RigidBodyMaterialBaseCfg
+        | materials.RigidBodyMaterialFragment
+        | list[materials.RigidBodyMaterialFragment]
+        | None
+    ) = None
     """Physics material properties.
+
+    Since shapes are rigid-only spawners, this slot accepts the rigid material base class or
+    rigid-material fragments (single-namespace :class:`~isaaclab.sim.spawners.materials.RigidBodyMaterialFragment`
+    instances or lists thereof).
 
     Note:
         If None, then no physics material will be added.
@@ -52,7 +61,7 @@ class SphereCfg(ShapeCfg):
     See :meth:`spawn_sphere` for more information.
     """
 
-    func: Callable = shapes.spawn_sphere
+    func: Callable | str = "{DIR}.shapes:spawn_sphere"
 
     radius: float = MISSING
     """Radius of the sphere (in m)."""
@@ -65,7 +74,7 @@ class CuboidCfg(ShapeCfg):
     See :meth:`spawn_cuboid` for more information.
     """
 
-    func: Callable = shapes.spawn_cuboid
+    func: Callable | str = "{DIR}.shapes:spawn_cuboid"
 
     size: tuple[float, float, float] = MISSING
     """Size of the cuboid."""
@@ -78,7 +87,7 @@ class CylinderCfg(ShapeCfg):
     See :meth:`spawn_cylinder` for more information.
     """
 
-    func: Callable = shapes.spawn_cylinder
+    func: Callable | str = "{DIR}.shapes:spawn_cylinder"
 
     radius: float = MISSING
     """Radius of the cylinder (in m)."""
@@ -95,7 +104,7 @@ class CapsuleCfg(ShapeCfg):
     See :meth:`spawn_capsule` for more information.
     """
 
-    func: Callable = shapes.spawn_capsule
+    func: Callable | str = "{DIR}.shapes:spawn_capsule"
 
     radius: float = MISSING
     """Radius of the capsule (in m)."""
@@ -112,7 +121,7 @@ class ConeCfg(ShapeCfg):
     See :meth:`spawn_cone` for more information.
     """
 
-    func: Callable = shapes.spawn_cone
+    func: Callable | str = "{DIR}.shapes:spawn_cone"
 
     radius: float = MISSING
     """Radius of the cone (in m)."""

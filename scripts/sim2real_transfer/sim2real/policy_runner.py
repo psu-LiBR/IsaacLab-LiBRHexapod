@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """onnxruntime wrapper around an exported hexapod policy.
 
 The ONNX graphs produced by `isaaclab_rl.rsl_rl.exporter.export_policy_as_onnx`
@@ -26,8 +31,7 @@ class PolicyRunner:
         outputs = self.session.get_outputs()
         if len(inputs) != 1 or len(outputs) != 1:
             raise ValueError(
-                f"expected a single-input/single-output ONNX graph, got "
-                f"{len(inputs)} inputs and {len(outputs)} outputs"
+                f"expected a single-input/single-output ONNX graph, got {len(inputs)} inputs and {len(outputs)} outputs"
             )
         self._input_name = inputs[0].name
         self._output_name = outputs[0].name

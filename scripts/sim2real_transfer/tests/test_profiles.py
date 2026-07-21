@@ -1,6 +1,10 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import numpy as np
 import pytest
-
 from sim2real.profiles import PROFILES, GoalObsBuilder, VelocityObsBuilder, make_obs_builder
 
 
@@ -58,8 +62,13 @@ def test_joint_pos_rel_subtracts_default():
     joint_pos = np.full(8, -0.47)
     q_default = np.full(8, -0.47)
     obs = builder.build(
-        np.zeros(3), np.array([0, 0, -1.0]), joint_pos, np.zeros(8), np.zeros(8),
-        q_default, np.zeros(3),
+        np.zeros(3),
+        np.array([0, 0, -1.0]),
+        joint_pos,
+        np.zeros(8),
+        np.zeros(8),
+        q_default,
+        np.zeros(3),
     )
     assert np.allclose(obs[9:17], 0.0)
 
@@ -68,8 +77,13 @@ def test_wrong_command_dim_raises():
     builder = VelocityObsBuilder()
     with pytest.raises(ValueError):
         builder.build(
-            np.zeros(3), np.zeros(3), np.zeros(8), np.zeros(8), np.zeros(8),
-            np.zeros(8), np.zeros(4),  # wrong dim for velocity profile
+            np.zeros(3),
+            np.zeros(3),
+            np.zeros(8),
+            np.zeros(8),
+            np.zeros(8),
+            np.zeros(8),
+            np.zeros(4),  # wrong dim for velocity profile
         )
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -61,7 +61,8 @@ class MySceneCfg(InteractiveSceneCfg):
 @configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
-    #joint_pos = mdp.JointPositionActionCfg(asset_name="robot", joint_names=[".*"], scale=0.5, use_default_offset=True)
+
+    # joint_pos = mdp.JointPositionActionCfg(asset_name="robot", joint_names=[".*"], scale=0.5, use_default_offset=True)
     joint_effort = mdp.JointEffortActionCfg(asset_name="robot", joint_names=[".*"], scale=7.5)
 
 
@@ -87,7 +88,8 @@ class ObservationsCfg:
             scale=0.1,
             params={
                 "asset_cfg": SceneEntityCfg(
-                    "robot", body_names=["MiddleLeft","MiddleRight","BackLeft","BackRight","FrontLeft","FrontRight"]
+                    "robot",
+                    body_names=["MiddleLeft", "MiddleRight", "BackLeft", "BackRight", "FrontLeft", "FrontRight"],
                 )
             },
         )
@@ -195,7 +197,7 @@ class HexapodCEnvCfg_PLAY(HexapodCEnvCfg):
         # disable randomization for play
 
         # camera settings
-        self.viewer.eye = (0.5, 0.3, 0.5) #overhead camera
+        self.viewer.eye = (0.5, 0.3, 0.5)  # overhead camera
         self.viewer.lookat = (0.0, 0.0, 0.00)
         self.viewer.origin_type = "asset_root"
         self.viewer.asset_name = "robot"

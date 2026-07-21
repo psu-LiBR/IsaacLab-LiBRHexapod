@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """IMU interface.
 
 The Hexapi robot already runs a ROS2 node that publishes a fused orientation
@@ -74,8 +79,17 @@ def quat_to_rot_matrix(q_wxyz: np.ndarray) -> np.ndarray:
 
 def quat_apply_inverse(q_wxyz: np.ndarray, v: np.ndarray) -> np.ndarray:
     """Rotates world-frame vector `v` into the frame described by quaternion `q`
-    (frame -> world orientation), matching `isaaclab.utils.math.quat_apply_inverse`
-    semantics used by `mdp.projected_gravity`."""
+    (frame -> world orientation) -- the same physical operation as
+    `mdp.projected_gravity` (`asset.data.projected_gravity_b`), which is what this
+    function's output is compared against/fed to the same policy input as.
+
+    NOTE: this is a self-contained reimplementation that intentionally takes
+    `q_wxyz` in (w, x, y, z) order and is never passed through
+    `isaaclab.utils.math`. As of Isaac Lab 3.0, `isaaclab.utils.math.quat_apply_inverse`
+    itself expects (x, y, z, w) -- do NOT "fix" this function's input order to match;
+    doing so would silently break it. This package's own WXYZ convention (see
+    `config/deployment.example.yaml`'s `mount_offset_quat` doc-comment) is independent
+    of Isaac Lab's internal quaternion storage format and does not need to track it."""
     return quat_to_rot_matrix(q_wxyz).T @ v
 
 
@@ -106,8 +120,7 @@ class RosImuReader(ImuReader):
             from sensor_msgs.msg import Imu as ImuMsg
         except ImportError as exc:
             raise ImportError(
-                "rclpy and sensor_msgs are required for RosImuReader (ROS2); "
-                "use FakeImu for hardware-free testing"
+                "rclpy and sensor_msgs are required for RosImuReader (ROS2); use FakeImu for hardware-free testing"
             ) from exc
 
         self._rclpy = rclpy

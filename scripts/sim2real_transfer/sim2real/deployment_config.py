@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Typed loader for deployment.yaml -- the single place hardware facts live.
 
 Every other module in this package receives already-typed config objects and
@@ -95,8 +100,7 @@ def load_deployment_config(path: str) -> DeploymentConfig:
         ticks_per_rev=int(_require(encoder_raw, "ticks_per_rev", "joints.encoder")),
         zero_tick={k: int(v) for k, v in _require(encoder_raw, "zero_tick", "joints.encoder").items()},
         soft_limits_rad={
-            k: (float(v[0]), float(v[1]))
-            for k, v in _require(joints_raw, "soft_limits_rad", "joints").items()
+            k: (float(v[0]), float(v[1])) for k, v in _require(joints_raw, "soft_limits_rad", "joints").items()
         },
     )
 

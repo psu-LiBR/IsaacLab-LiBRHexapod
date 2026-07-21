@@ -9,19 +9,19 @@ from dataclasses import MISSING
 from typing import TYPE_CHECKING, Literal
 
 import isaaclab.sim as sim_utils
-from isaaclab.utils import configclass
-
-from .terrain_importer import TerrainImporter
+from isaaclab.sim.spawners import materials
+from isaaclab.utils.configclass import configclass
 
 if TYPE_CHECKING:
     from .terrain_generator_cfg import TerrainGeneratorCfg
+    from .terrain_importer import TerrainImporter
 
 
 @configclass
 class TerrainImporterCfg:
     """Configuration for the terrain manager."""
 
-    class_type: type = TerrainImporter
+    class_type: type[TerrainImporter] | str = "{DIR}.terrain_importer:TerrainImporter"
     """The class to use for the terrain importer.
 
     Defaults to :class:`isaaclab.terrains.terrain_importer.TerrainImporter`.
@@ -88,13 +88,20 @@ class TerrainImporterCfg:
       to the grid color of the imported ground plane.
     """
 
-    physics_material: sim_utils.RigidBodyMaterialCfg = sim_utils.RigidBodyMaterialCfg()
+    physics_material: (
+        materials.RigidBodyMaterialBaseCfg
+        | materials.RigidBodyMaterialFragment
+        | list[materials.RigidBodyMaterialFragment]
+    ) = materials.RigidBodyMaterialCfg()
     """The physics material of the terrain. Defaults to a default physics material.
 
     The material is created at the path: ``{prim_path}/physicsMaterial``.
 
     .. note::
         This parameter is used only when the ``terrain_type`` is "generator" or "plane".
+
+    Accepts a legacy rigid material cfg, a single rigid-material fragment, or a list of
+    rigid-material fragments.
     """
 
     max_init_terrain_level: int | None = None

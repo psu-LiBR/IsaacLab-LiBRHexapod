@@ -17,21 +17,52 @@ To learn about how to set up your own project on top of Isaac Lab, please see :r
 
 .. include:: include/pip_python_virtual_env.rst
 
-Installing dependencies
-~~~~~~~~~~~~~~~~~~~~~~~
+Installing Isaac Lab
+~~~~~~~~~~~~~~~~~~~~
+
+The ``isaaclab`` pip wheel bundles all Isaac Lab extensions. Common optional
+pip extras include:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 52
+
+   * - Extra
+     - What it installs
+   * - ``isaacsim``
+     - Isaac Sim (``isaacsim[all,extscache]`` version |isaacsim_version|) from `pypi.nvidia.com <https://pypi.nvidia.com>`_
+   * - ``all``
+     - RL frameworks (SB3, SKRL, RSL-RL). Combine with ``isaacsim`` for a full install.
+
+Install with ``isaaclab[isaacsim,all]`` for the full workflow.
+
+.. tab-set::
+
+   .. tab-item:: uv
+
+      .. code-block:: bash
+
+         uv pip install "isaaclab[isaacsim,all]" --extra-index-url https://pypi.nvidia.com --index-strategy unsafe-best-match --prerelease=allow
+
+   .. tab-item:: pip
+
+      .. code-block:: bash
+
+         pip install "isaaclab[isaacsim,all]" --extra-index-url https://pypi.nvidia.com --pre
 
 .. note::
 
-   In case you used UV to create your virtual environment, please replace ``pip`` with ``uv pip``
-   in the following commands.
+   ``rl_games`` is not included in the Isaac Lab pip wheel extras. If your workflow requires
+   ``rl_games``, install it manually from the Isaac Lab-compatible branch:
 
--  Install the Isaac Lab packages along with Isaac Sim:
+   .. code-block:: bash
 
-   .. code-block:: none
+      pip install "rl-games @ git+https://github.com/isaac-sim/rl_games.git@python3.11" gym standard-distutils
 
-      pip install isaaclab[isaacsim,all]==2.3.2.post1 --extra-index-url https://pypi.nvidia.com
+Installing dependencies
+~~~~~~~~~~~~~~~~~~~~~~~
 
--  Install a CUDA-enabled PyTorch 2.7.0 build for CUDA 12.8 that matches your system architecture:
+-  Install a CUDA-enabled PyTorch |torch_version| build that matches your system architecture:
 
    .. tab-set::
       :sync-group: pip-platform
@@ -39,51 +70,70 @@ Installing dependencies
       .. tab-item:: :icon:`fa-brands fa-linux` Linux (x86_64)
          :sync: linux-x86_64
 
-         .. code-block:: bash
-
-            pip install -U torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+         .. isaaclab-torch-install:: cu128 pip
 
       .. tab-item:: :icon:`fa-brands fa-windows` Windows (x86_64)
          :sync: windows-x86_64
 
-         .. code-block:: bash
-
-            pip install -U torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+         .. isaaclab-torch-install:: cu128 pip
 
       .. tab-item:: :icon:`fa-brands fa-linux` Linux (aarch64)
          :sync: linux-aarch64
 
-         .. code-block:: bash
-
-            pip install -U torch==2.9.0 torchvision==0.24.0 --index-url https://download.pytorch.org/whl/cu130
+         .. isaaclab-torch-install:: cu130 pip
 
          .. note::
 
-            After installing Isaac Lab on aarch64, you may encounter warnings such as:
+            On aarch64 (e.g., DGX Spark), some Python packages, notably ``imgui-bundle``, must be compiled
+            from source because no pre-built wheel is available. Install the required Python, OpenGL, and X11
+            development packages **before** installing Isaac Lab:
+
+            .. code-block:: bash
+
+               sudo apt install python3.12-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev
+
+         .. note::
+
+            **Required for Isaac Sim on aarch64.** After installing Isaac Lab on aarch64, the PyTorch
+            wheel ships its own ``libgomp`` (GNU OpenMP) that conflicts with the system OpenMP that
+            Isaac Sim expects. Without overriding ``LD_PRELOAD`` to point at the system library,
+            ``import isaaclab.app`` and any ``./isaaclab.sh train ...`` invocation will exit
+            immediately with ``rc=1`` and the message:
 
             .. code-block:: none
 
-               ERROR: ld.so: object '...torch.libs/libgomp-XXXX.so.1.0.0' cannot be preloaded: ignored.
+               WARNING: For the application to run, some shared libraries must be loaded before others ...
+                  LD_PRELOAD="/lib/aarch64-linux-gnu/libgomp.so.1" <COMMAND>
 
-            This occurs when both the system and PyTorch ``libgomp`` (GNU OpenMP) libraries are preloaded.
-            Isaac Sim expects the **system** OpenMP runtime, while PyTorch sometimes bundles its own.
-
-            To fix this, unset any existing ``LD_PRELOAD`` and set it to use the system library only:
+            Unset any existing ``LD_PRELOAD`` and force the system library before invoking Python:
 
             .. code-block:: bash
 
                unset LD_PRELOAD
-               export LD_PRELOAD="$LD_PRELOAD:/lib/aarch64-linux-gnu/libgomp.so.1"
+               export LD_PRELOAD=/lib/aarch64-linux-gnu/libgomp.so.1
 
             This ensures the correct ``libgomp`` library is preloaded for both Isaac Sim and Isaac Lab,
             removing the preload warnings during runtime.
 
--  If you want to use ``rl_games`` for training and inferencing, install
-   its Python 3.11 enabled fork:
+         .. note::
 
-   .. code-block:: none
+            On aarch64, you may encounter the following error when importing ``omni.client`` or ``torch``:
 
-      pip install git+https://github.com/isaac-sim/rl_games.git@python3.11
+            .. code-block:: none
+
+               ImportError: .../libcarb.so: cannot allocate memory in static TLS block
+
+            This happens because ``libcarb.so`` uses the *initial-exec* TLS model, and
+            the dynamic linker's fixed-size TLS surplus is exhausted by the time it is loaded.
+            To fix this, preload ``libcarb.so`` before launching Python:
+
+            .. code-block:: bash
+
+               export LD_PRELOAD=$(python -c "import sys,os;[print(os.path.join(p,'omni','client','libcarb.so')) for p in sys.path if os.path.isfile(os.path.join(p,'omni','client','libcarb.so'))]" 2>/dev/null | head -1)${LD_PRELOAD:+:$LD_PRELOAD}
+
+            When using ``./isaaclab.sh -p``, this is handled automatically.
+            When using a conda environment,
+            the preload is set up via the conda activation hook.
 
 .. include:: include/pip_verify_isaacsim.rst
 

@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Lightweight changelog for this fork. Upstream's nightly-changelog.yml
 # compiles per-package changelog.d/ fragments via tools/changelog/cli.py
 # across develop/release branches with a GitHub App token — none of that

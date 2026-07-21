@@ -72,8 +72,8 @@ pausing and stepping the simulator. All these operations are handled through the
 context**. It takes care of various timeline events and also configures the physics scene for
 simulation.
 
-In Isaac Lab, the :class:`sim.SimulationContext` class inherits from Isaac Sim's
-:class:`isaacsim.core.api.simulation_context.SimulationContext` to allow configuring the simulation
+In Isaac Lab, the :class:`sim.SimulationContext` class wraps Isaac Sim's simulation stack
+to allow configuring the simulation
 through Python's ``dataclass`` object and handle certain intricacies of the simulation stepping.
 
 For this tutorial, we set the physics and rendering time step to 0.01 seconds. This is done
@@ -139,7 +139,7 @@ Now that we have gone through the code, let's run the script and see the result:
 
 .. code-block:: bash
 
-   ./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py
+   python scripts/tutorials/00_sim/create_empty.py --viz kit
 
 
 The simulation should be playing, and the stage should be rendering. To stop the simulation,
@@ -151,13 +151,15 @@ you can either close the window, or press ``Ctrl+C`` in the terminal.
     :alt: result of create_empty.py
 
 Passing ``--help`` to the above script will show the different command-line arguments added
-earlier by the :class:`app.AppLauncher` class. To run the script headless, you can execute the
-following:
+earlier by the :class:`app.AppLauncher` class. To run the script headless, omit the visualizer
+selection:
 
 .. code-block:: bash
 
-   ./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py --headless
+   python scripts/tutorials/00_sim/create_empty.py
 
+If a config or command selects a visualizer, force-disable all visualizers with
+``--visualizer none`` or ``--viz none``.
 
 Now that we have a basic understanding of how to run a simulation, let's move on to the
 following tutorial where we will learn how to add assets to the stage.

@@ -1,6 +1,13 @@
 Tricks and Troubleshooting
 ==========================
 
+.. seealso::
+
+   This page is the source of truth for the ``isaaclab-setup-troubleshooting`` agent skill
+   (`skills/user/setup-troubleshooting/ <../../../skills/user/setup-troubleshooting/SKILL.md>`__).
+   When you change this page, update the skill so agent guidance stays in sync. See
+   :doc:`/source/overview/developer-guide/agent_skills`.
+
 .. note::
 
     The following lists some of the common tricks and troubleshooting methods that we use in our common workflows.
@@ -8,6 +15,116 @@ Tricks and Troubleshooting
     <https://docs.omniverse.nvidia.com/kit/docs/kit-manual/latest/guide/linux_troubleshooting.html>`__ for more
     assistance.
 
+
+Installation Troubleshooting
+----------------------------
+
+``ModuleNotFoundError: No module named 'pip'``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Your venv was created without pip. The install system auto-detects and uses
+``uv pip`` when pip is absent, so this error should no longer occur with the
+latest Isaac Lab.
+
+``ModuleNotFoundError: No module named 'isaacsim'``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You are running a script that requires Isaac Sim, but it is not installed.
+Either:
+
+- Install Isaac Sim: ``./isaaclab.sh -i isaacsim``, or
+- Use a Newton-based task with ``physics=newton_mjwarp --visualizer newton`` (Kit-less path)
+
+``ModuleNotFoundError: No module named 'isaaclab_physx'`` or ``'isaaclab_ov'``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These config packages are auto-installed by ``./isaaclab.sh -i``. If using a
+selective install, re-run with the default ``./isaaclab.sh -i`` to get all
+packages.
+
+``ModuleNotFoundError: No module named 'isaaclab_assets'``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Include ``assets`` in your install command, or use ``./isaaclab.sh -i`` to install
+everything.
+
+``ModuleNotFoundError: No module named 'isaaclab_tasks'``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``isaaclab_tasks`` package contains the registered task environments. This
+error usually means the command is not running in the Isaac Lab Python
+environment or the repository packages were not installed in editable mode.
+
+Try the following checks:
+
+1. Run from the Isaac Lab repository root using uv:
+
+   .. code-block:: bash
+
+      uv run python -c "import isaaclab_tasks; print('ok')"
+
+2. If the import still fails, recreate the documented source-install
+   environment for your workflow.
+
+3. Re-run the task command from the repository root instead of a system Python:
+
+   .. code-block:: bash
+
+      uv run python scripts/environments/random_agent.py --task Isaac-Cartpole --num_envs 4
+
+``<package> requires <version>, but <other-package> requires <version>``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+During pip or uv installs, the package manager may print dependency warnings
+where an Isaac Lab package, Isaac Sim package, or third-party package declares
+an incompatible dependency constraint. Common examples include ``coverage``,
+``packaging``, ``numpy``, or ``Pillow`` constraints reported between
+``isaaclab``, ``isaacsim-kernel``, ``isaacsim-core``, ``nvidia-srl-usd``, and
+``moviepy``.
+
+These messages are generally benign when the install command completes
+successfully. They usually reflect package metadata that is stricter or older
+than the versions bundled and tested with Isaac Sim. Prefer starting from a
+fresh virtual environment and using the installation commands in the Isaac Lab
+docs. If the resolver aborts with ``No solution found`` or installation leaves
+missing modules at runtime, recreate the environment and install the documented
+Isaac Sim version before installing Isaac Lab.
+
+``ModuleNotFoundError: No module named 'rsl_rl'``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Include the RL framework: ``./isaaclab.sh -i rsl_rl``, or use
+``./isaaclab.sh -i`` to install all frameworks.
+
+Crash in ``libusd_tf`` / USD Symbol Collision with OVRTX
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you see a crash involving ``libusd_tf-*.so`` and conflicting USD versions
+(e.g. ``pxrInternal_v0_25_5`` vs ``pxrInternal_v0_25_11``):
+
+1. Ensure ``LD_PRELOAD`` is set to ovrtx's ``libcarb.so`` and install the OVRTX
+   runtime with ``./isaaclab.sh -i 'ov[ovrtx]'`` (see :ref:`installation-selective-install`)
+2. Ensure ``isaacsim`` / ``omniverse-kit`` is **not** installed in the same
+   environment — their bundled USD libraries conflict with ovrtx's
+
+Visualizer Not Appearing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+If ``--visualizer newton`` shows no window, you may be missing ``imgui-bundle``:
+
+.. code-block:: bash
+
+   uv pip install imgui-bundle
+
+For ``viser``, check the terminal for a URL (e.g. ``http://localhost:8012``).
+
+``GLIBC Version Too Old``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Isaac Sim pip packages require GLIBC 2.35+. Check with ``ldd --version``.
+Ubuntu 22.04+ satisfies this. For older distributions, use the
+`binary installation <https://docs.isaacsim.omniverse.nvidia.com/latest/installation/install_workstation.html>`_
+method for Isaac Sim.
 
 Troubleshooting distributed training NCCL errors
 ------------------------------------------------
@@ -36,7 +153,58 @@ To enable OmniPVD capture in Isaac Lab, add the relevant kit arguments to the co
 
 .. code:: bash
 
-    ./isaaclab.sh -p scripts/demos/bipeds.py --kit_args "--/persistent/physics/omniPvdOvdRecordingDirectory=/tmp/ --/physics/omniPvdOutputEnabled=true" --headless
+    ./isaaclab.sh -p scripts/demos/bipeds.py --kit_args "--/persistent/physics/omniPvdOvdRecordingDirectory=/tmp/ --/physics/omniPvdOutputEnabled=true"
+
+
+Joints actuate in PhysX but not in a Newton-based backend
+---------------------------------------------------------
+
+If your robot's joints move under PhysX but appear unactuated under one of the
+Newton-based backends (MuJoCo Warp, XPBD, Featherstone, Semi-implicit) — even
+though you have authored an :class:`~isaaclab.actuators.ImplicitActuatorCfg`
+with non-zero ``stiffness`` and ``damping`` — the cause is almost always that
+the USD asset ships with zero authored drive gains.
+
+Newton's USD importer only materialises a solver actuator when the authored
+``PhysicsDriveAPI`` reports a non-zero stiffness *or* damping. Many existing
+assets leave both at ``0`` on purpose, expecting the actuator gains to come from
+an :class:`~isaaclab.actuators.ImplicitActuatorCfg` at runtime. PhysX creates
+the actuator regardless and lets the runtime gain writes take effect, so the
+asset works there; Newton drops the actuator before the runtime writes can
+attach to it.
+
+The fix is to set
+:attr:`~isaaclab.sim.schemas.JointDrivePropertiesCfg.ensure_drives_exist` to
+``True`` on the spawn config. This writes a minimal placeholder stiffness
+(``1e-3``) to any drive whose authored stiffness *and* damping are both zero,
+which is enough for Newton's importer to create the actuator. The actual gains
+are then overwritten by the actuator model at runtime, so the placeholder has
+no effect on the simulated dynamics.
+
+.. code:: python
+
+   from isaaclab.actuators import ImplicitActuatorCfg
+   from isaaclab.assets import ArticulationCfg
+   import isaaclab.sim as sim_utils
+
+   ROBOT_CFG = ArticulationCfg(
+       spawn=sim_utils.UsdFileCfg(
+           usd_path="...",
+           joint_drive_props=sim_utils.JointDrivePropertiesCfg(ensure_drives_exist=True),
+       ),
+       actuators={
+           "legs": ImplicitActuatorCfg(
+               joint_names_expr=[".*HAA", ".*HFE", ".*KFE"],
+               effort_limit_sim=120.0,
+               velocity_limit_sim=7.5,
+               stiffness={".*": 40.0},
+               damping={".*": 5.0},
+           ),
+       },
+   )
+
+See :ref:`import-new-asset-ensure-drives-exist` for the underlying USD-import
+details and the equivalent fix when authoring a new asset.
 
 
 Checking the internal logs from the simulator
@@ -81,7 +249,7 @@ For instance, to run a standalone script with verbose logging, you can use the f
 .. code-block:: bash
 
     # Run the standalone script with info logging
-    ./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py --headless --info
+    ./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py --info
 
 For more fine-grained control, you can modify the logging channels through the ``logger`` module.
 For more information, please refer to its `documentation <https://docs.python.org/3/library/logging.html>`__.

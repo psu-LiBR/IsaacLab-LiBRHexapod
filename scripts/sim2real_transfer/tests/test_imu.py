@@ -1,10 +1,14 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import math
 import sys
 import types
 
 import numpy as np
 import pytest
-
 from sim2real.imu import (
     DEFAULT_MAX_STALENESS_S,
     FakeImu,
@@ -148,8 +152,11 @@ def test_ros_imu_reader_fresh_data_reads_successfully(monkeypatch):
     _install_fake_ros_modules(monkeypatch)
     clock = [100.0]
     reader = RosImuReader(
-        topic="/imu", mount_offset_quat=(1.0, 0.0, 0.0, 0.0), negate_gyro_z=False,
-        max_staleness_s=0.25, time_fn=lambda: clock[0],
+        topic="/imu",
+        mount_offset_quat=(1.0, 0.0, 0.0, 0.0),
+        negate_gyro_z=False,
+        max_staleness_s=0.25,
+        time_fn=lambda: clock[0],
     )
     reader._on_imu(_FakeImuMsg())
 
@@ -164,8 +171,11 @@ def test_ros_imu_reader_stale_data_raises(monkeypatch):
     _install_fake_ros_modules(monkeypatch)
     clock = [100.0]
     reader = RosImuReader(
-        topic="/imu", mount_offset_quat=(1.0, 0.0, 0.0, 0.0), negate_gyro_z=False,
-        max_staleness_s=0.25, time_fn=lambda: clock[0],
+        topic="/imu",
+        mount_offset_quat=(1.0, 0.0, 0.0, 0.0),
+        negate_gyro_z=False,
+        max_staleness_s=0.25,
+        time_fn=lambda: clock[0],
     )
     reader._on_imu(_FakeImuMsg())
 

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """CLI entry point: runs a trained hexapod policy on the real robot (or a
 hardware-free dry run) via the sim2real package.
 
@@ -44,21 +49,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rate-hz", type=float, default=None, help="Overrides control.rate_hz from config.")
     parser.add_argument("--log-csv", default=None, help="Optional path to write a per-step CSV run log.")
     parser.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Use an in-memory DryRunDynamixelBus -- no serial port, no motion.",
     )
     parser.add_argument(
-        "--fake-imu", action="store_true",
+        "--fake-imu",
+        action="store_true",
         help="Use a stationary FakeImu instead of subscribing to the real /imu topic (no ROS2 needed).",
     )
     parser.add_argument(
-        "--no-torque", action="store_true",
+        "--no-torque",
+        action="store_true",
         help="Read real sensors and compute real targets, but never enable servo torque "
         "(bring-up stage 4: zero physical risk, verifies sensor/target sanity on live hardware).",
     )
     parser.add_argument("--duration", type=float, default=None, help="Auto-stop after this many seconds.")
     parser.add_argument(
-        "--action-scale-mult", type=float, default=None,
+        "--action-scale-mult",
+        type=float,
+        default=None,
         help="Overrides control.action_scale_multiplier from config -- <1.0 dampens motion for bring-up.",
     )
     return parser.parse_args()
@@ -95,11 +105,20 @@ def main() -> None:
         )
     )
 
-    logger = CsvRunLogger(args.log_csv, obs_dim=profile.obs_dim, action_dim=profile.action_dim) if args.log_csv else None
+    logger = (
+        CsvRunLogger(args.log_csv, obs_dim=profile.obs_dim, action_dim=profile.action_dim) if args.log_csv else None
+    )
 
     try:
         control_loop.run(
-            cfg, args.profile, policy, obs_builder, joint_mapping, bus, imu, command_source,
+            cfg,
+            args.profile,
+            policy,
+            obs_builder,
+            joint_mapping,
+            bus,
+            imu,
+            command_source,
             localizer=localizer,
             logger=logger,
             dry_run=args.dry_run,

@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Per-step CSV run logger.
 
 The `obs_*`/`action_*` columns double as the reference-trace format
@@ -21,7 +26,7 @@ class CsvRunLogger:
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-        self._file = open(path, "w", newline="")
+        self._file = open(path, "w", newline="")  # noqa: SIM115 -- closed via close()/__exit__
         self._writer = csv.writer(self._file)
         header = (
             ["step", "t", "loop_time_ms"]
@@ -60,7 +65,7 @@ class CsvRunLogger:
     def close(self) -> None:
         self._file.close()
 
-    def __enter__(self) -> "CsvRunLogger":
+    def __enter__(self) -> CsvRunLogger:
         return self
 
     def __exit__(self, *exc_info) -> None:

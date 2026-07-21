@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Read-only sanity check for the spine (body) joints -- BackLink/FrontLink --
 against a real reference gait trajectory, so a sign error like the one found
 in the leg calibration (2026-07-17: correction_group was wrong, not just the
@@ -86,8 +91,9 @@ def _open_bus(cfg: DeploymentConfig) -> RealDynamixelBus:
         protocol_version=cfg.serial.protocol_version,
     )
     bus.torque_enable(False)  # safety: always the very first thing done with the bus
-    print(f"Connected to {cfg.serial.port} @ {cfg.serial.baud_rate} baud, "
-          f"{len(motor_ids)} motors, torque forced OFF.\n")
+    print(
+        f"Connected to {cfg.serial.port} @ {cfg.serial.baud_rate} baud, {len(motor_ids)} motors, torque forced OFF.\n"
+    )
     return bus
 
 
@@ -108,9 +114,12 @@ def _read_settled(bus: RealDynamixelBus, real_order: list[str], samples: int, in
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", required=True, help="path to deployment.yaml")
-    parser.add_argument("--reference", required=True,
-                         help="path to a reference gait CSV, sim DOF order (e.g. a copy of "
-                              "hexapod-assets/Sim Gaits/forward3_lleg30_amp65_sim.csv pushed onto this host)")
+    parser.add_argument(
+        "--reference",
+        required=True,
+        help="path to a reference gait CSV, sim DOF order (e.g. a copy of "
+        "hexapod-assets/Sim Gaits/forward3_lleg30_amp65_sim.csv pushed onto this host)",
+    )
     parser.add_argument("--samples", type=int, default=15, help="reads to average per capture (default: 15)")
     parser.add_argument("--interval", type=float, default=0.05, help="seconds between reads (default: 0.05)")
     args = parser.parse_args()
@@ -136,10 +145,15 @@ def main() -> None:
         for name in _BODY_JOINTS:
             print(f"--- {name} ---")
             for extreme_num in (1, 2):
-                input(f"Move {name} to physical extreme #{extreme_num} (no forcing past a hard stop), "
-                      f"then press Enter...")
-                label = input(f"  In a few words, describe this extreme's physical direction "
-                               f"(e.g. 'front tip curls up'): ").strip() or f"extreme #{extreme_num} (unlabeled)"
+                input(
+                    f"Move {name} to physical extreme #{extreme_num} (no forcing past a hard stop), then press Enter..."
+                )
+                label = (
+                    input(
+                        "  In a few words, describe this extreme's physical direction (e.g. 'front tip curls up'): "
+                    ).strip()
+                    or f"extreme #{extreme_num} (unlabeled)"
+                )
                 ticks = _read_settled(bus, cfg.joints.real_order, args.samples, args.interval)
                 sim_rad = mapping.ticks_to_sim_rad(ticks)[cfg.joints.sim_order.index(name)]
                 results[name].append((label, sim_rad))
@@ -160,8 +174,10 @@ def main() -> None:
         measured_amp = (max(measured_vals) - min(measured_vals)) / 2.0
         ref_amp = (ref_hi - ref_lo) / 2.0
         amp_ratio = measured_amp / ref_amp if ref_amp > 1e-6 else float("nan")
-        print(f"    measured amplitude {measured_amp:.4f} rad vs. reference amplitude {ref_amp:.4f} rad "
-              f"(ratio {amp_ratio:.2f})")
+        print(
+            f"    measured amplitude {measured_amp:.4f} rad vs. reference amplitude {ref_amp:.4f} rad "
+            f"(ratio {amp_ratio:.2f})"
+        )
         if amp_ratio < 0.5 or amp_ratio > 2.0:
             print("    <-- WARNING: measured range is very different in magnitude from the reference gait --")
             print("        check the joint isn't hitting a mechanical limit before the intended extreme.")

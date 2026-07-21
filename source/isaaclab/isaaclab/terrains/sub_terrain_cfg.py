@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import MISSING
+from typing import TYPE_CHECKING
 
-import numpy as np
-import trimesh
+from isaaclab.utils.configclass import configclass
 
-from isaaclab.utils import configclass
+if TYPE_CHECKING:
+    import numpy as np
+    import trimesh
 
 
 @configclass

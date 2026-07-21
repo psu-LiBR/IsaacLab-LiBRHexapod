@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Offline sim-vs-onnx trace validation. Run this (on the dev machine AND the
 actual Pi -- onnxruntime/opset behavior can differ by platform) before ever
 letting a policy touch the real robot.
@@ -65,8 +70,13 @@ def run_direct_check(rows: list[dict], policy: PolicyRunner, obs_dim: int, actio
 
 
 def run_pipeline_check(
-    rows: list[dict], policy: PolicyRunner, obs_dim: int, action_dim: int,
-    command_dim: int, q_default_sim: np.ndarray, tol: float,
+    rows: list[dict],
+    policy: PolicyRunner,
+    obs_dim: int,
+    action_dim: int,
+    command_dim: int,
+    q_default_sim: np.ndarray,
+    tol: float,
 ) -> bool:
     obs_builder = make_obs_builder(policy.profile.name)
     max_obs_err = 0.0
@@ -95,8 +105,10 @@ def run_pipeline_check(
             max_action_err = action_err
             worst_step = row.get("step", "?")
 
-    print(f"[pipeline] {len(rows)} rows, max_abs_obs_err={max_obs_err:.6f}, "
-          f"max_abs_action_err={max_action_err:.6f} (worst step={worst_step})")
+    print(
+        f"[pipeline] {len(rows)} rows, max_abs_obs_err={max_obs_err:.6f}, "
+        f"max_abs_action_err={max_action_err:.6f} (worst step={worst_step})"
+    )
     ok = max_obs_err <= tol and max_action_err <= tol
     print("[pipeline] PASS" if ok else f"[pipeline] FAIL (tolerance={tol})")
     return ok
@@ -127,9 +139,7 @@ def main() -> None:
             sys.exit(1)
         cfg = load_deployment_config(args.config)
         q_default_sim = ordered_array(cfg.control.q_default_sim, cfg.joints.sim_order)
-        ok = run_pipeline_check(
-            rows, policy, spec.obs_dim, spec.action_dim, spec.command_dim, q_default_sim, args.tol
-        )
+        ok = run_pipeline_check(rows, policy, spec.obs_dim, spec.action_dim, spec.command_dim, q_default_sim, args.tol)
 
     sys.exit(0 if ok else 1)
 

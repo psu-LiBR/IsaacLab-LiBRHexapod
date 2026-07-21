@@ -5,19 +5,6 @@
 
 """Test cases for PinkKinematicsConfiguration class."""
 
-# Import pinocchio in the main script to force the use of the dependencies installed
-# by IsaacLab and not the one installed by Isaac Sim
-# pinocchio is required by the Pink IK controller
-import sys
-
-if sys.platform != "win32":
-    import pinocchio  # noqa: F401
-
-from isaaclab.app import AppLauncher
-
-# launch omniverse app
-simulation_app = AppLauncher(headless=True).app
-
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +13,8 @@ import pytest
 from pink.exceptions import FrameNotFound
 
 from isaaclab.controllers.pink_ik.pink_kinematics_configuration import PinkKinematicsConfiguration
+
+pytestmark = [pytest.mark.integration, pytest.mark.isaacsim_ci]
 
 
 class TestPinkKinematicsConfiguration:

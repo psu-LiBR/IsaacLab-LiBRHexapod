@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Sim<->Real DOF permutation, sign/offset corrections, and tick<->radian conversion.
 
 This is the single most safety-critical file in the deployment package: a sign or
@@ -77,9 +82,7 @@ class JointMapping:
         self._ticks_per_rad = ticks_per_rad
         self._zero_tick = np.array([cfg.zero_tick[name] for name in self.real_order], dtype=np.float64)
 
-        self.soft_limits_sim = np.array(
-            [cfg.soft_limits_rad[name] for name in self.sim_order], dtype=np.float64
-        )
+        self.soft_limits_sim = np.array([cfg.soft_limits_rad[name] for name in self.sim_order], dtype=np.float64)
 
     # ------------------------------------------------------------------
     # Sim <-> Real, in radians

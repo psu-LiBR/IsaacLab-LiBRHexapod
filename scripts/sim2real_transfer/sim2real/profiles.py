@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Observation schemas matching the actor (`PolicyCfg`) obs groups the RL policies
 were trained on.
 
@@ -76,14 +81,11 @@ class ObsBuilder:
                 raise ValueError(f"{name} must be shape ({NUM_JOINTS},), got {arr.shape}")
         if command.shape != (self.spec.command_dim,):
             raise ValueError(
-                f"command must be shape ({self.spec.command_dim},) for profile "
-                f"'{self.spec.name}', got {command.shape}"
+                f"command must be shape ({self.spec.command_dim},) for profile '{self.spec.name}', got {command.shape}"
             )
 
         joint_pos_rel = joint_pos_sim - q_default_sim
-        obs = np.concatenate(
-            [gyro_xyz, gravity_body, command, joint_pos_rel, joint_vel_sim, last_action_sim]
-        )
+        obs = np.concatenate([gyro_xyz, gravity_body, command, joint_pos_rel, joint_vel_sim, last_action_sim])
         assert obs.shape == (self.spec.obs_dim,)
         return obs.astype(np.float32)
 

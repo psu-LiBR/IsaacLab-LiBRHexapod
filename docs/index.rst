@@ -6,9 +6,9 @@ Welcome to Isaac Lab!
    :alt: H1 Humanoid example using Isaac Lab
 
 **Isaac Lab** is a unified and modular framework for robot learning that aims to simplify common workflows
-in robotics research (such as reinforcement learning, learning from demonstrations, and motion planning). It is built on
-`NVIDIA Isaac Sim`_ to leverage the latest simulation capabilities for photo-realistic scenes, and fast
-and efficient simulation.
+in robotics research (such as reinforcement learning, learning from demonstrations, and motion planning). It supports
+`NVIDIA Isaac Sim`_ for photo-realistic scenes and RTX rendering, and can also run standalone with the Newton physics backend
+for fast and efficient simulation without requiring a full Isaac Sim installation.
 
 The core objectives of the framework are:
 
@@ -17,9 +17,15 @@ The core objectives of the framework are:
 - **Openness**: Remain open-sourced to allow the community to contribute and extend the framework.
 - **Batteries-included**: Include a number of environments, sensors, and tasks that are ready to use.
 
-Key features available in Isaac Lab include fast and accurate physics simulation provided by PhysX,
-tiled rendering APIs for vectorized rendering, domain randomization for improving robustness and adaptability,
-and support for running in the cloud.
+Key features available in Isaac Lab include fast and accurate physics simulation powered by both the
+**PhysX** and **Newton** backends, tiled rendering APIs for vectorized rendering with support for both
+**RTX** and **Newton** camera sensors, domain randomization for improving robustness and
+adaptability, and support for running in the cloud.
+
+.. note::
+
+   **Upgrading from Isaac Lab 2.x?** See the :ref:`migrating-to-isaaclab-3-0` guide for a full list
+   of breaking changes and the new multi-backend architecture introduced in Isaac Lab 3.0.
 
 Additionally, Isaac Lab provides a variety of environments, and we are actively working on adding more environments
 to the list. These include classic control tasks, fixed-arm and dexterous manipulation tasks, legged locomotion tasks,
@@ -29,7 +35,7 @@ Isaac lab is developed with specific robot assets that are now **Batteries-inclu
 
 - **Classic** Cartpole, Humanoid, Ant
 - **Fixed-Arm and Hands**: UR10, Franka, Allegro, Shadow Hand
-- **Quadrupeds**: Anybotics Anymal-B, Anymal-C, Anymal-D, Unitree A1, Unitree Go1, Unitree Go2, Boston Dynamics Spot
+- **Quadrupeds**: Anybotics AnymalB, AnymalC, AnymalD, Unitree A1, Unitree Go1, Unitree Go2, Boston Dynamics Spot
 - **Humanoids**: Unitree H1, Unitree G1
 - **Quadcopter**: Crazyflie
 
@@ -46,7 +52,7 @@ For more information about the framework, please refer to the `technical report 
 
 
 License
-=======
+========
 
 The Isaac Lab framework is open-sourced under the BSD-3-Clause license,
 with certain parts under Apache-2.0 license. Please refer to :ref:`license` for more details.
@@ -99,6 +105,7 @@ Table of Contents
    source/tutorials/index
    source/how-to/index
    source/overview/developer-guide/index
+   source/testing/index
 
 
 .. toctree::
@@ -119,10 +126,10 @@ Table of Contents
    :maxdepth: 2
    :caption: Features
 
+   source/features/isaac_teleop
    source/features/hydra
    source/features/multi_gpu
    source/features/population_based_training
-   Tiled Rendering</source/overview/core-concepts/sensors/camera>
    source/features/ray
    source/features/reproducibility
 
@@ -132,14 +139,14 @@ Table of Contents
    :caption: Experimental Features
 
    source/experimental-features/bleeding-edge
-   source/experimental-features/newton-physics-integration/index
+   source/experimental-features/visuo_tactile_sensor
+   source/experimental-features/rlinf_vla_posttraining
 
 .. toctree::
    :maxdepth: 1
    :caption: Resources
    :titlesonly:
 
-   source/setup/installation/cloud_installation
    source/policy_deployment/index
 
 .. toctree::
@@ -147,6 +154,8 @@ Table of Contents
    :caption: Migration Guides
    :titlesonly:
 
+   source/migration/migrating_to_isaaclab_3-0
+   source/migration/migrating_deformables
    source/migration/migrating_from_isaacgymenvs
    source/migration/migrating_from_omniisaacgymenvs
    source/migration/migrating_from_orbit
@@ -179,6 +188,7 @@ Table of Contents
     GitHub <https://github.com/isaac-sim/IsaacLab>
     NVIDIA Isaac Sim <https://docs.isaacsim.omniverse.nvidia.com/latest/index.html>
     NVIDIA PhysX <https://nvidia-omniverse.github.io/PhysX/physx/5.4.1/index.html>
+    NVIDIA Newton <https://github.com/newton-physics/newton>
 
 Indices and tables
 ==================

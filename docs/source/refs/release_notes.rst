@@ -319,7 +319,7 @@ Related PR: https://github.com/isaac-sim/IsaacLab/pull/4286
 
 For backward compatibility, legacy functions are still available in ``isaaclab.sim.utils.legacy``, but it's recommended to migrate to the new APIs or use USD directly.
 
-**Full Changelog**: https://github.com/isaac-sim/IsaacLab/compare/v2.2.1...v2.3.2
+**Full Changelog**: https://github.com/isaac-sim/IsaacLab/compare/v2.3.1...v2.3.2
 
 v2.3.1
 ======
@@ -506,7 +506,7 @@ Mimic and Teleoperation
 * Adds dgx spark limitations link to teleop docs by @lotusl-code in https://github.com/isaac-sim/IsaacLab/pull/3805
 * Adds Cosmos Transfer1 limitation for DGX spark by @shauryadNv in https://github.com/isaac-sim/IsaacLab/pull/3817
 * Updates DGX spark limitations for SkillGen in the documentation by @njawale42 in https://github.com/isaac-sim/IsaacLab/pull/3748
-* Adds the Isaac-PickPlace-G1-InspireFTP-Abs-v0 Task into Envs Docs by @yami007007 in https://github.com/isaac-sim/IsaacLab/pull/3479
+* Adds the IsaacContrib-PickPlace-G1-InspireFTP-Abs Task into Envs Docs by @yami007007 in https://github.com/isaac-sim/IsaacLab/pull/3479
 
 Infrastructure
 ~~~~~~~~~~~~~~
@@ -1762,13 +1762,13 @@ Before:
 
 .. code:: bash
 
-    ./isaaclab.sh -p source/standalone/workflows/sb3/train.py --task Isaac-Cartpole-v0 --headless --cpu
+    ./isaaclab.sh -p source/standalone/workflows/sb3/train.py --task Isaac-Cartpole --cpu
 
 Now:
 
 .. code:: bash
 
-    ./isaaclab.sh -p source/standalone/workflows/sb3/train.py --task Isaac-Cartpole-v0 --headless --device cpu
+    ./isaaclab.sh -p source/standalone/workflows/sb3/train.py --task Isaac-Cartpole --device cpu
 
 Renaming of teleoperation device CLI in standalone scripts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1781,13 +1781,13 @@ Before:
 
 .. code:: bash
 
-    ./isaaclab.sh -p source/standalone/environments/teleoperation/teleop_se3_agent.py --task Isaac-Lift-Cube-Franka-IK-Rel-v0 --num_envs 1 --device keyboard
+    ./isaaclab.sh -p source/standalone/environments/teleoperation/teleop_se3_agent.py --task IsaacContrib-Lift-Cube-Franka-IK-Rel --num_envs 1 --device keyboard
 
 Now:
 
 .. code:: bash
 
-    ./isaaclab.sh -p source/standalone/environments/teleoperation/teleop_se3_agent.py --task Isaac-Lift-Cube-Franka-IK-Rel-v0 --num_envs 1 --teleop_device keyboard
+    ./isaaclab.sh -p source/standalone/environments/teleoperation/teleop_se3_agent.py --task IsaacContrib-Lift-Cube-Franka-IK-Rel --num_envs 1 --teleop_device keyboard
 
 
 Using Python-version of container utility script
@@ -1975,7 +1975,7 @@ Migration Guide
 
 Please find detailed migration guides as follows:
 
-* `From Orbit to IsaacLab <https://isaac-sim.github.io/IsaacLab/main/source/migration/migrating_from_orbit.html>`_
-* `From OmniIsaacGymEnvs to IsaacLab <https://isaac-sim.github.io/IsaacLab/main/source/migration/migrating_from_omniisaacgymenvs.html>`_
+* :doc:`From Orbit to IsaacLab <../migration/migrating_from_orbit>`
+* :doc:`From OmniIsaacGymEnvs to IsaacLab <../migration/migrating_from_omniisaacgymenvs>`
 
 .. _simple script: https://gist.github.com/kellyguo11/3e8f73f739b1c013b1069ad372277a85

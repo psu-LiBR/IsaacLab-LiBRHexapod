@@ -109,6 +109,7 @@ Meshes
     MeshConeCfg
     MeshCuboidCfg
     MeshCylinderCfg
+    MeshRectangleCfg
     MeshSphereCfg
 
 .. autoclass:: MeshCfg
@@ -139,6 +140,13 @@ Meshes
 .. autofunction:: spawn_mesh_cylinder
 
 .. autoclass:: MeshCylinderCfg
+    :members:
+    :show-inheritance:
+    :exclude-members: __init__, func
+
+.. autofunction:: spawn_mesh_rectangle
+
+.. autoclass:: MeshRectangleCfg
     :members:
     :show-inheritance:
     :exclude-members: __init__, func
@@ -259,8 +267,14 @@ Materials
     MdlFileCfg
     GlassMdlCfg
     PhysicsMaterialCfg
+    RigidBodyMaterialBaseCfg
+    RigidBodyMaterialFragment
+    UsdPhysicsRigidBodyMaterialCfg
     RigidBodyMaterialCfg
+    DeformableBodyMaterialBaseCfg
+    SurfaceDeformableBodyMaterialBaseCfg
     DeformableBodyMaterialCfg
+    SurfaceDeformableBodyMaterialCfg
 
 Visual Materials
 ~~~~~~~~~~~~~~~~
@@ -292,7 +306,26 @@ Physical Materials
     :members:
     :exclude-members: __init__, func
 
+.. autofunction:: spawn_physics_material
+
 .. autofunction:: spawn_rigid_body_material
+
+.. autoclass:: RigidBodyMaterialBaseCfg
+    :members:
+    :show-inheritance:
+    :exclude-members: __init__, func
+
+.. autofunction:: spawn_rigid_body_material_from_fragments
+
+.. autoclass:: RigidBodyMaterialFragment
+    :members:
+    :show-inheritance:
+    :exclude-members: __init__, func
+
+.. autoclass:: UsdPhysicsRigidBodyMaterialCfg
+    :members:
+    :show-inheritance:
+    :exclude-members: __init__, func
 
 .. autoclass:: RigidBodyMaterialCfg
     :members:
@@ -300,8 +333,33 @@ Physical Materials
 
 .. autofunction:: spawn_deformable_body_material
 
-.. autoclass:: DeformableBodyMaterialCfg
+.. autoclass:: DeformableBodyMaterialBaseCfg
     :members:
+    :show-inheritance:
+    :exclude-members: __init__, func
+
+.. autoclass:: SurfaceDeformableBodyMaterialBaseCfg
+    :members:
+    :show-inheritance:
+    :exclude-members: __init__, func
+
+.. note::
+
+    Backend-specific deformable material cfgs live in
+    :mod:`isaaclab_physx.sim.spawners.materials` and
+    :mod:`isaaclab_newton.sim.spawners.materials`. The legacy default names below
+    are forwarded to the deprecated PhysX aliases for compatibility.
+
+.. autoclass:: DeformableBodyMaterialCfg
+    :no-index:
+    :members:
+    :show-inheritance:
+    :exclude-members: __init__, func
+
+.. autoclass:: SurfaceDeformableBodyMaterialCfg
+    :no-index:
+    :members:
+    :show-inheritance:
     :exclude-members: __init__, func
 
 Wrappers

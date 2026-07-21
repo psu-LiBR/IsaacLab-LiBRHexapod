@@ -7,7 +7,7 @@
 
 The following configuration parameters are available:
 
-* :obj:`ARL_ROBOT_1_CFG`: The ARL_Robot_1 with (TODO add motor propeller combination)
+* :obj:`ARL_ROBOT_1_CFG`: The ARL_Robot_1
 """
 
 import isaaclab.sim as sim_utils
@@ -54,7 +54,7 @@ ARL_ROBOT_1_CFG = MultirotorCfg(
         pos=(0.0, 0.0, 0.0),
         lin_vel=(0.0, 0.0, 0.0),
         ang_vel=(0.0, 0.0, 0.0),
-        rot=(1.0, 0.0, 0.0, 0.0),
+        rot=(0.0, 0.0, 0.0, 1.0),
         rps={
             "back_left_prop": 200.0,
             "back_right_prop": 200.0,
@@ -63,7 +63,7 @@ ARL_ROBOT_1_CFG = MultirotorCfg(
         },
     ),
     actuators={"thrusters": ARL_ROBOT_1_THRUSTER},
-    rotor_directions=[1, -1, 1, -1],
+    rotor_directions=[-1, 1, -1, 1],
     allocation_matrix=[
         [0.0, 0.0, 0.0, 0.0],
         [0.0, 0.0, 0.0, 0.0],

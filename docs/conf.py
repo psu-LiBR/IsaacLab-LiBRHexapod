@@ -18,6 +18,8 @@
 import os
 import sys
 
+import tomllib
+
 sys.path.insert(0, os.path.abspath("_extensions"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab/isaaclab"))
@@ -25,12 +27,28 @@ sys.path.insert(0, os.path.abspath("../source/isaaclab_assets"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_assets/isaaclab_assets"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_tasks"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_tasks/isaaclab_tasks"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_tasks_experimental"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_tasks_experimental/isaaclab_tasks_experimental"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_physx"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_physx/isaaclab_physx"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_ovphysx"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_ovphysx/isaaclab_ovphysx"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_newton"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_newton/isaaclab_newton"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_experimental"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_experimental/isaaclab_experimental"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_rl"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_rl/isaaclab_rl"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_mimic"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_mimic/isaaclab_mimic"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_contrib"))
 sys.path.insert(0, os.path.abspath("../source/isaaclab_contrib/isaaclab_contrib"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_teleop"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_teleop/isaaclab_teleop"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_ov"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_ov/isaaclab_ov"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_visualizers"))
+sys.path.insert(0, os.path.abspath("../source/isaaclab_visualizers/isaaclab_visualizers"))
 
 # -- Project information -----------------------------------------------------
 
@@ -43,11 +61,44 @@ with open(os.path.join(os.path.dirname(__file__), "..", "VERSION")) as f:
     full_version = f.read().strip()
     version = ".".join(full_version.split(".")[:3])
 
-# Latest branch referenced by installation documentation.
-isaaclab_latest_branch = os.getenv("ISAACLAB_LATEST_BRANCH", "main")
+# Latest release branch referenced by installation documentation.
+isaaclab_latest_branch = os.getenv("ISAACLAB_LATEST_BRANCH", "develop")
+
+
+def _read_pinned_versions() -> dict:
+    """Read the ``[tool.isaaclab.versions]`` table from the root pyproject.
+
+    This table is the single source of truth for externally-pinned versions
+    (Isaac Sim, the torch stack, the OV renderer/physics wheels).
+    """
+    pyproject = os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")
+    with open(pyproject, "rb") as f:
+        return tomllib.load(f)["tool"]["isaaclab"]["versions"]
+
+
+# Pinned external versions referenced by the installation docs. Shared with the
+# ``isaaclab_docs`` extension via config values of the same name.
+_pinned_versions = _read_pinned_versions()
+isaacsim_version = _pinned_versions["isaacsim"]
+torch_version = _pinned_versions["torch"]
+torchvision_version = _pinned_versions["torchvision"]
+ovrtx_spec = _pinned_versions["ovrtx"]
+ovphysx_version = _pinned_versions["ovphysx"]
+
+# Short version strings used in external documentation URLs and badges.
+torch_docs_version = ".".join(torch_version.split(".")[:2])  # e.g. "2.11"
+isaacsim_docs_version = ".".join(isaacsim_version.split(".")[:3])  # e.g. "6.0.0"
+
+# Copy buttons on highlighted code blocks (including nested directive output).
+copybutton_selector = "div.highlight pre"
 
 rst_prolog = f"""
 .. |isaaclab_latest_branch| replace:: {isaaclab_latest_branch}
+.. |isaacsim_version| replace:: {isaacsim_version}
+.. |torch_version| replace:: {torch_version}
+.. |torchvision_version| replace:: {torchvision_version}
+.. |ovrtx_spec| replace:: {ovrtx_spec}
+.. |ovphysx_version| replace:: {ovphysx_version}
 """
 
 # -- General configuration ---------------------------------------------------
@@ -71,6 +122,7 @@ extensions = [
     "sphinxcontrib.icon",
     "sphinx_copybutton",
     "sphinx_design",
+    "sphinx_paramlinks",
     "sphinx_tabs.tabs",  # backwards compatibility for building docs on v1.0.0
     "sphinx_multiversion",
     "isaaclab_docs",
@@ -135,8 +187,9 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "trimesh": ("https://trimesh.org/", None),
-    "torch": ("https://docs.pytorch.org/docs/stable/", None),
-    "isaacsim": ("https://docs.isaacsim.omniverse.nvidia.com/5.1.0/py/", None),
+    # pinned to the release version because /docs/stable/objects.inv currently 404s
+    "torch": (f"https://docs.pytorch.org/docs/{torch_docs_version}/", None),
+    "isaacsim": (f"https://docs.isaacsim.omniverse.nvidia.com/{isaacsim_docs_version}/py/", None),
     "gymnasium": ("https://gymnasium.farama.org/", None),
     # NOTE: pinned to /stable/ because /objects.inv at the root currently 404s
     "warp": ("https://nvidia.github.io/warp/stable/", None),
@@ -149,13 +202,23 @@ templates_path = []
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "_redirect", "_templates", "Thumbs.db", ".DS_Store", "README.md", "licenses/*", "plans"]
+exclude_patterns = [
+    "_build",
+    "_redirect",
+    "_templates",
+    "Thumbs.db",
+    ".DS_Store",
+    "README.md",
+    "licenses/*",
+    "plans",
+    # Include-only fragments (pulled in via ``.. include::``; not standalone pages).
+    "source/setup/installation/include/*",
+]
 
 # Mock out modules that are not available on RTD
 autodoc_mock_imports = [
     "torch",
     "torchvision",
-    "numpy",
     "matplotlib",
     "scipy",
     "carb",
@@ -169,15 +232,16 @@ autodoc_mock_imports = [
     "omni.client",
     "omni.physx",
     "omni.physics",
+    "ovphysx",
     "usdrt",
     "pxr.PhysxSchema",
     "pxr.PhysicsSchemaTools",
     "omni.replicator",
-    "isaacsim",
-    "isaacsim.core.api",
     "isaacsim.core.cloner",
     "isaacsim.core.version",
-    "isaacsim.core.utils",
+    "isaacsim.core.experimental.prims",
+    "isaacsim.core.experimental.utils",
+    "isaacsim.core.rendering_manager",
     "isaacsim.robot_motion.motion_generation",
     "isaacsim.gui.components",
     "isaacsim.asset.importer.urdf",
@@ -201,13 +265,21 @@ autodoc_mock_imports = [
     "toml",
     "pink",
     "pinocchio",
-    "nvidia.srl",
+    "qpsolvers",
     "flatdict",
+    "filelock",
     "IPython",
     "cv2",
     "imageio",
     "ipywidgets",
     "mpl_toolkits",
+    "isaacteleop",
+    "scipy",
+    "hydra",
+    "hydra.core",
+    "hydra.core.config_store",
+    "omegaconf",
+    "newton",
 ]
 
 # List of zero or more Sphinx-specific warning categories to be squelched (i.e.,
@@ -278,7 +350,7 @@ html_theme_options = {
         {
             "name": "Isaac Sim",
             "url": "https://developer.nvidia.com/isaac-sim",
-            "icon": "https://img.shields.io/badge/IsaacSim-5.1.0-silver.svg",
+            "icon": f"https://img.shields.io/badge/IsaacSim-{isaacsim_docs_version}-silver.svg",
             "type": "url",
         },
         {

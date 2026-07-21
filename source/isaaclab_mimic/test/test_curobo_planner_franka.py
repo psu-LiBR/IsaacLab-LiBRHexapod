@@ -20,6 +20,7 @@ simulation_app: Any = app_launcher.app
 
 import gymnasium as gym
 import torch
+import warp as wp
 
 import isaaclab.utils.assets as _al_assets
 import isaaclab.utils.math as math_utils
@@ -34,16 +35,16 @@ ISAAC_NUCLEUS_DIR: str = getattr(_al_assets, "ISAAC_NUCLEUS_DIR", "/Isaac")
 from isaaclab_mimic.motion_planners.curobo.curobo_planner import CuroboPlanner
 from isaaclab_mimic.motion_planners.curobo.curobo_planner_cfg import CuroboPlannerCfg
 
-from isaaclab_tasks.manager_based.manipulation.stack.config.franka.stack_joint_pos_env_cfg import FrankaCubeStackEnvCfg
+from isaaclab_tasks.contrib.stack.config.franka.stack_joint_pos_env_cfg import FrankaCubeStackEnvCfg
 
 # Predefined EE goals for the test
 # Each entry is a tuple of: (goal specification, goal ID)
 predefined_ee_goals_and_ids = [
-    ({"pos": [0.70, -0.25, 0.25], "quat": [0.0, 0.707, 0.0, 0.707]}, "Behind wall, left"),
-    ({"pos": [0.70, 0.25, 0.25], "quat": [0.0, 0.707, 0.0, 0.707]}, "Behind wall, right"),
-    ({"pos": [0.65, 0.0, 0.45], "quat": [0.0, 1.0, 0.0, 0.0]}, "Behind wall, center, high"),
-    ({"pos": [0.80, -0.15, 0.35], "quat": [0.0, 0.5, 0.0, 0.866]}, "Behind wall, far left"),
-    ({"pos": [0.80, 0.15, 0.35], "quat": [0.0, 0.5, 0.0, 0.866]}, "Behind wall, far right"),
+    ({"pos": [0.70, -0.25, 0.25], "quat": [0.707, 0.0, 0.707, 0.0]}, "Behind wall, left"),
+    ({"pos": [0.70, 0.25, 0.25], "quat": [0.707, 0.0, 0.707, 0.0]}, "Behind wall, right"),
+    ({"pos": [0.65, 0.0, 0.45], "quat": [1.0, 0.0, 0.0, 0.0]}, "Behind wall, center, high"),
+    ({"pos": [0.80, -0.15, 0.35], "quat": [0.5, 0.0, 0.866, 0.0]}, "Behind wall, far left"),
+    ({"pos": [0.80, 0.15, 0.35], "quat": [0.5, 0.0, 0.866, 0.0]}, "Behind wall, far right"),
 ]
 
 
@@ -69,7 +70,7 @@ def curobo_test_env() -> Generator[dict[str, Any], None, None]:
     )
     setattr(env_cfg.scene, "moving_wall", wall_cfg)
 
-    env: ManagerBasedEnv = gym.make("Isaac-Stack-Cube-Franka-v0", cfg=env_cfg, headless=headless).unwrapped
+    env: ManagerBasedEnv = gym.make("IsaacContrib-Stack-Cube-Franka", cfg=env_cfg, headless=headless).unwrapped
     env.reset()
 
     robot = env.scene["robot"]
@@ -141,7 +142,7 @@ class TestCuroboPlanner:
             q_full = torch.cat([q, fingers], dim=-1)
         else:
             q_full = q
-        self.robot.write_joint_position_to_sim(q_full)
+        self.robot.write_joint_position_to_sim(wp.from_torch(q_full.to(self.env.device)))
 
     @pytest.mark.parametrize("goal_spec, goal_id", predefined_ee_goals_and_ids)
     def test_plan_to_predefined_goal(self, goal_spec, goal_id) -> None:

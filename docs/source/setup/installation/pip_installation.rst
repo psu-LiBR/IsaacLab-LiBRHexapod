@@ -39,14 +39,17 @@ Installing dependencies
 
 .. note::
 
-   In case you used UV to create your virtual environment, please replace ``pip`` with ``uv pip``
-   in the following commands.
+   On aarch64 (e.g., DGX Spark), some Python packages, notably ``imgui-bundle``, must be compiled
+   from source because no pre-built wheel is available. Install the required Python, OpenGL, and X11
+   development packages **before** installing Isaac Lab:
+
+    .. code-block:: bash
+
+       sudo apt install python3.12-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev
 
 -  Install Isaac Sim pip packages:
 
-   .. code-block:: none
-
-      pip install "isaacsim[all,extscache]==5.1.0" --extra-index-url https://pypi.nvidia.com
+   .. isaaclab-isaacsim-install::
 
 -  Install a CUDA-enabled PyTorch build that matches your system architecture:
 
@@ -56,23 +59,17 @@ Installing dependencies
       .. tab-item:: :icon:`fa-brands fa-linux` Linux (x86_64)
          :sync: linux-x86_64
 
-         .. code-block:: bash
-
-            pip install -U torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+         .. isaaclab-torch-install:: cu128
 
       .. tab-item:: :icon:`fa-brands fa-windows` Windows (x86_64)
          :sync: windows-x86_64
 
-         .. code-block:: bash
-
-            pip install -U torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+         .. isaaclab-torch-install:: cu128
 
       .. tab-item:: :icon:`fa-brands fa-linux` Linux (aarch64)
          :sync: linux-aarch64
 
-         .. code-block:: bash
-
-            pip install -U torch==2.9.0 torchvision==0.24.0 --index-url https://download.pytorch.org/whl/cu130
+         .. isaaclab-torch-install:: cu130
 
          .. note::
 
@@ -90,10 +87,41 @@ Installing dependencies
             .. code-block:: bash
 
                unset LD_PRELOAD
-               export LD_PRELOAD="$LD_PRELOAD:/lib/aarch64-linux-gnu/libgomp.so.1"
+               export LD_PRELOAD=/lib/aarch64-linux-gnu/libgomp.so.1
 
             This ensures the correct ``libgomp`` library is preloaded for both Isaac Sim and Isaac Lab,
             removing the preload warnings during runtime.
+
+         .. note::
+
+            On aarch64, you may encounter the following error when importing ``omni.client`` or ``torch``:
+
+            .. code-block:: none
+
+               ImportError: .../libcarb.so: cannot allocate memory in static TLS block
+
+            This happens because ``libcarb.so`` uses the *initial-exec* TLS model, and
+            the dynamic linker's fixed-size TLS surplus is exhausted by the time it is loaded.
+            To fix this, preload ``libcarb.so`` before launching Python:
+
+            .. code-block:: bash
+
+               export LD_PRELOAD=$(python -c "import sys,os;[print(os.path.join(p,'omni','client','libcarb.so')) for p in sys.path if os.path.isfile(os.path.join(p,'omni','client','libcarb.so'))]" 2>/dev/null | head -1)${LD_PRELOAD:+:$LD_PRELOAD}
+
+            When using ``./isaaclab.sh -p``, this is handled automatically.
+            When using a conda environment,
+            the preload is set up via the conda activation hook.
+
+.. note::
+
+   The first launch of Isaac Sim asks to accept the NVIDIA Omniverse EULA interactively.
+   In a non-interactive shell (CI, remote scripts), the prompt cannot be answered and the
+   launch fails with ``Unable to bootstrap inner kit kernel: EOF when reading a line``.
+   Accept the EULA through the environment instead:
+
+   .. code-block:: bash
+
+      export OMNI_KIT_ACCEPT_EULA=yes
 
 .. include:: include/pip_verify_isaacsim.rst
 

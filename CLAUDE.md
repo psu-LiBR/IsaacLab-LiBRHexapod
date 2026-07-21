@@ -2,54 +2,72 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+@AGENTS.md
+
+The import above pulls in the repo-wide Isaac Lab guidelines (API design conventions, dependency policy,
+`./isaaclab.sh -p` tooling usage, changelog-fragment workflow, commit/PR conventions). It is generic and
+does not conflict with the hexapod-specific guidance below — treat both as in effect.
+
 ## Project Overview
 
-Isaac Lab (v2.3.2) is a GPU-accelerated robotics simulation framework built on NVIDIA Isaac Sim (4.5/5.0/5.1). This fork adds a 6-legged robot (LiBR Hexapod) with flat-terrain RL training configurations including an imitation-learning warm-up system.
+Isaac Lab (v3.0) is a GPU-accelerated robotics simulation framework built on NVIDIA Isaac Sim (6.0+ — the
+exact supported point-release range was not fully confirmed during the 2.3.2 -> 3.0 migration; verify
+against `docs/source/setup/installation/` before relying on a specific patch version). This fork adds a
+6-legged robot (LiBR Hexapod) with flat-terrain RL training configurations including an imitation-learning
+warm-up system.
 
 **Key runtime requirements:**
 
-- Isaac Sim 4.5+ installed and on PATH (or at `_isaac_sim` symlink)
+- Isaac Sim 6.0+ installed and on PATH (or at `_isaac_sim` symlink)
 - Python 3.11, PyTorch 2.7.0 + CUDA 12.8
 - Hexapod USD model at `hexapod-assets/USD/Hexapod_Flattened.usd` (repo-relative)
 - Data output directory at `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/`
 
 ## Common Commands
 
-All scripts must be run via Isaac Sim's bundled Python (not system Python). Use `isaaclab.bat` on Windows:
+Isaac Lab 3.0 replaced the old per-library `scripts/reinforcement_learning/<library>/train.py` / `play.py`
+scripts with a unified CLI subcommand dispatched through `isaaclab.bat` (confirmed by reading
+`isaaclab.bat` and `source/isaaclab/isaaclab/cli/__init__.py`: `isaaclab.bat train ...` / `isaaclab.bat play ...`
+run `scripts/reinforcement_learning/train.py` / `play.py`, which call
+`isaaclab_rl.entrypoints.run_train_cli` / `run_play_cli`; those dispatch to a backend module in
+`source/isaaclab_rl/isaaclab_rl/entrypoints/backends/` selected by `--rl_library`). All scripts must be run
+via Isaac Sim's bundled Python (not system Python):
 
 ```bat
 :: Train hexapod on flat terrain
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 4096
+isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 4096
 
 :: Resume training from checkpoint
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Velocity-Flat-Hexapod-v0 --resume
+isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --resume
 
 :: Play/evaluate a checkpoint (logs joint positions to CSV)
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/play.py --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1
+isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1
 
 :: Train hexapod with imitation warm-up then RL (two-phase, single run)
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Velocity-Flat-Hexapod-Mimic-v0 --num_envs 4096
+isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-v0 --num_envs 4096
 
 :: Play/evaluate a mimic checkpoint
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/play.py --task Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0 --num_envs 1
+isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0 --num_envs 1
 
 :: Fine-tune a mimic checkpoint under the flat RL env (compatible observation space)
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Velocity-Flat-Hexapod-v0 --checkpoint <path/to/mimic/model.pt>
+isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --checkpoint <path/to/mimic/model.pt>
 
-:: Play open-loop gait from CSV (compare against RL policy rewards)
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/playReal.py --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --gait_csv <path_to_csv> --gait_mode pos --gait_dt <seconds_per_row> --warmup_time 1.0
+:: Play open-loop gait from CSV (compare against RL policy rewards) -- playReal.py is a fork-only
+:: script with no --rl_library backend registration, so it is run directly by module path, not through
+:: the unified play subcommand
+isaaclab.bat -p source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --gait_csv <path_to_csv> --gait_mode pos --gait_dt <seconds_per_row> --warmup_time 1.0
 
 :: Train the goal-reaching curriculum (reach a fixed forward distance as fast as possible)
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096
+isaaclab.bat train --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096
 
 :: Play/evaluate a goal-reaching checkpoint
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/play.py --task Isaac-Goal-Flat-Hexapod-Play-v0 --num_envs 1
+isaaclab.bat play --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-Play-v0 --num_envs 1
 
 :: List all registered environments
 isaaclab.bat -p scripts/environments/list_envs.py
 
 :: Run with a specific checkpoint
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/play.py --task Isaac-Velocity-Flat-Hexapod-Play-v0 --checkpoint <path>
+isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --checkpoint <path>
 ```
 
 ```bat
@@ -92,9 +110,14 @@ source/
   isaaclab_assets/   # Robot and sensor config dataclasses (ArticulationCfg)
   isaaclab_tasks/    # Task definitions: reward/obs/termination/event MDP terms
   isaaclab_rl/       # RL-specific wrappers (RslRlVecEnvWrapper, export utilities)
+    isaaclab_rl/entrypoints/backends/  # rsl_rl backend (train_rsl_rl.py, play_rsl_rl.py,
+                                        # cli_args_rsl_rl.py) dispatched via `isaaclab.bat
+                                        # train/play --rl_library rsl_rl`, plus fork-only
+                                        # direct-invoke scripts with no --rl_library entry:
+                                        # playReal.py, playTracking.py, play_physicsGait.py,
+                                        # playpyvista.py, render_pyvista.py, train_mimic.bat
   isaaclab_mimic/    # Imitation learning support
 scripts/
-  reinforcement_learning/rsl_rl/  # train.py, play.py, playReal.py, playpyvista.py, render_pyvista.py
   environments/                   # Utility scripts: list_envs, random_agent, zero_agent
   sim2real_transfer/              # Standalone real-hardware deployment package; see below
 ```
@@ -141,7 +164,7 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
   - `effort_limit_sim` is NOT a 1:1 analog of physical torque; it caps the PD output and needs headroom for damping term (`damping × velocity` can exceed physical stall torque)
 - Init pose: spine joints at 0.0 rad, all leg joints at -0.47 rad
 
-**Gym registration:** `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/__init__.py`
+**Gym registration:** `source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/__init__.py`
 
 - `Isaac-Velocity-Flat-Hexapod-v0` / `Isaac-Velocity-Flat-Hexapod-Play-v0`
 - `Isaac-Velocity-Rough-Hexapod-v0` / `Isaac-Velocity-Rough-Hexapod-Play-v0`
@@ -168,7 +191,7 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `hexapod_mimic_env_cfg.py` — `HexapodMimicEnvCfg` and `HexapodMimicEnvCfg_PLAY`; see **Mimic System** below
 - `hexapod_mimic_rewards.py` — `joint_pos_imitation` and `spine_pos_imitation` reward functions; `MotionReference` is built lazily and cached in a module-level dict keyed by `(csv_path, gait_period, col_order)` so it is only constructed once across all envs
 - `hexapod_mimic_motion.py` — `MotionReference` class: loads a reference gait from CSV (headerless or headered) or falls back to a built-in sinusoidal tripod gait; resamples to a 200-point uniform phase grid; transfers to GPU lazily on first `get_reference()` call
-- `agents/rsl_rl_ppo_mimic_cfg.py` — `HexapodMimicPPORunnerCfg`: 3000 total iterations, `init_noise_std=0.25`, `entropy_coef=0.005`, logs to `logs/rsl_rl/hexapod_mimic/`
+- `agents/rsl_rl_ppo_mimic_cfg.py` — `HexapodMimicPPORunnerCfg`: 3000 total iterations, `init_noise_std`/`entropy_coef` left at the inherited flat/rough defaults (1.0 / 0.01) to match the May 2026 working run configuration, logs to `logs/rsl_rl/hexapod_mimic/`
 - `hexapod_goal_env_cfg.py` — `HexapodGoalEnvCfg` and `HexapodGoalEnvCfg_PLAY`; see **Goal-Reaching System** below
 - `hexapod_goal_curriculum.py` — `goal_distance_curriculum`: success-rate-gated distance progression
 - `hexapod_goal_rewards.py` — `progress_to_goal`, `termination_signal`, `constant_per_step`, `reached_goal_done`
@@ -186,7 +209,7 @@ Two-phase training in a single run controlled by curriculum terms (`modify_rewar
 
 On first call, `joint_pos_imitation` validates that `asset.data.joint_names` matches the expected Sim DOF order and auto-corrects with a reorder index if they differ (logs a warning). This makes the reward robust to Isaac Lab version changes that might alter joint sorting.
 
-`MotionReference` joint ordering (Sim DOF order, matches `asset.data.joint_pos` and play.py CSVs):
+`MotionReference` joint ordering (Sim DOF order, matches `asset.data.joint_pos` and play_rsl_rl.py CSVs):
 
 ```text
 0 BackLink  1 FrontLink  2 MiddleLeft  3 MiddleRight  4 BackLeft  5 BackRight  6 FrontLeft  7 FrontRight
@@ -197,7 +220,7 @@ Tripod B (swing second half-cycle): indices 2, 5, 7 (MiddleLeft, BackRight, Fron
 
 `MIMIC_CSV_PATH` defaults to `hexapod-assets/Sim Gaits/forward3_lleg30_amp65_sim.csv`. If the file is absent, the built-in sinusoidal tripod gait is used automatically — no CSV needed to start training.
 
-PPO tuning rationale for mimic: `init_noise_std=0.25` (down from default 1.0) prevents the policy from getting imitation reward "for free" by saturating joints at their limits, which causes value-function divergence. `entropy_coef=0.005` (down from 0.01) allows action std to decrease once the gradient supports deterministic tracking.
+PPO tuning for mimic: `init_noise_std`/`entropy_coef` are intentionally left at the inherited flat/rough defaults (1.0 / 0.01, see `rsl_rl_ppo_cfg.py`) rather than lowered, per the May 2026 working run configuration.
 
 **Goal-Reaching System** (`hexapod_goal_env_cfg.py`, `hexapod_goal_curriculum.py`, `hexapod_goal_rewards.py`, `hexapod_goal_obs_cfg.py`):
 
@@ -211,9 +234,11 @@ PPO tuning rationale for mimic: `init_noise_std=0.25` (down from default 1.0) pr
 - `HexapodGoalEnvCfg_PLAY` fixes distance at the final curriculum stage (5.0 m), disables the curriculum and domain randomization events, and sets a wide fixed-world camera to view the whole 5 m path across 16 envs.
 - PPO tuning (`rsl_rl_ppo_goal_cfg.py`): inherits `HexapodRoughPPORunnerCfg`, raises `gamma` to 0.999 (longer effective horizon needed for a 45 s sparse/shaped goal task vs. the flat task's short-horizon velocity tracking) and lowers `entropy_coef` to 0.003.
 
-**playReal.py** (`scripts/reinforcement_learning/rsl_rl/playReal.py`):
+**playReal.py** (`source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py`; run directly via
+`isaaclab.bat -p <path> --task ...` — it has no `--rl_library` backend registration, so it is not
+reachable through the unified `play` subcommand):
 
-- Extends play.py to support open-loop gait CSV playback for sim-to-real comparison
+- Extends play_rsl_rl.py to support open-loop gait CSV playback for sim-to-real comparison
 - Key args: `--gait_csv`, `--gait_mode pos`, `--gait_dt <sec/row>`, `--warmup_time`, `--run_time`
 - In `pos` mode: CSV values are absolute joint positions (rad); converted to actions via `(pos - default) / scale` where default comes from `robot.data.default_joint_pos`
 - `q_default_list` in script: `[0.0, 0.0, -0.47, -0.47, -0.47, -0.47, -0.47, -0.47]`
@@ -232,7 +257,7 @@ Distinct from `scripts/sim2real_transfer/` (see below): `playReal.py` replays a 
 - Body corrections: BackLink unchanged, FrontLink negated (`*-1`)
 - Ground contact encoder → rad: `val1 = (4096/2 + 300) → 2348 → 3.601 rad → -0.459 rad` (matches init_state -0.47)
 
-**play.py data logging:**
+**play_rsl_rl.py data logging:**
 
 - Joint positions (rad) → `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_*.csv`
 - Displacement tracking → `sim_displacement_log_*.csv`
@@ -248,18 +273,20 @@ GPU driver 596.36 causes RTX scenedb crashes in Isaac Sim's normal rendering pat
 
 ```bat
 :: Runs the RL policy for N steps and saves body_poses_<timestamp>.npz alongside the checkpoint
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/playpyvista.py ^
+:: playpyvista.py has no --rl_library backend registration, so run it directly by module path
+:: (not through the unified play subcommand)
+isaaclab.bat -p source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playpyvista.py ^
     --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --num_steps 500
 ```
 
-NPZ layout: `body_pos_w` (T, 9, 3), `body_quat_w` (T, 9, 4 wxyz), `body_names`, `dt`.
+NPZ layout: `body_pos_w` (T, 9, 3), `body_quat_w` (T, 9, 4 xyzw), `body_names`, `dt`.
 Saved to `<checkpoint_dir>/body_pose_log/body_poses_<timestamp>.npz`.
 
 **Step 2 — Render to MP4** (plain Python, no Isaac Sim, no GPU required):
 
 ```bat
 pip install pyvista numpy imageio imageio-ffmpeg
-python scripts/reinforcement_learning/rsl_rl/render_pyvista.py ^
+python source/isaaclab_rl/isaaclab_rl/entrypoints/backends/render_pyvista.py ^
     --npz <path/to/body_poses_*.npz> ^
     --obj-up-axis Y --camera-distance 1.8 --ground --out hexapod_render.mp4
 ```
@@ -285,9 +312,9 @@ Key `render_pyvista.py` arguments:
 - Body ordering in NPZ (matches `asset.data.body_names` and Isaac DOF order):
   `CenterLink, BackLink, FrontLink, MiddleLeft, MiddleRight, BackLeft, BackRight, FrontLeft, FrontRight`
 
-**playpyvista.py vs play.py:**
+**playpyvista.py vs play_rsl_rl.py:**
 
-`playpyvista.py` is a fork of `play.py` kept as a separate file so `play.py` can be merged from upstream cleanly. Differences: always logs body poses (no flag), adds `--num_steps` to stop after a fixed count. The hardcoded output paths in `play.py`/`playpyvista.py` (CSV joint log, displacement log) still point to `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/` and must be updated if the machine changes.
+`playpyvista.py` is a fork of `play_rsl_rl.py` kept as a separate file so `play_rsl_rl.py` can be merged from upstream cleanly. Differences: always logs body poses (no flag), adds `--num_steps` to stop after a fixed count. The hardcoded output paths in `play_rsl_rl.py`/`playpyvista.py` (CSV joint log, displacement log) still point to `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/` and must be updated if the machine changes.
 
 ## Sim-to-Real Deployment (`scripts/sim2real_transfer/`)
 
@@ -355,8 +382,8 @@ The repo uses rsl-rl < 4.0.0. `handle_deprecated_rsl_rl_cfg` in `source/isaaclab
 
 All reward/observation/termination/event functions referenced by string in configs are defined in:
 
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/hexapod_rewards.py` — hexapod-specific custom rewards
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/` — locomotion-specific terms
+- `source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/hexapod_rewards.py` — hexapod-specific custom rewards
+- `source/isaaclab_tasks/isaaclab_tasks/core/velocity/mdp/` — locomotion-specific terms
 - `source/isaaclab/isaaclab/envs/mdp/` — general-purpose MDP terms (shared across tasks)
 
 When a config references e.g. `mdp.feet_air_time`, look in the locomotion mdp directory first, then the core mdp directory.

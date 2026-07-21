@@ -3,20 +3,13 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from isaaclab.app import AppLauncher
-
-HEADLESS = True
-
-# if not AppLauncher.instance():
-simulation_app = AppLauncher(headless=HEADLESS).app
-
-"""Rest of imports follows"""
-
 import pytest
 import torch
 
 from isaaclab.actuators import IdealPDActuatorCfg
 from isaaclab.utils.types import ArticulationActions
+
+pytestmark = pytest.mark.integration
 
 
 @pytest.mark.parametrize("num_envs", [1, 2])

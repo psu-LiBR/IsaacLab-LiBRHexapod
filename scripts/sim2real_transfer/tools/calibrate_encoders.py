@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Interactive, read-only encoder calibration helper for the leg joints'
 `zero_tick` and `soft_limits_rad` in config/deployment.yaml -- see CLAUDE.md's
 sim2real bring-up notes and the "CALIBRATE" comments in deployment.example.yaml.
@@ -82,8 +87,9 @@ def _open_bus(cfg: DeploymentConfig) -> RealDynamixelBus:
         protocol_version=cfg.serial.protocol_version,
     )
     bus.torque_enable(False)  # safety: always the very first thing done with the bus
-    print(f"Connected to {cfg.serial.port} @ {cfg.serial.baud_rate} baud, "
-          f"{len(motor_ids)} motors, torque forced OFF.\n")
+    print(
+        f"Connected to {cfg.serial.port} @ {cfg.serial.baud_rate} baud, {len(motor_ids)} motors, torque forced OFF.\n"
+    )
     return bus
 
 
@@ -132,8 +138,10 @@ def cmd_zero_tick(args: argparse.Namespace) -> None:
         expected_real_rad = a * cfg.control.q_default_sim[sim_name] + b
         suggested = round(mean_ticks[i] - expected_real_rad * ticks_per_rad)
         in_range = "" if 0 <= suggested <= 4095 else "  <-- OUT OF [0,4095] RANGE, something is wrong"
-        print(f"    {name}: {suggested}{in_range}  "
-              f"(measured {mean_ticks[i]:.1f} ticks, expected real_rad={expected_real_rad:+.4f})")
+        print(
+            f"    {name}: {suggested}{in_range}  "
+            f"(measured {mean_ticks[i]:.1f} ticks, expected real_rad={expected_real_rad:+.4f})"
+        )
     print("\nSanity check: BackLink/FrontLink (body joints) should come out close to the already-")
     print("confirmed 2048 -- if they're far off, the robot likely wasn't actually at rest pose.")
     print("This script did NOT modify deployment.yaml -- copy the values in by hand, then run `rom`.")
@@ -150,15 +158,17 @@ def cmd_rom(args: argparse.Namespace) -> None:
     print("this step converts ticks to sim radians via the full JointMapping pipeline.\n")
     print(f"Margin factor {args.margin}: each joint's raw measured range is shrunk by this factor")
     print("around its own midpoint before being suggested as the soft limit (matches CLAUDE.md's")
-    print(f"soft_joint_pos_limit_factor convention). Override with --margin if you want the raw range.\n")
+    print("soft_joint_pos_limit_factor convention). Override with --margin if you want the raw range.\n")
 
     bus = _open_bus(cfg)
     results: dict[str, tuple[float, float]] = {}
     try:
         for sim_name in cfg.joints.sim_order:
             print(f"--- {sim_name} ---")
-            input(f"Move {sim_name} to its LOW-end safe physical extreme (no forcing past a hard "
-                  f"stop), then press Enter...")
+            input(
+                f"Move {sim_name} to its LOW-end safe physical extreme (no forcing past a hard "
+                f"stop), then press Enter..."
+            )
             lo_ticks = _read_settled(bus, cfg.joints.real_order, args.samples, args.interval)
             lo_sim_rad = mapping.ticks_to_sim_rad(lo_ticks)[cfg.joints.sim_order.index(sim_name)]
 
@@ -171,8 +181,10 @@ def cmd_rom(args: argparse.Namespace) -> None:
             half = (raw_hi - raw_lo) / 2.0 * args.margin
             soft_lo, soft_hi = center - half, center + half
             results[sim_name] = (soft_lo, soft_hi)
-            print(f"    raw measured range: [{raw_lo:+.4f}, {raw_hi:+.4f}] rad  ->  "
-                  f"soft_limits_rad: [{soft_lo:+.4f}, {soft_hi:+.4f}] rad\n")
+            print(
+                f"    raw measured range: [{raw_lo:+.4f}, {raw_hi:+.4f}] rad  ->  "
+                f"soft_limits_rad: [{soft_lo:+.4f}, {soft_hi:+.4f}] rad\n"
+            )
     finally:
         bus.close()
 
@@ -200,9 +212,7 @@ def cmd_read(args: argparse.Namespace) -> None:
         while True:
             ticks = bus.read_positions()
             sim_rad = mapping.ticks_to_sim_rad(ticks)
-            line = "  ".join(
-                f"{name}={sim_rad[i]:+.3f}" for i, name in enumerate(cfg.joints.sim_order)
-            )
+            line = "  ".join(f"{name}={sim_rad[i]:+.3f}" for i, name in enumerate(cfg.joints.sim_order))
             print(f"\r{line}   ", end="", flush=True)
             time.sleep(args.interval)
     except KeyboardInterrupt:
@@ -216,7 +226,8 @@ def cmd_scale(args: argparse.Namespace) -> None:
     ticks_per_rad_theory = cfg.joints.ticks_per_rev / (2.0 * math.pi)
 
     leg_names = [
-        name for name in cfg.joints.sim_order
+        name
+        for name in cfg.joints.sim_order
         if cfg.joints.correction_group[name] in ("leg_negate_plus_pi", "leg_negate_minus_pi")
     ]
     if not leg_names:
@@ -238,11 +249,17 @@ def cmd_scale(args: argparse.Namespace) -> None:
     print(f"    PERPENDICULAR_VERTICAL  ~= {args.perpendicular_sim_rad:+.3f} rad\n")
 
     poses = [
-        ("PARALLEL_SPRAWLED", "Move ALL SIX LEGS parallel to the ground (fully sprawled out, horizontal).",
-         args.parallel_sim_rad),
+        (
+            "PARALLEL_SPRAWLED",
+            "Move ALL SIX LEGS parallel to the ground (fully sprawled out, horizontal).",
+            args.parallel_sim_rad,
+        ),
         ("REST_STANCE", "Move ALL SIX LEGS to the normal rest/standing stance.", None),
-        ("PERPENDICULAR_VERTICAL", "Move ALL SIX LEGS perpendicular to the ground (fully vertical).",
-         args.perpendicular_sim_rad),
+        (
+            "PERPENDICULAR_VERTICAL",
+            "Move ALL SIX LEGS perpendicular to the ground (fully vertical).",
+            args.perpendicular_sim_rad,
+        ),
     ]
 
     bus = _open_bus(cfg)
@@ -254,8 +271,7 @@ def cmd_scale(args: argparse.Namespace) -> None:
             print(f"  Reading {args.samples} samples over ~{args.samples * args.interval:.1f}s:")
             mean_ticks = _read_settled(bus, cfg.joints.real_order, args.samples, args.interval)
             sim_rad_per_leg = {
-                name: (override if override is not None else cfg.control.q_default_sim[name])
-                for name in leg_names
+                name: (override if override is not None else cfg.control.q_default_sim[name]) for name in leg_names
             }
             captures.append((pose_name, sim_rad_per_leg, mean_ticks))
             print()
@@ -263,7 +279,10 @@ def cmd_scale(args: argparse.Namespace) -> None:
         bus.close()
 
     print("Per-leg least-squares fit across the 3 poses:\n")
-    header = f"{'joint':12s} {'fit zero_tick':>14s} {'fit ticks_per_rad':>18s} {'theory':>10s} {'diff %':>8s} {'max resid (ticks)':>18s}"
+    header = (
+        f"{'joint':12s} {'fit zero_tick':>14s} {'fit ticks_per_rad':>18s} {'theory':>10s} {'diff %':>8s}"
+        f" {'max resid (ticks)':>18s}"
+    )
     print(header)
     print("-" * len(header))
 
@@ -281,8 +300,10 @@ def cmd_scale(args: argparse.Namespace) -> None:
         fitted_zero_tick[name] = intercept
 
         flag = "  <-- check pose assumptions / hold steadier" if max_resid > 15.0 else ""
-        print(f"{name:12s} {intercept:14.1f} {slope:18.2f} {ticks_per_rad_theory:10.2f} "
-              f"{diff_pct:7.2f}% {max_resid:18.2f}{flag}")
+        print(
+            f"{name:12s} {intercept:14.1f} {slope:18.2f} {ticks_per_rad_theory:10.2f} "
+            f"{diff_pct:7.2f}% {max_resid:18.2f}{flag}"
+        )
 
     print("\nSuggested zero_tick (fit across all 3 poses -- paste into joints.encoder.zero_tick):")
     print("  zero_tick:")
@@ -312,25 +333,43 @@ def main() -> None:
     p_zt.set_defaults(func=cmd_zero_tick)
 
     p_rom = sub.add_parser("rom", help="Calibrate joints.soft_limits_rad by sweeping each joint's physical range.")
-    p_rom.add_argument("--margin", type=float, default=0.9,
-                        help="shrink factor applied around each joint's measured-range midpoint (default: 0.9)")
+    p_rom.add_argument(
+        "--margin",
+        type=float,
+        default=0.9,
+        help="shrink factor applied around each joint's measured-range midpoint (default: 0.9)",
+    )
     p_rom.set_defaults(func=cmd_rom)
 
-    p_read = sub.add_parser("read", help="Live-stream ticks_to_sim_rad() for all joints -- read-only sanity "
-                                          "check of an already-calibrated zero_tick.")
+    p_read = sub.add_parser(
+        "read",
+        help="Live-stream ticks_to_sim_rad() for all joints -- read-only sanity "
+        "check of an already-calibrated zero_tick.",
+    )
     p_read.set_defaults(func=cmd_read)
 
-    p_scale = sub.add_parser("scale", help="Alternative to `zero-tick`: fit zero_tick (and check ticks_per_rad) "
-                                            "per leg from 3 poses -- parallel/rest/perpendicular -- instead of "
-                                            "just the rest pose.")
-    p_scale.add_argument("--parallel-sim-rad", type=float, default=0.3,
-                          help="assumed sim_rad for ALL legs at the 'parallel to ground / sprawled' pose "
-                               "(default: 0.3, matching deployment.example.yaml's placeholder soft_limits_rad "
-                               "upper bound -- override if your CAD/USD limits differ)")
-    p_scale.add_argument("--perpendicular-sim-rad", type=float, default=-1.4,
-                          help="assumed sim_rad for ALL legs at the 'perpendicular to ground / vertical' pose "
-                               "(default: -1.4, matching deployment.example.yaml's placeholder soft_limits_rad "
-                               "lower bound -- override if your CAD/USD limits differ)")
+    p_scale = sub.add_parser(
+        "scale",
+        help="Alternative to `zero-tick`: fit zero_tick (and check ticks_per_rad) "
+        "per leg from 3 poses -- parallel/rest/perpendicular -- instead of "
+        "just the rest pose.",
+    )
+    p_scale.add_argument(
+        "--parallel-sim-rad",
+        type=float,
+        default=0.3,
+        help="assumed sim_rad for ALL legs at the 'parallel to ground / sprawled' pose "
+        "(default: 0.3, matching deployment.example.yaml's placeholder soft_limits_rad "
+        "upper bound -- override if your CAD/USD limits differ)",
+    )
+    p_scale.add_argument(
+        "--perpendicular-sim-rad",
+        type=float,
+        default=-1.4,
+        help="assumed sim_rad for ALL legs at the 'perpendicular to ground / vertical' pose "
+        "(default: -1.4, matching deployment.example.yaml's placeholder soft_limits_rad "
+        "lower bound -- override if your CAD/USD limits differ)",
+    )
     p_scale.set_defaults(func=cmd_scale)
 
     args = parser.parse_args()

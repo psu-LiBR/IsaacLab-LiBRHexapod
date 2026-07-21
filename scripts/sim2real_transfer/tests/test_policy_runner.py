@@ -1,13 +1,17 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import numpy as np
 import pytest
 
 pytest.importorskip("torch")
 pytest.importorskip("onnxruntime")
 
+from _onnx_test_utils import export_tiny_mlp as _export_tiny_mlp
 from sim2real.policy_runner import PolicyRunner
 from sim2real.profiles import PROFILES
-
-from _onnx_test_utils import export_tiny_mlp as _export_tiny_mlp
 
 
 def test_matching_profile_loads_and_infers(tmp_path):

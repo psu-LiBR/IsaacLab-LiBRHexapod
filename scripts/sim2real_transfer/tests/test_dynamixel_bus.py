@@ -1,8 +1,12 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import sys
 
 import numpy as np
 import pytest
-
 from sim2real.dynamixel_bus import DryRunDynamixelBus, RealDynamixelBus, _to_signed32
 
 MOTOR_IDS = [3, 6, 2, 1, 4, 5, 7, 8]

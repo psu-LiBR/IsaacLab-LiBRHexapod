@@ -5,6 +5,10 @@ Augmented Imitation Learning
 
 This section describes how to use Isaac Lab's imitation learning capabilities with the visual augmentation capabilities of `Cosmos <https://www.nvidia.com/en-us/ai/cosmos/>`_ models to generate demonstrations at scale to train visuomotor policies robust against visual variations.
 
+
+.. important::
+   The `Cosmos Transfer1 <https://github.com/nvidia-cosmos/cosmos-transfer1/tree/e4055e39ee9c53165e85275bdab84ed20909714a>`_ model used in this tutorial is `supported <https://huggingface.co/nvidia/Cosmos-Transfer1-7B#software-integration>`_ on Ampere and Hopper GPUs.
+
 Generating Demonstrations
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -21,16 +25,18 @@ In the following example, we will show you how to use Isaac Lab Mimic to generat
 .. code:: bash
 
     ./isaaclab.sh -p scripts/imitation_learning/isaaclab_mimic/generate_dataset.py \
-    --device cpu --enable_cameras --headless --num_envs 10 --generation_num_trials 1000 \
+    --device cpu --enable_cameras --num_envs 10 --generation_num_trials 1000 \
     --input_file ./datasets/annotated_dataset.hdf5 --output_file ./datasets/mimic_dataset_1k.hdf5 \
-    --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos-Mimic-v0 \
-    --rendering_mode performance
+    --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos-Mimic-v0
 
 The number of demonstrations can be increased or decreased, 1000 demonstrations have been shown to provide good training results for this task.
 
 Additionally, the number of environments in the ``--num_envs`` parameter can be adjusted to speed up data generation.
 The suggested number of 10 can be executed on a moderate laptop CPU.
 On a more powerful desktop machine, use a larger number of environments for a significant speedup of this step.
+When running large camera-heavy jobs, switch to the RTX Minimal renderer for higher throughput, or
+override the task's high-fidelity RTX settings directly if they are more expensive than your workflow
+requires.
 
 Cosmos Augmentation
 ~~~~~~~~~~~~~~~~~~~
@@ -298,17 +304,17 @@ To install the robomimic framework, use the following commands:
 Training an agent
 ^^^^^^^^^^^^^^^^^
 
-Using the generated data, we can now train a visuomotor BC agent for ``Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos-v0``:
+Using the generated data, we can now train a visuomotor BC agent for ``IsaacContrib-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos``:
 
 .. code:: bash
 
     ./isaaclab.sh -p scripts/imitation_learning/robomimic/train.py \
-    --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos-v0 --algo bc \
+    --task IsaacContrib-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos --algo bc \
     --dataset ./datasets/mimic_cosmos_dataset.hdf5 \
     --name bc_rnn_image_franka_stack_mimic_cosmos
 
 .. note::
-   By default the trained models and logs will be saved to ``IssacLab/logs/robomimic``.
+   By default the trained models and logs will be saved to ``IsaacLab/logs/robomimic``.
 
 Evaluation
 ^^^^^^^^^^
@@ -373,8 +379,6 @@ Below is an explanation of the different settings used for evaluation:
       - Maximum value of the action space normalization factor.
     * - ``--disable_fabric``
       - Whether to disable fabric and use USD I/O operations.
-    * - ``--enable_pinocchio``
-      - Whether to enable Pinocchio for IK controllers.
 
 .. note::
     The evaluation results will help you understand if the visual augmentation has improved the policy's performance and robustness. Compare these results with evaluations on the original dataset to measure the impact of augmentation.
@@ -384,14 +388,16 @@ Example usage for the cube stacking task:
 .. code:: bash
 
     ./isaaclab.sh -p scripts/imitation_learning/robomimic/robust_eval.py \
-    --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos-v0 \
-    --input_dir logs/robomimic/Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos-v0/bc_rnn_image_franka_stack_mimic_cosmos/*/models \
+    --task IsaacContrib-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos \
+    --input_dir logs/robomimic/IsaacContrib-Stack-Cube-Franka-IK-Rel-Visuomotor-Cosmos/bc_rnn_image_franka_stack_mimic_cosmos/*/models \
     --log_dir robust_results/bc_rnn_image_franka_stack_mimic_cosmos \
     --log_file result \
     --enable_cameras \
     --seeds 0 \
-    --num_rollouts 15 \
-    --rendering_mode performance
+    --num_rollouts 15
+
+.. tip::
+   Verify that the models directory is not empty. By default, the training script saves models every 20 epochs starting from epoch 100.
 
 .. note::
    This script can take over a day or even longer to run (depending on the hardware being used). This behavior is expected.

@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Shared helper for tests that need a tiny synthetic ONNX 'policy' graph, mirroring
 the shape/name conventions of isaaclab_rl's export_policy_as_onnx (obs->actions,
 batch-size-1, opset 18)."""

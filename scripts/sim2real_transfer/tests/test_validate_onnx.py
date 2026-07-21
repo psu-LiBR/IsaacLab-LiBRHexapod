@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import csv
 import os
 import sys
@@ -13,7 +18,6 @@ from _onnx_test_utils import export_tiny_mlp
 _TOOLS_DIR = os.path.join(os.path.dirname(__file__), "..", "tools")
 sys.path.insert(0, _TOOLS_DIR)
 import validate_onnx  # noqa: E402
-
 from sim2real.policy_runner import PolicyRunner
 from sim2real.profiles import NUM_JOINTS, PROFILES, make_obs_builder
 
@@ -73,11 +77,14 @@ def test_pipeline_check_passes_for_consistent_trace(tmp_path):
     trace_path = tmp_path / "pipeline_trace.csv"
     header = (
         ["step"]
-        + [f"gyro_{i}" for i in range(3)] + [f"gravity_{i}" for i in range(3)]
+        + [f"gyro_{i}" for i in range(3)]
+        + [f"gravity_{i}" for i in range(3)]
         + [f"command_{i}" for i in range(spec.command_dim)]
-        + [f"joint_pos_{i}" for i in range(NUM_JOINTS)] + [f"joint_vel_{i}" for i in range(NUM_JOINTS)]
+        + [f"joint_pos_{i}" for i in range(NUM_JOINTS)]
+        + [f"joint_vel_{i}" for i in range(NUM_JOINTS)]
         + [f"last_action_{i}" for i in range(NUM_JOINTS)]
-        + [f"obs_{i}" for i in range(spec.obs_dim)] + [f"action_{i}" for i in range(spec.action_dim)]
+        + [f"obs_{i}" for i in range(spec.obs_dim)]
+        + [f"action_{i}" for i in range(spec.action_dim)]
     )
     with open(trace_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -92,8 +99,15 @@ def test_pipeline_check_passes_for_consistent_trace(tmp_path):
             obs = obs_builder.build(gyro, gravity, joint_pos, joint_vel, last_action, q_default, command)
             action = policy.step(obs)
             writer.writerow(
-                [step] + list(gyro) + list(gravity) + list(command) + list(joint_pos)
-                + list(joint_vel) + list(last_action) + list(obs) + list(action)
+                [step]
+                + list(gyro)
+                + list(gravity)
+                + list(command)
+                + list(joint_pos)
+                + list(joint_vel)
+                + list(last_action)
+                + list(obs)
+                + list(action)
             )
 
     rows = validate_onnx.load_trace(str(trace_path))

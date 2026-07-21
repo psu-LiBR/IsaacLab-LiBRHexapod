@@ -1,31 +1,57 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import math
 import os
 
 import numpy as np
 import pytest
-
 from sim2real.deployment_config import JointsCfg, load_deployment_config
 from sim2real.joint_mapping import JointMapping, ordered_array
 
-_EXAMPLE_CFG_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", "deployment.example.yaml"
-)
+_EXAMPLE_CFG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "deployment.example.yaml")
 
 SIM_ORDER = [
-    "BackLink", "FrontLink", "MiddleLeft", "MiddleRight",
-    "BackLeft", "BackRight", "FrontLeft", "FrontRight",
+    "BackLink",
+    "FrontLink",
+    "MiddleLeft",
+    "MiddleRight",
+    "BackLeft",
+    "BackRight",
+    "FrontLeft",
+    "FrontRight",
 ]
 REAL_ORDER = [
-    "FrontLink", "BackLink", "FrontRight", "FrontLeft",
-    "MiddleRight", "MiddleLeft", "BackRight", "BackLeft",
+    "FrontLink",
+    "BackLink",
+    "FrontRight",
+    "FrontLeft",
+    "MiddleRight",
+    "MiddleLeft",
+    "BackRight",
+    "BackLeft",
 ]
-MOTOR_IDS = {"FrontLink": 3, "BackLink": 6, "FrontRight": 2, "FrontLeft": 1,
-             "MiddleRight": 4, "MiddleLeft": 5, "BackRight": 7, "BackLeft": 8}
+MOTOR_IDS = {
+    "FrontLink": 3,
+    "BackLink": 6,
+    "FrontRight": 2,
+    "FrontLeft": 1,
+    "MiddleRight": 4,
+    "MiddleLeft": 5,
+    "BackRight": 7,
+    "BackLeft": 8,
+}
 CORRECTION_GROUP = {
-    "BackLink": "unchanged", "FrontLink": "negate",
-    "FrontRight": "leg_negate_plus_pi", "FrontLeft": "leg_negate_plus_pi",
-    "MiddleRight": "leg_negate_plus_pi", "MiddleLeft": "leg_negate_plus_pi",
-    "BackRight": "leg_negate_plus_pi", "BackLeft": "leg_negate_plus_pi",
+    "BackLink": "unchanged",
+    "FrontLink": "negate",
+    "FrontRight": "leg_negate_plus_pi",
+    "FrontLeft": "leg_negate_plus_pi",
+    "MiddleRight": "leg_negate_plus_pi",
+    "MiddleLeft": "leg_negate_plus_pi",
+    "BackRight": "leg_negate_plus_pi",
+    "BackLeft": "leg_negate_plus_pi",
 }
 ZERO_TICK = {name: 2048 for name in REAL_ORDER}
 SOFT_LIMITS = {name: (-1.4, 1.4) for name in SIM_ORDER}
@@ -142,8 +168,16 @@ def test_tick_round_trip():
 def test_end_to_end_sim_to_ticks_and_back():
     jm = make_mapping()
     q_default = ordered_array(
-        {"BackLink": 0.0, "FrontLink": 0.0, "MiddleLeft": -0.47, "MiddleRight": -0.47,
-         "BackLeft": -0.47, "BackRight": -0.47, "FrontLeft": -0.47, "FrontRight": -0.47},
+        {
+            "BackLink": 0.0,
+            "FrontLink": 0.0,
+            "MiddleLeft": -0.47,
+            "MiddleRight": -0.47,
+            "BackLeft": -0.47,
+            "BackRight": -0.47,
+            "FrontLeft": -0.47,
+            "FrontRight": -0.47,
+        },
         SIM_ORDER,
     )
     ticks = jm.sim_target_to_ticks(q_default)

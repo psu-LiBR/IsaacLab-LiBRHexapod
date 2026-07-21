@@ -15,12 +15,26 @@
     RigidObjectCollection
     RigidObjectCollectionData
     RigidObjectCollectionCfg
-    Articulation
-    ArticulationData
-    ArticulationCfg
+    BaseDeformableObject
+    BaseDeformableObjectData
     DeformableObject
     DeformableObjectData
     DeformableObjectCfg
+    BaseArticulation
+    BaseArticulationData
+    Articulation
+    ArticulationData
+    ArticulationCfg
+    ArticulationOrderingConvention
+    ArticulationNameMap
+
+  .. rubric:: Functions
+
+  .. autosummary::
+
+    apply_articulation_ordering_preset
+    parse_articulation_ordering_convention
+    get_articulation_name_ordering
 
 .. currentmodule:: isaaclab.assets
 
@@ -74,6 +88,37 @@ Rigid Object Collection
     :show-inheritance:
     :exclude-members: __init__, class_type
 
+Deformable Object
+-----------------
+
+.. autoclass:: DeformableObject
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
+.. autoclass:: BaseDeformableObject
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
+.. autoclass:: DeformableObjectData
+    :members:
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: __init__
+
+.. autoclass:: BaseDeformableObjectData
+    :members:
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: __init__
+
+.. autoclass:: DeformableObjectCfg
+    :members:
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: __init__, class_type, InitialStateCfg
+
 Articulation
 ------------
 
@@ -82,7 +127,18 @@ Articulation
     :inherited-members:
     :show-inheritance:
 
+.. autoclass:: BaseArticulation
+    :members:
+    :inherited-members:
+    :show-inheritance:
+
 .. autoclass:: ArticulationData
+    :members:
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: __init__
+
+.. autoclass:: BaseArticulationData
     :members:
     :inherited-members:
     :show-inheritance:
@@ -94,22 +150,17 @@ Articulation
     :show-inheritance:
     :exclude-members: __init__, class_type
 
-Deformable Object
------------------
+Articulation Ordering
+---------------------
 
-.. autoclass:: DeformableObject
+.. autoclass:: ArticulationOrderingConvention
     :members:
-    :inherited-members:
-    :show-inheritance:
 
-.. autoclass:: DeformableObjectData
+.. autoclass:: ArticulationNameMap
     :members:
-    :inherited-members:
-    :show-inheritance:
-    :exclude-members: __init__
 
-.. autoclass:: DeformableObjectCfg
-    :members:
-    :inherited-members:
-    :show-inheritance:
-    :exclude-members: __init__, class_type
+.. autofunction:: apply_articulation_ordering_preset
+
+.. autofunction:: parse_articulation_ordering_convention
+
+.. autofunction:: get_articulation_name_ordering

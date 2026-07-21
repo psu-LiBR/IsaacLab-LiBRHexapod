@@ -27,13 +27,56 @@ instead of *./isaaclab.sh -p* or *isaaclab.bat -p*.
 
    The Python version of the virtual environment must match the Python version of Isaac Sim.
 
-   - For Isaac Sim 5.X, the required Python version is 3.11.
-   - For Isaac Sim 4.X, the required Python version is 3.10.
+   - For Isaac Sim 6.X, the required Python version is 3.12.
 
    Using a different Python version will result in errors when running Isaac Lab.
 
 
 .. tab-set::
+
+   .. tab-item::  UV Environment (Recommended)
+
+      To install ``uv``, please follow the instructions `here <https://docs.astral.sh/uv/getting-started/installation/>`__.
+      You can create the Isaac Lab environment using the following commands:
+
+      .. tab-set::
+         :sync-group: os
+
+         .. tab-item:: :icon:`fa-brands fa-linux` Linux
+            :sync: linux
+
+            .. code:: bash
+
+               # Option 1: Default environment name 'env_isaaclab'
+               ./isaaclab.sh --uv  # or "./isaaclab.sh -u"
+               # Option 2: Custom name
+               ./isaaclab.sh --uv my_env  # or "./isaaclab.sh -u my_env"
+
+            .. code:: bash
+
+               # Activate environment
+               source ./env_isaaclab/bin/activate  # or "source ./my_env/bin/activate"
+
+         .. tab-item:: :icon:`fa-brands fa-windows` Windows
+            :sync: windows
+
+            .. code:: batch
+
+               :: Option 1: Default environment name 'env_isaaclab'
+               isaaclab.bat --uv  :: or "isaaclab.bat -u"
+               :: Option 2: Custom name
+               isaaclab.bat --uv my_env  :: or "isaaclab.bat -u my_env"
+
+            .. code:: batch
+
+               :: Activate environment
+               env_isaaclab\Scripts\activate  :: or "my_env\Scripts\activate"
+
+            .. note::
+
+               You can also create the environment manually with ``uv venv --python 3.12 --seed env_isaaclab``.
+               The ``--seed`` flag ensures ``pip`` is available inside the venv, which the Isaac Lab installer
+               requires.
 
    .. tab-item::  Conda Environment
 
@@ -74,39 +117,20 @@ instead of *./isaaclab.sh -p* or *isaaclab.bat -p*.
             .. code:: batch
 
                :: Activate environment
-               conda activate env_isaaclab  # or "conda activate my_env"
+               conda activate env_isaaclab  :: or "conda activate my_env"
 
-   .. tab-item::  UV Environment (experimental)
+            .. note::
 
-      To install ``uv``, please follow the instructions `here <https://docs.astral.sh/uv/getting-started/installation/>`__.
-      You can create the Isaac Lab environment using the following commands:
-
-      .. tab-set::
-         :sync-group: os
-
-         .. tab-item:: :icon:`fa-brands fa-linux` Linux
-            :sync: linux
-
-            .. code:: bash
-
-               # Option 1: Default environment name 'env_isaaclab'
-               ./isaaclab.sh --uv  # or "./isaaclab.sh -u"
-               # Option 2: Custom name
-               ./isaaclab.sh --uv my_env  # or "./isaaclab.sh -u my_env"
-
-            .. code:: bash
-
-               # Activate environment
-               source ./env_isaaclab/bin/activate  # or "source ./my_env/bin/activate"
-
-         .. tab-item:: :icon:`fa-brands fa-windows` Windows
-            :sync: windows
-
-            .. warning::
-               Windows support for UV is currently unavailable. Please check
-               `issue #3483 <https://github.com/isaac-sim/IsaacLab/issues/3438>`_ to track progress.
+               On Windows, ``isaaclab.bat`` sources ``_isaac_sim\setup_conda_env.bat`` to
+               export the Isaac Sim environment variables. Some Isaac Sim binary zips do
+               not ship this file; in that case, ``isaaclab.bat`` prints a non-fatal warning
+               and Isaac Sim env vars are not exported, which later surfaces as an
+               ``Isaac Sim is not installed or not found on PYTHONPATH`` error at script
+               launch. Re-extract a build that includes ``setup_conda_env.bat``, or set
+               the Isaac Sim environment variables yourself before running ``isaaclab.bat``.
 
 Once you are in the virtual environment, you do not need to use ``./isaaclab.sh -p`` or
 ``isaaclab.bat -p`` to run python scripts. You can use the default python executable in your
-environment by running ``python`` or ``python3``. However, for the rest of the documentation,
-we will assume that you are using ``./isaaclab.sh -p`` or ``isaaclab.bat -p`` to run python scripts.
+environment by running ``python`` or ``python3``. Updated how-to guides use ``python`` directly;
+older pages may still show ``./isaaclab.sh -p`` or ``isaaclab.bat -p``, which are equivalent when
+your virtual environment is active.

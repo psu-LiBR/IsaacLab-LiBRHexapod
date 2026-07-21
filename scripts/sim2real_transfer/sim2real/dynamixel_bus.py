@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Dynamixel servo bus interface.
 
 `RealDynamixelBus` is a direct port of the working driver in
@@ -116,9 +121,7 @@ class RealDynamixelBus(DynamixelBus):
             raise RuntimeError(f"failed to set baud rate {baud_rate}")
 
         for dxl_id in self.motor_ids:
-            self.packet_handler.write4ByteTxRx(
-                self.port_handler, dxl_id, ADDR_PROFILE_VELOCITY, profile_velocity
-            )
+            self.packet_handler.write4ByteTxRx(self.port_handler, dxl_id, ADDR_PROFILE_VELOCITY, profile_velocity)
 
         for dxl_id in self.motor_ids:
             if not self._bulk_read_pos.addParam(dxl_id, ADDR_PRESENT_POSITION, LEN_PRESENT_POSITION):

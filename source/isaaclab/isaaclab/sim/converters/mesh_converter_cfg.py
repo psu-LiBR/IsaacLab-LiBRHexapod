@@ -5,7 +5,7 @@
 
 from isaaclab.sim.converters.asset_converter_base_cfg import AssetConverterBaseCfg
 from isaaclab.sim.schemas import schemas_cfg
-from isaaclab.utils import configclass
+from isaaclab.utils.configclass import configclass
 
 
 @configclass
@@ -19,21 +19,42 @@ class MeshConverterCfg(AssetConverterBaseCfg):
         If None, then no mass properties will be added.
     """
 
-    rigid_props: schemas_cfg.RigidBodyPropertiesCfg = None
+    rigid_props: schemas_cfg.RigidBodyBaseCfg = None
     """Rigid body properties to apply to the USD. Defaults to None.
 
     Note:
         If None, then no rigid body properties will be added.
     """
 
-    collision_props: schemas_cfg.CollisionPropertiesCfg = None
+    collision_props: (
+        schemas_cfg.CollisionPropertiesCfg | schemas_cfg.CollisionFragment | list[schemas_cfg.CollisionFragment]
+    ) = None
     """Collision properties to apply to the USD. Defaults to None.
+
+    Accepts either a single legacy cfg (e.g. :class:`~isaaclab.sim.schemas.CollisionBaseCfg`) or a
+    list of :class:`~isaaclab.sim.schemas.CollisionFragment` fragments. When a fragment list is
+    given, ``UsdPhysics.CollisionAPI`` is applied as the implicit anchor and each fragment writes
+    its own namespace.
 
     Note:
         If None, then no collision properties will be added.
     """
-    mesh_collision_props: schemas_cfg.MeshCollisionPropertiesCfg = None
+    mesh_collision_props: (
+        schemas_cfg.MeshCollisionBaseCfg
+        | schemas_cfg.MeshCollisionFragment
+        | list[schemas_cfg.MeshCollisionFragment]
+        | None
+    ) = None
     """Mesh approximation properties to apply to all collision meshes in the USD.
+
+    Accepts either a single legacy cfg (e.g. :class:`~isaaclab.sim.schemas.MeshCollisionBaseCfg` or
+    a ``Physx*PropertiesCfg`` cooking cfg) or a list of
+    :class:`~isaaclab.sim.schemas.MeshCollisionFragment` fragments (e.g.
+    ``[UsdPhysicsMeshCollisionCfg(...), PhysxConvexHullCfg(...)]``). When a fragment list is given,
+    ``UsdPhysics.MeshCollisionAPI`` is applied as the implicit anchor, the ``physics:approximation``
+    token is resolved from whichever cooking fragment is present, and each fragment writes its own
+    namespace.
+
     Note:
         If None, then no mesh approximation properties will be added.
     """
@@ -41,8 +62,8 @@ class MeshConverterCfg(AssetConverterBaseCfg):
     translation: tuple[float, float, float] = (0.0, 0.0, 0.0)
     """The translation of the mesh to the origin. Defaults to (0.0, 0.0, 0.0)."""
 
-    rotation: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
-    """The rotation of the mesh in quaternion format (w, x, y, z). Defaults to (1.0, 0.0, 0.0, 0.0)."""
+    rotation: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+    """The rotation of the mesh in quaternion format (x, y, z, w). Defaults to (0.0, 0.0, 0.0, 1.0)."""
 
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
     """The scale of the mesh. Defaults to (1.0, 1.0, 1.0)."""

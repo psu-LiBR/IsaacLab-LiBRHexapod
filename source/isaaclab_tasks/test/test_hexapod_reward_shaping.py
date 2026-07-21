@@ -1,18 +1,14 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 from __future__ import annotations
 
 from pathlib import Path
 
 SOURCE_ROOT = Path(__file__).parents[2]
-HEXAPOD_CFG_DIR = (
-    SOURCE_ROOT
-    / "isaaclab_tasks"
-    / "isaaclab_tasks"
-    / "manager_based"
-    / "locomotion"
-    / "velocity"
-    / "config"
-    / "hexapod"
-)
+HEXAPOD_CFG_DIR = SOURCE_ROOT / "isaaclab_tasks" / "isaaclab_tasks" / "contrib" / "velocity" / "config" / "hexapod"
 
 
 def test_flat_rshape_keeps_reward_shaping_values():

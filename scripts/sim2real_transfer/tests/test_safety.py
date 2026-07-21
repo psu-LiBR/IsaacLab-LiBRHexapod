@@ -1,9 +1,12 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import math
 import time
 
 import numpy as np
-import pytest
-
 from sim2real.deployment_config import JointsCfg
 from sim2real.dynamixel_bus import DryRunDynamixelBus
 from sim2real.joint_mapping import JointMapping
@@ -17,20 +20,44 @@ from sim2real.safety import (
 )
 
 SIM_ORDER = [
-    "BackLink", "FrontLink", "MiddleLeft", "MiddleRight",
-    "BackLeft", "BackRight", "FrontLeft", "FrontRight",
+    "BackLink",
+    "FrontLink",
+    "MiddleLeft",
+    "MiddleRight",
+    "BackLeft",
+    "BackRight",
+    "FrontLeft",
+    "FrontRight",
 ]
 REAL_ORDER = [
-    "FrontLink", "BackLink", "FrontRight", "FrontLeft",
-    "MiddleRight", "MiddleLeft", "BackRight", "BackLeft",
+    "FrontLink",
+    "BackLink",
+    "FrontRight",
+    "FrontLeft",
+    "MiddleRight",
+    "MiddleLeft",
+    "BackRight",
+    "BackLeft",
 ]
-MOTOR_IDS = {"FrontLink": 3, "BackLink": 6, "FrontRight": 2, "FrontLeft": 1,
-             "MiddleRight": 4, "MiddleLeft": 5, "BackRight": 7, "BackLeft": 8}
+MOTOR_IDS = {
+    "FrontLink": 3,
+    "BackLink": 6,
+    "FrontRight": 2,
+    "FrontLeft": 1,
+    "MiddleRight": 4,
+    "MiddleLeft": 5,
+    "BackRight": 7,
+    "BackLeft": 8,
+}
 CORRECTION_GROUP = {
-    "BackLink": "unchanged", "FrontLink": "negate",
-    "FrontRight": "leg_negate_plus_pi", "FrontLeft": "leg_negate_plus_pi",
-    "MiddleRight": "leg_negate_plus_pi", "MiddleLeft": "leg_negate_plus_pi",
-    "BackRight": "leg_negate_plus_pi", "BackLeft": "leg_negate_plus_pi",
+    "BackLink": "unchanged",
+    "FrontLink": "negate",
+    "FrontRight": "leg_negate_plus_pi",
+    "FrontLeft": "leg_negate_plus_pi",
+    "MiddleRight": "leg_negate_plus_pi",
+    "MiddleLeft": "leg_negate_plus_pi",
+    "BackRight": "leg_negate_plus_pi",
+    "BackLeft": "leg_negate_plus_pi",
 }
 # NOTE: 2048 is only a self-consistent placeholder for exercising the ramp math in
 # this test, not a claim about the real robot's calibration -- see
@@ -47,8 +74,12 @@ SOFT_LIMITS = {name: (-1.4, 1.4) for name in SIM_ORDER}
 
 def make_mapping() -> JointMapping:
     cfg = JointsCfg(
-        sim_order=SIM_ORDER, real_order=REAL_ORDER, motor_ids=MOTOR_IDS,
-        correction_group=CORRECTION_GROUP, ticks_per_rev=4096, zero_tick=ZERO_TICK,
+        sim_order=SIM_ORDER,
+        real_order=REAL_ORDER,
+        motor_ids=MOTOR_IDS,
+        correction_group=CORRECTION_GROUP,
+        ticks_per_rev=4096,
+        zero_tick=ZERO_TICK,
         soft_limits_rad=SOFT_LIMITS,
     )
     return JointMapping(cfg)
@@ -101,9 +132,13 @@ def test_zero_tick_2048_for_legs_overflows_valid_range_reproducing_calibration_b
     # valid 12-bit tick range, which is exactly the kind of thing
     # ticks_in_valid_range() is meant to catch before it gets silently clipped.
     cfg = JointsCfg(
-        sim_order=SIM_ORDER, real_order=REAL_ORDER, motor_ids=MOTOR_IDS,
-        correction_group=CORRECTION_GROUP, ticks_per_rev=4096,
-        zero_tick={name: 2048 for name in REAL_ORDER}, soft_limits_rad=SOFT_LIMITS,
+        sim_order=SIM_ORDER,
+        real_order=REAL_ORDER,
+        motor_ids=MOTOR_IDS,
+        correction_group=CORRECTION_GROUP,
+        ticks_per_rev=4096,
+        zero_tick={name: 2048 for name in REAL_ORDER},
+        soft_limits_rad=SOFT_LIMITS,
     )
     jm = JointMapping(cfg)
     q_default = np.full(8, -0.47)

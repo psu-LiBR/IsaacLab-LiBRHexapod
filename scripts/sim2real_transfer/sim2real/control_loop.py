@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """The 50 Hz policy control loop.
 
 `imu.RosImuReader` needs `rclpy` running (spinning in a background thread) while
@@ -20,8 +25,6 @@ than propagating as a raw exception.
 from __future__ import annotations
 
 import time
-
-import numpy as np
 
 from .command_source import CommandSource
 from .deployment_config import DeploymentConfig
@@ -96,8 +99,13 @@ def run(
                 command = localizer.get_pose_command(goal[:3], goal[3])
 
             obs = obs_builder.build(
-                gyro, gravity, measured_pos_sim, measured_vel_sim,
-                policy_runner.last_action, q_default_sim, command,
+                gyro,
+                gravity,
+                measured_pos_sim,
+                measured_vel_sim,
+                policy_runner.last_action,
+                q_default_sim,
+                command,
             )
             if not watchdog.check(extra_ok=all_finite(obs), reason="non-finite observation"):
                 print(f"[control_loop] watchdog tripped: {watchdog.trip_reason}")
@@ -120,8 +128,15 @@ def run(
             loop_time_ms = (time.perf_counter() - iter_start) * 1000.0
             if logger is not None:
                 logger.log(
-                    step, time.perf_counter() - run_start, obs, raw_action,
-                    target_sim, target_ticks, measured_pos_sim, measured_vel_sim, loop_time_ms,
+                    step,
+                    time.perf_counter() - run_start,
+                    obs,
+                    raw_action,
+                    target_sim,
+                    target_ticks,
+                    measured_pos_sim,
+                    measured_vel_sim,
+                    loop_time_ms,
                 )
 
             elapsed = time.perf_counter() - iter_start

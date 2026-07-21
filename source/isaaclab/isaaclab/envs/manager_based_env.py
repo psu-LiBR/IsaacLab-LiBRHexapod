@@ -3,30 +3,32 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from __future__ import annotations
+
 import builtins
 import logging
+import sys
 import warnings
 from collections.abc import Sequence
 from typing import Any
 
 import torch
 
-import omni.physx
-from isaacsim.core.simulation_manager import SimulationManager
-
 from isaaclab.managers import ActionManager, EventManager, ObservationManager, RecorderManager
 from isaaclab.scene import InteractiveScene
 from isaaclab.sim import SimulationContext
-from isaaclab.sim.utils.stage import attach_stage_to_usd_context, use_stage
+from isaaclab.sim.utils.stage import use_stage
 from isaaclab.ui.widgets import ManagerLiveVisualizer
+from isaaclab.utils.configclass import resolve_cfg_presets
 from isaaclab.utils.seed import configure_seed
 from isaaclab.utils.timer import Timer
-from isaaclab.utils.version import get_isaac_sim_version
+from isaaclab.utils.version import has_kit
 
 from .common import VecEnvObs
 from .manager_based_env_cfg import ManagerBasedEnvCfg
 from .ui import ViewportCameraController
 from .utils.io_descriptors import export_articulations_data, export_scene_data
+from .utils.video_recorder import VideoRecorder
 
 # import logger
 logger = logging.getLogger(__name__)
@@ -84,12 +86,18 @@ class ManagerBasedEnv:
             RuntimeError: If a simulation context already exists. The environment must always create one
                 since it configures the simulation context and controls the simulation.
         """
+        # The env remains closed until initialization completes.
+        self._is_closed = True
+
         # check that the config is valid
         cfg.validate()
+        # Resolve any preset-wrapper fields (PresetCfg subclasses or old-style ``presets`` dicts)
+        # to their default variant so that managers and scene builders see concrete cfg objects.
+        resolve_cfg_presets(cfg)
         # store inputs to class
         self.cfg = cfg
         # initialize internal variables
-        self._is_closed = False
+        self._physics_handles_decimation = False
 
         # set the seed for the environment
         if self.cfg.seed is not None:
@@ -102,13 +110,31 @@ class ManagerBasedEnv:
             # the type-annotation is required to avoid a type-checking error
             # since it gets confused with Isaac Sim's SimulationContext class
             self.sim: SimulationContext = SimulationContext(self.cfg.sim)
+            created_sim = True
         else:
             # simulation context should only be created before the environment
             # when in extension mode
             if not builtins.ISAAC_LAUNCHED_FROM_TERMINAL:
                 raise RuntimeError("Simulation context already exists. Cannot create a new one.")
             self.sim: SimulationContext = SimulationContext.instance()
+            created_sim = False
 
+        # From this point on, if __init__ fails we must tear down the SimulationContext
+        # singleton (only if we created it) so callers can retry or proceed.
+        try:
+            self._init_sim()
+        except Exception:
+            if created_sim:
+                self.sim.clear_instance()
+            raise
+        self._is_closed = False
+
+    def _init_sim(self):
+        """Complete environment initialization after the SimulationContext is created.
+
+        Separated from :meth:`__init__` so that the caller can tear down the
+        :class:`SimulationContext` singleton if this method raises.
+        """
         # make sure torch is running on the correct device
         if "cuda" in self.device:
             torch.cuda.set_device(self.device)
@@ -132,22 +158,34 @@ class ManagerBasedEnv:
         # counter for simulation steps
         self._sim_step_counter = 0
 
+        # -- controls camera/Kit rendering in step().
+        # When False, the Kit app loop (app.update()) and camera/RTX sensor updates are
+        # skipped, but standalone visualizers (Newton, Rerun, Viser) continue to update.
+        # This is because Kit bundles camera rendering with its app loop and the two
+        # cannot be separated.  Non-Kit visualizers have independent step() methods
+        # that do not trigger camera or GUI updates, so they remain active.
+        self.render_enabled: bool = True
+
         # allocate dictionary to store metrics
         self.extras = {}
 
         # generate scene
         with Timer("[INFO]: Time taken for scene creation", "scene_creation"):
             # set the stage context for scene creation steps which use the stage
-            with use_stage(self.sim.get_initial_stage()):
+            with use_stage(self.sim.stage):
                 self.scene = InteractiveScene(self.cfg.scene)
-                attach_stage_to_usd_context()
+                self.scene.initialize_renderers()
+            self.sim.register_interactive_scene(self.scene)
         print("[INFO]: Scene manager: ", self.scene)
 
         # set up camera viewport controller
         # viewport is not available in other rendering modes so the function will throw a warning
         # FIXME: This needs to be fixed in the future when we unify the UI functionalities even for
         # non-rendering modes.
-        if self.sim.render_mode >= self.sim.RenderMode.PARTIAL_RENDERING:
+        # Initialize when a Kit viewport exists. ViewportCameraController uses omni.kit (renderer camera);
+        # skip in kitless Newton-only runs (e.g. --viz rerun) where no Kit app is running.
+        has_visualizers = self.sim.has_active_visualizers()
+        if (self.sim.has_gui or has_visualizers) and has_kit():
             self.viewport_camera_controller = ViewportCameraController(self, self.cfg.viewer)
         else:
             self.viewport_camera_controller = None
@@ -161,35 +199,47 @@ class ManagerBasedEnv:
         if "prestartup" in self.event_manager.available_modes:
             self.event_manager.apply(mode="prestartup")
 
+        # Instantiate the video recorder before sim.reset() so that any fallback Camera
+        # (used for state-based envs without an observation camera) is spawned into the USD
+        # stage and registered for the PHYSICS_READY callback before physics initialises.
+        # env_render_mode and eye/lookat are forwarded by subclasses (e.g. ManagerBasedRLEnv)
+        # into cfg.video_recorder before calling super().__init__().
+        if self.cfg.video_recorder is not None:
+            self.video_recorder: VideoRecorder = self.cfg.video_recorder.class_type(self.cfg.video_recorder, self.scene)
+        else:
+            self.video_recorder = None
+
         # play the simulator to activate physics handles
         # note: this activates the physics simulation view that exposes TensorAPIs
         # note: when started in extension mode, first call sim.reset_async() and then initialize the managers
-        if builtins.ISAAC_LAUNCHED_FROM_TERMINAL is False:
-            print("[INFO]: Starting the simulation. This may take a few seconds. Please wait...")
-            with Timer("[INFO]: Time taken for simulation start", "simulation_start"):
-                # since the reset can trigger callbacks which use the stage,
-                # we need to set the stage context here
-                with use_stage(self.sim.get_initial_stage()):
-                    self.sim.reset()
-                # update scene to pre populate data buffers for assets and sensors.
-                # this is needed for the observation manager to get valid tensors for initialization.
-                # this shouldn't cause an issue since later on, users do a reset over all the environments
-                # so the lazy buffers would be reset.
-                self.scene.update(dt=self.physics_dt)
-            # add timeline event to load managers
-            self.load_managers()
+        with Timer("[INFO]: Time taken for simulation start", "simulation_start"):
+            # since the reset can trigger callbacks which use the stage,
+            # we need to set the stage context here
+            with use_stage(self.sim.stage):
+                self.sim.reset()
+            # update scene to pre populate data buffers for assets and sensors.
+            # this is needed for the observation manager to get valid tensors for initialization.
+            # this shouldn't cause an issue since later on, users do a reset over all the environments
+            # so the lazy buffers would be reset.
+            self.scene.update(dt=self.physics_dt)
+        # let the physics backend know about the env decimation so it can
+        # fold the full loop into a single step() when possible
+        self.sim.physics_manager.set_decimation(self.cfg.decimation)
+        self._physics_handles_decimation = self.sim.physics_manager.handles_decimation()
+        # add timeline event to load managers
+        self.load_managers()
 
         # extend UI elements
         # we need to do this here after all the managers are initialized
         # this is because they dictate the sensors and commands right now
-        if self.sim.has_gui() and self.cfg.ui_window_class_type is not None:
+        if self.sim.has_gui and self.cfg.ui_window_class_type is not None:
             # setup live visualizers
             self.setup_manager_visualizers()
             self._window = self.cfg.ui_window_class_type(self, window_name="IsaacLab")
         else:
             # if no window, then we don't need to store the window
             self._window = None
-
+        self.has_rtx_sensors = self.sim.get_setting("/isaaclab/render/rtx_sensors")
         # initialize observation buffers
         self.obs_buf = {}
 
@@ -211,9 +261,10 @@ class ManagerBasedEnv:
             if self.cfg.num_rerenders_on_reset == 0:
                 self.cfg.num_rerenders_on_reset = 1
 
-    def __del__(self):
+    def __del__(self, _sys=sys):
         """Cleanup for the environment."""
-        self.close()
+        if not self._is_closed and not _sys.is_finalizing() and _sys.meta_path is not None:
+            self.close()
 
     """
     Properties.
@@ -359,7 +410,7 @@ class ManagerBasedEnv:
             A tuple containing the observations and extras.
         """
         if env_ids is None:
-            env_ids = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
+            env_ids = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
 
         # trigger recorder terms for pre-reset calls
         self.recorder_manager.record_pre_reset(env_ids)
@@ -375,7 +426,7 @@ class ManagerBasedEnv:
         self.scene.write_data_to_sim()
         self.sim.forward()
         # if sensors are added to the scene, make sure we render to reflect changes in reset
-        if self.sim.has_rtx_sensors() and self.cfg.num_rerenders_on_reset > 0:
+        if self.has_rtx_sensors and self.cfg.num_rerenders_on_reset > 0:
             for _ in range(self.cfg.num_rerenders_on_reset):
                 self.sim.render()
 
@@ -385,9 +436,11 @@ class ManagerBasedEnv:
         # compute observations
         self.obs_buf = self.observation_manager.compute(update_history=True)
 
-        if self.cfg.wait_for_textures and self.sim.has_rtx_sensors():
-            while SimulationManager.assets_loading():
-                self.sim.render()
+        if self.cfg.wait_for_textures and self.has_rtx_sensors:
+            # Wait for assets to finish loading (PhysX-specific)
+            if hasattr(self.sim.physics_manager, "assets_loading"):
+                while self.sim.physics_manager.assets_loading():
+                    self.sim.render()
 
         # return observations
         return self.obs_buf, self.extras
@@ -418,7 +471,7 @@ class ManagerBasedEnv:
         """
         # reset all envs in the scene if env_ids is None
         if env_ids is None:
-            env_ids = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
+            env_ids = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
 
         # trigger recorder terms for pre-reset calls
         self.recorder_manager.record_pre_reset(env_ids)
@@ -436,7 +489,7 @@ class ManagerBasedEnv:
         self.sim.forward()
 
         # if sensors are added to the scene, make sure we render to reflect changes in reset
-        if self.sim.has_rtx_sensors() and self.cfg.num_rerenders_on_reset > 0:
+        if self.has_rtx_sensors and self.cfg.num_rerenders_on_reset > 0:
             for _ in range(self.cfg.num_rerenders_on_reset):
                 self.sim.render()
 
@@ -458,6 +511,17 @@ class ManagerBasedEnv:
         simulation steps per environment step) and the :attr:`ManagerBasedEnvCfg.sim.dt` (physics time-step).
         Based on these parameters, the environment time-step is computed as the product of the two.
 
+        Rendering can be controlled per-step via :attr:`render_enabled`.
+
+        When ``render_enabled`` is False:
+
+        - The Kit app loop (``app.update()``) is **skipped**, which also disables
+          camera/RTX sensor rendering and GUI viewport updates.  Kit bundles these
+          operations together, so they cannot be separated.
+        - Standalone visualizers (Newton, Rerun, Viser) **continue to update**
+          normally because their ``step()`` methods are independent of the Kit
+          app loop.
+
         Args:
             action: The actions to apply on the environment. Shape is (num_envs, action_dim).
 
@@ -470,25 +534,36 @@ class ManagerBasedEnv:
         self.recorder_manager.record_pre_step()
 
         # check if we need to do rendering within the physics loop
-        # note: checked here once to avoid multiple checks within the loop
-        is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
+        # note: uses cached property to avoid settings lookup every step
+        is_rendering = self.sim.is_rendering
 
         # perform physics stepping
-        for _ in range(self.cfg.decimation):
-            self._sim_step_counter += 1
-            # set actions into buffers
+        if self._physics_handles_decimation:
+            self._sim_step_counter += self.cfg.decimation
             self.action_manager.apply_action()
-            # set actions into simulator
             self.scene.write_data_to_sim()
-            # simulate
             self.sim.step(render=False)
-            # render between steps only if the GUI or an RTX sensor needs it
-            # note: we assume the render interval to be the shortest accepted rendering interval.
-            #    If a camera needs rendering at a faster frequency, this will lead to unexpected behavior.
+            # render only when a render_interval boundary falls within this decimation block,
+            # mirroring the per-sub-step check in the else branch.
             if self._sim_step_counter % self.cfg.sim.render_interval == 0 and is_rendering:
-                self.sim.render()
-            # update buffers at sim dt
-            self.scene.update(dt=self.physics_dt)
+                self.sim.render(skip_app_pumping=not self.render_enabled)
+            self.scene.update(dt=self.step_dt)
+        else:
+            for _ in range(self.cfg.decimation):
+                self._sim_step_counter += 1
+                # set actions into buffers
+                self.action_manager.apply_action()
+                # set actions into simulator
+                self.scene.write_data_to_sim()
+                # simulate
+                self.sim.step(render=False)
+                # render between steps only if the GUI or an RTX sensor needs it.
+                # When render_enabled is False, Kit visualizer (camera/GUI) is skipped
+                # but standalone visualizers (Newton, Rerun, Viser) still update.
+                if self._sim_step_counter % self.cfg.sim.render_interval == 0 and is_rendering:
+                    self.sim.render(skip_app_pumping=not self.render_enabled)
+                # update buffers at sim dt
+                self.scene.update(dt=self.physics_dt)
 
         # post-step: step interval event
         if "interval" in self.event_manager.available_modes:
@@ -516,7 +591,7 @@ class ManagerBasedEnv:
             import omni.replicator.core as rep
 
             rep.set_global_seed(seed)
-        except ModuleNotFoundError:
+        except (ModuleNotFoundError, AttributeError):
             pass
         # set seed for torch and other libraries
         return configure_seed(seed)
@@ -524,6 +599,14 @@ class ManagerBasedEnv:
     def close(self):
         """Cleanup for the environment."""
         if not self._is_closed:
+            # Stop simulation first to allow physics to clean up properly
+            self.sim.stop()
+
+            # Drop cached observation tensors so they don't survive close via
+            # gymnasium's wrapper chain.
+            if isinstance(getattr(self, "obs_buf", None), dict):
+                self.obs_buf.clear()
+
             # destructor is order-sensitive
             del self.viewport_camera_controller
             del self.action_manager
@@ -533,14 +616,6 @@ class ManagerBasedEnv:
             del self.scene
 
             # clear callbacks and instance
-            if get_isaac_sim_version().major >= 5:
-                if self.cfg.sim.create_stage_in_memory:
-                    # detach physx stage
-                    omni.physx.get_physx_simulation_interface().detach_stage()
-                    self.sim.stop()
-                    self.sim.clear()
-
-            self.sim.clear_all_callbacks()
             self.sim.clear_instance()
 
             # destroy the window
