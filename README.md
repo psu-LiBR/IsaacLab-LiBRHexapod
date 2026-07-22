@@ -52,16 +52,18 @@ This fork adds a 6-legged robot (LiBR Hexapod) with flat-terrain reinforcement l
 | File | Purpose |
 | ---- | ------- |
 | [`source/isaaclab_assets/isaaclab_assets/robots/hexapod.py`](source/isaaclab_assets/isaaclab_assets/robots/hexapod.py) | Robot asset config — USD path, 8-joint articulation, two actuator groups (spine vs. legs) with independent PD gains |
-| [`source/isaaclab_tasks/.../config/hexapod/flat_env_cfg.py`](source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/flat_env_cfg.py) | Flat-terrain environment: forward-only velocity command, friction tuned for PLA-on-wood, asymmetric actor-critic observations, EMA yaw-tracking reward |
-| [`source/isaaclab_tasks/.../config/hexapod/hexapod_mimic_env_cfg.py`](source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/hexapod_mimic_env_cfg.py) | Two-phase training env: Phase 1 imitation (800 iterations), Phase 2 RL — both in a single `train.py` run |
-| [`source/isaaclab_tasks/.../config/hexapod/hexapod_mimic_rewards.py`](source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/hexapod_mimic_rewards.py) | `joint_pos_imitation` reward: per-joint Gaussian tracking against a reference gait, auto-corrects for joint ordering mismatches |
-| [`source/isaaclab_tasks/.../config/hexapod/hexapod_mimic_motion.py`](source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/hexapod_mimic_motion.py) | `MotionReference` class: loads reference gait from CSV or generates a built-in sinusoidal tripod gait; resamples to a 200-point phase grid on GPU |
-| [`source/isaaclab_tasks/.../config/hexapod/hexapod_rewards.py`](source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/hexapod_rewards.py) | Custom reward functions: EMA yaw tracking, per-leg duty-cycle air time (reference) |
-| [`source/isaaclab_tasks/.../config/hexapod/hexapod_obs_cfg.py`](source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/hexapod_obs_cfg.py) | Asymmetric observation groups: `PolicyCfg` (proprioceptive only, deployable on hardware) and `CriticCfg` (adds ground-truth base velocity during training) |
-| [`source/isaaclab_tasks/.../config/hexapod/__init__.py`](source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/__init__.py) | Gym environment registration for all six hexapod task IDs |
-| [`source/isaaclab_tasks/.../config/hexapod/agents/`](source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/hexapod/agents/) | PPO runner configs (`rsl_rl_ppo_cfg.py` for flat RL, `rsl_rl_ppo_mimic_cfg.py` for mimic) |
+| [`source/isaaclab_tasks/.../config/hexapod/flat_env_cfg.py`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/flat_env_cfg.py) | Flat-terrain environment: forward-only velocity command, friction tuned for PLA-on-wood, asymmetric actor-critic observations, EMA yaw-tracking reward |
+| [`source/isaaclab_tasks/.../config/hexapod/hexapod_mimic_env_cfg.py`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/hexapod_mimic_env_cfg.py) | Two-phase training env: Phase 1 imitation (800 iterations), Phase 2 RL — both in a single `train` run |
+| [`source/isaaclab_tasks/.../config/hexapod/hexapod_mimic_rewards.py`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/hexapod_mimic_rewards.py) | `joint_pos_imitation` reward: per-joint Gaussian tracking against a reference gait, auto-corrects for joint ordering mismatches |
+| [`source/isaaclab_tasks/.../config/hexapod/hexapod_mimic_motion.py`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/hexapod_mimic_motion.py) | `MotionReference` class: loads reference gait from CSV or generates a built-in sinusoidal tripod gait; resamples to a 200-point phase grid on GPU |
+| [`source/isaaclab_tasks/.../config/hexapod/hexapod_goal_env_cfg.py`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/hexapod_goal_env_cfg.py) | Goal-reaching env: fixed-distance "reach the point fastest" task with success-gated curriculum |
+| [`source/isaaclab_tasks/.../config/hexapod/hexapod_rewards.py`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/hexapod_rewards.py) | Custom reward functions: EMA yaw tracking, per-leg duty-cycle air time (reference) |
+| [`source/isaaclab_tasks/.../config/hexapod/hexapod_obs_cfg.py`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/hexapod_obs_cfg.py) | Asymmetric observation groups: `PolicyCfg` (proprioceptive only, deployable on hardware) and `CriticCfg` (adds ground-truth base velocity during training) |
+| [`source/isaaclab_tasks/.../config/hexapod/__init__.py`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/__init__.py) | Gym environment registration for all hexapod task IDs |
+| [`source/isaaclab_tasks/.../config/hexapod/agents/`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/agents/) | PPO runner configs (`rsl_rl_ppo_cfg.py` for flat RL, `rsl_rl_ppo_mimic_cfg.py` for mimic, `rsl_rl_ppo_goal_cfg.py` for goal-reaching) |
 | [`hexapod-assets/`](hexapod-assets/) | USD robot model and reference gait CSVs (tracked in this repo) |
-| [`scripts/reinforcement_learning/rsl_rl/playReal.py`](scripts/reinforcement_learning/rsl_rl/playReal.py) | Extended play script: replays an open-loop gait from CSV in sim for sim-to-real comparison |
+| [`source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py`](source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py) | Extended play script: replays an open-loop gait from CSV in sim for sim-to-real comparison (run directly by module path, no `--rl_library` entry) |
+| [`scripts/sim2real_transfer/`](scripts/sim2real_transfer/) | Standalone package (no Isaac Lab dependency) that runs an exported ONNX policy on the real robot's onboard computer |
 
 ### Robot: 8 Joints, Two Actuator Groups
 
@@ -80,19 +82,22 @@ Init pose: spine joints at 0.0 rad, all leg joints at −0.47 rad. Physical hard
 | `Isaac-Velocity-Flat-Hexapod-Play-v0` | Evaluation / CSV logging |
 | `Isaac-Velocity-Flat-Hexapod-Mimic-v0` | Two-phase imitation → RL training |
 | `Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0` | Evaluate mimic checkpoint |
-| `Isaac-Velocity-Rough-Hexapod-v0` | Rough terrain (experimental) |
+| `Isaac-Velocity-Rough-Hexapod-v0` / `-Play-v0` | Rough terrain (experimental) |
+| `Isaac-Goal-Flat-Hexapod-v0` / `-Play-v0` | Goal-reaching curriculum (reach a fixed distance fastest) |
+
+See [`source/isaaclab_tasks/.../config/hexapod/README.md`](source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/README.md) for the additional reward-shaping task variants (`-Rshape-*`, `-BigStep-*`).
 
 ### Quick Start
 
 ```bat
 :: Two-phase imitation + RL (recommended starting point)
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Velocity-Flat-Hexapod-Mimic-v0 --num_envs 4096
+isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-v0 --num_envs 4096
 
-:: Standard flat RL (or fine-tune a mimic checkpoint)
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 4096
+:: Standard flat RL (or fine-tune a mimic checkpoint via --checkpoint)
+isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 4096
 
 :: Evaluate a checkpoint
-isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/play.py --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --checkpoint <path>
+isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --checkpoint <path>
 ```
 
 The mimic task falls back to a built-in sinusoidal tripod gait if `hexapod-assets/Sim Gaits/forward3_lleg30_amp65_sim.csv` is absent — no CSV is required to start training.

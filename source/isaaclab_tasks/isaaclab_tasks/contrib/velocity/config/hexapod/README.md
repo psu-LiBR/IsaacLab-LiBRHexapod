@@ -26,15 +26,16 @@ reasoning behind each parameter is in the module docstring of the corresponding 
 
 ```bash
 # train
-./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py \
+./isaaclab.sh train --rl_library rsl_rl \
     --task Isaac-Velocity-Flat-Hexapod-Rshape-v0 --headless
 
 # evaluate a checkpoint
-./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/play.py \
+./isaaclab.sh play --rl_library rsl_rl \
     --task Isaac-Velocity-Flat-Hexapod-Rshape-Play-v0 --num_envs 1 --checkpoint <path>
 
-# replay an open-loop gait CSV (joint angles in radians)
-./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/playReal.py \
+# replay an open-loop gait CSV (joint angles in radians) -- playReal.py has no
+# --rl_library backend registration, so it is run directly by module path
+./isaaclab.sh -p source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py \
     --task Isaac-Velocity-Flat-Hexapod-Rshape-Play-v0 --num_envs 1 \
     --gait_csv <path> --gait_mode pos --gait_dt <seconds_per_row> --warmup_time 2.0
 ```

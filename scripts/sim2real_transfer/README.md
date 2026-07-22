@@ -69,9 +69,10 @@ profile (`velocity` or `goal`).
 ## Layout
 
 - `sim2real/` -- the package: `joint_mapping.py` (Sim<->Real DOF conversion,
-  most safety-critical file), `profiles.py` (obs schemas), `policy_runner.py`
-  (onnxruntime wrapper), `dynamixel_bus.py` / `imu.py` (hardware interfaces,
-  each with a hardware-free dry-run/fake counterpart), `command_source.py` /
+  most safety-critical file), `profiles.py` (obs schemas), `deployment_config.py`
+  (typed `deployment.yaml` loader), `policy_runner.py` (onnxruntime wrapper),
+  `dynamixel_bus.py` / `imu.py` (hardware interfaces, each with a
+  hardware-free dry-run/fake counterpart), `command_source.py` /
   `localization.py` (velocity/goal command handling), `safety.py` (watchdog,
   startup/shutdown ramps), `logging_utils.py`, `control_loop.py` (ties it all
   together).
@@ -79,8 +80,12 @@ profile (`velocity` or `goal`).
 - `tools/validate_onnx.py` -- offline sim-vs-onnx trace validation; run before
   ever touching hardware. Direct mode needs only a CSV with `obs_*`/`action_*`
   columns; pipeline mode additionally needs the raw fields that
-  `scripts/reinforcement_learning/rsl_rl/play.py --dump_obs_action_csv`
+  `isaaclab.bat play --rl_library rsl_rl ... --dump_obs_action_csv <path>`
   produces.
+- `tools/calibrate_encoders.py`, `tools/check_body_alignment.py`,
+  `tools/log_imu_rotation_test.py`, `tools/log_imu_axis_alignment_test.py` --
+  standalone hardware calibration/diagnostic helpers, not part of the bring-up
+  sequence above.
 - `config/deployment.example.yaml` -- hardware facts template; copy to
   `deployment.yaml` (gitignored) and calibrate before real bring-up.
 - `tests/` -- `python -m pytest tests/` from this directory, or

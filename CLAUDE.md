@@ -89,6 +89,8 @@ isaaclab.bat -p -m pytest source/isaaclab_tasks/test/test_hexapod_goal_mdp.py -v
 
 `test_hexapod_goal_mdp.py` loads `hexapod_goal_rewards.py`/`hexapod_goal_curriculum.py` directly via `importlib` (not through the `isaaclab_tasks` package) and only depends on `torch`, so — unlike most tests here — it can also run under plain system Python: `python -m pytest source/isaaclab_tasks/test/test_hexapod_goal_mdp.py`.
 
+`test_hexapod_reward_shaping.py` asserts the reward-shaping/tuned config files (`flat_env_cfg_rshape.py`, `hexapod_goal_tuned_env_cfg.py`) and their gym registrations hold the documented parameter values; it only does source-text assertions (no `torch`/Isaac Sim import at all), so it also runs under plain system Python: `python -m pytest source/isaaclab_tasks/test/test_hexapod_reward_shaping.py`.
+
 Training logs save to `logs/rsl_rl/<experiment_name>/<timestamp>/`.
 
 `scripts/sim2real_transfer/` is a separate plain-Python package (no Isaac Sim dependency, own `requirements.txt`) for running exported policies on the real robot — see **Sim-to-Real Deployment** below for its commands.
@@ -170,6 +172,9 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `Isaac-Velocity-Rough-Hexapod-v0` / `Isaac-Velocity-Rough-Hexapod-Play-v0`
 - `Isaac-Velocity-Flat-Hexapod-Mimic-v0` / `Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0`
 - `Isaac-Goal-Flat-Hexapod-v0` / `Isaac-Goal-Flat-Hexapod-Play-v0`
+- Reward-shaping/tuned variants (`Isaac-Velocity-Flat-Hexapod-Rshape-*`, `Isaac-Goal-Flat-Hexapod-BigStep-*`) —
+  see `flat_env_cfg_rshape.py` / `hexapod_goal_tuned_env_cfg.py` below and the task-specific
+  `config/hexapod/README.md` for the full parameter table
 
 **Flat env key settings** (`flat_env_cfg.py`):
 
@@ -197,6 +202,9 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `hexapod_goal_rewards.py` — `progress_to_goal`, `termination_signal`, `constant_per_step`, `reached_goal_done`
 - `hexapod_goal_obs_cfg.py` — `HexapodGoalObservationsCfg`: mirrors `HexapodFlatObservationsCfg` but swaps `velocity_commands` for `pose_command` (4-dim relative goal pose)
 - `agents/rsl_rl_ppo_goal_cfg.py` — `HexapodGoalPPORunnerCfg`: 3000 iterations, `num_steps_per_env=96`, `gamma=0.999`, `entropy_coef=0.003`, logs to `logs/rsl_rl/hexapod_goal/`
+- `flat_env_cfg_rshape.py` — `HexapodFlatRshapeEnvCfg` (+ `_PLAY` and `Slide045/035/025` foot-slide-weight variants): reward-shaping on top of the flat baseline that trades short/rapid steps for longer swing phases (looser velocity-tracking std, higher `feet_air_time` weight/threshold, added `feet_slide` penalty, higher ground friction)
+- `hexapod_goal_tuned_env_cfg.py` — `HexapodGoalBigStepEnvCfg` family (+ `Slide06/035`, `Minimal`, `_PLAY`): carries the same flat-shaping deltas over to the goal-reaching task
+- `README.md` — task-variant reference table (which reward params each `-Rshape-*`/`-BigStep-*` task ID changes) and CLI examples; kept current with the registrations in `__init__.py`
 
 **Mimic System** (`hexapod_mimic_env_cfg.py`, `hexapod_mimic_rewards.py`, `hexapod_mimic_motion.py`):
 
