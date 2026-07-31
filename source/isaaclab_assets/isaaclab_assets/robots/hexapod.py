@@ -43,22 +43,22 @@ HEXAPOD_CFG = ArticulationCfg(
         pos=(0.0, 0.0, 0.2),
         joint_pos={
             #".*": 0.0,
-            "FrontLink": 0.0,
-            "BackLink":0.0,
+            "FrontLink_Joint": 0.0,
+            "BackLink_Joint":0.0,
 
-            #"MiddleLeft":0.0,
-            #"MiddleRight": 0.0,
-            #"BackLeft": 0.0,
-            #"BackRight": 0.0,
-            #"FrontLeft": 0.0,
-            #"FrontRight": 0.0,
+            #"MiddleLeft_Joint":0.0,
+            #"MiddleRight_Joint": 0.0,
+            #"BackLeft_Joint": 0.0,
+            #"BackRight_Joint": 0.0,
+            #"FrontLeft_Joint": 0.0,
+            #"FrontRight_Joint": 0.0,
 
-            "MiddleLeft":-0.47,
-            "MiddleRight": -0.47,
-            "BackLeft": -0.47,
-            "BackRight": -0.47,
-            "FrontLeft": -0.47,
-            "FrontRight": -0.47,
+            "MiddleLeft_Joint":-0.47,
+            "MiddleRight_Joint": -0.47,
+            "BackLeft_Joint": -0.47,
+            "BackRight_Joint": -0.47,
+            "FrontLeft_Joint": -0.47,
+            "FrontRight_Joint": -0.47,
             #"Front Middle Joint": 1.57079,
             #"Front Left Joint": 0,
             #"Front Right Joint": 0,
@@ -76,7 +76,7 @@ HEXAPOD_CFG = ArticulationCfg(
         # Lower stiffness reduces peak torque demand (at stiffness=40, error=0.15 rad before saturation vs 0.075 at 80).
         # The real servo's internal firmware handles gravity loading better than a pure PD controller.
         "body_joints": ImplicitActuatorCfg(
-            joint_names_expr=["FrontLink", "BackLink"],
+            joint_names_expr=["FrontLink_Joint", "BackLink_Joint"],
             stiffness = 40,
             # stiffness = 80,   # too stiff -- small tracking lag generates huge torques; consistently saturates
             damping = 0.4,
@@ -86,7 +86,14 @@ HEXAPOD_CFG = ArticulationCfg(
         ),
         # Leg joints: intermittent ground contact, shorter duration at peak torque
         "leg_joints": ImplicitActuatorCfg(
-            joint_names_expr=["MiddleLeft", "MiddleRight", "BackLeft", "BackRight", "FrontLeft", "FrontRight"],
+            joint_names_expr=[
+                "MiddleLeft_Joint",
+                "MiddleRight_Joint",
+                "BackLeft_Joint",
+                "BackRight_Joint",
+                "FrontLeft_Joint",
+                "FrontRight_Joint",
+            ],
             stiffness = 80,
             # stiffness = 37,   # original -- too low: max correctable error = 1.4/37 = 0.038 rad before torque saturation
             damping = 0.9,
