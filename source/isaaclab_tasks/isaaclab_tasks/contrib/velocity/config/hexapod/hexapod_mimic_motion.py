@@ -16,16 +16,17 @@ sinusoidal tripod gait.
 Joint ordering used throughout this module matches Isaac Lab's internal order for this
 robot as confirmed by playReal.py (Sim DOF order, determined by the USD articulation):
 
-    0 BackLink   1 FrontLink   2 MiddleLeft  3 MiddleRight
-    4 BackLeft   5 BackRight   6 FrontLeft   7 FrontRight
+    0 BackLink_Joint   1 FrontLink_Joint   2 MiddleLeft_Joint  3 MiddleRight_Joint
+    4 BackLeft_Joint   5 BackRight_Joint   6 FrontLeft_Joint   7 FrontRight_Joint
 
 CSV format (headerless, Sim DOF order — matches play.py / playReal.py logs):
     -0.702,-0.687,-0.7,-0.460,-0.460,-0.460,-0.7,-0.460
     ...
 
 CSV format (with header, any column order — columns matched by name):
-    time,BackLink,FrontLink,MiddleLeft,MiddleRight,BackLeft,BackRight,FrontLeft,FrontRight
-    0.00, 0.0,    0.0,      -0.47,     -0.47,      -0.47,   -0.47,   -0.47,    -0.47
+    time,BackLink_Joint,FrontLink_Joint,MiddleLeft_Joint,MiddleRight_Joint,BackLeft_Joint,
+        BackRight_Joint,FrontLeft_Joint,FrontRight_Joint
+    0.00,0.0,0.0,-0.47,-0.47,-0.47,-0.47,-0.47,-0.47
 
 A leading "time" column is optional; if omitted, rows are assumed equally spaced over
 one gait period.
@@ -47,22 +48,22 @@ import torch
 # Joint ordering as used by Isaac Lab's asset.data.joint_pos for this robot.
 # Determined by the USD articulation definition, confirmed via playReal.py.
 JOINT_NAMES: list[str] = [
-    "BackLink",  # 0  (spine)
-    "FrontLink",  # 1  (spine)
-    "MiddleLeft",  # 2
-    "MiddleRight",  # 3
-    "BackLeft",  # 4
-    "BackRight",  # 5
-    "FrontLeft",  # 6
-    "FrontRight",  # 7
+    "BackLink_Joint",  # 0  (spine)
+    "FrontLink_Joint",  # 1  (spine)
+    "MiddleLeft_Joint",  # 2
+    "MiddleRight_Joint",  # 3
+    "BackLeft_Joint",  # 4
+    "BackRight_Joint",  # 5
+    "FrontLeft_Joint",  # 6
+    "FrontRight_Joint",  # 7
 ]
 NUM_JOINTS: int = 8
 
 # Tripod gait groupings (indices into JOINT_NAMES).
 # Standard alternating tripod: diagonal legs swing together.
-TRIPOD_A: list[int] = [3, 4, 6]  # MiddleRight, BackLeft, FrontLeft
-TRIPOD_B: list[int] = [2, 5, 7]  # MiddleLeft,  BackRight, FrontRight
-SPINE_IDX: list[int] = [0, 1]  # BackLink, FrontLink
+TRIPOD_A: list[int] = [3, 4, 6]  # MiddleRight_Joint, BackLeft_Joint, FrontLeft_Joint
+TRIPOD_B: list[int] = [2, 5, 7]  # MiddleLeft_Joint,  BackRight_Joint, FrontRight_Joint
+SPINE_IDX: list[int] = [0, 1]  # BackLink_Joint, FrontLink_Joint
 
 # SIM_DOF_TO_ALPHA is kept for reference but NOT used — asset.data.joint_pos
 # already matches the CSV column order (both are Sim DOF order).
@@ -144,7 +145,7 @@ class MotionReference:
             phase: Tensor of shape [num_envs] with values in [0, 1).
         Returns:
             Tensor of shape [num_envs, 8] — target absolute joint angles (rad)
-            in alphabetical joint order (BackLeft … MiddleRight).
+            in alphabetical joint order (BackLeft_Joint … MiddleRight_Joint).
         """
         if self._ref_gpu is None or self._ref_gpu.device != phase.device:
             self._ref_gpu = torch.from_numpy(self._ref_np).to(phase.device)
@@ -222,15 +223,15 @@ class MotionReference:
         """Generate a sinusoidal tripod gait reference.
 
         Joint ordering matches asset.data.joint_pos (Sim DOF order, confirmed via playReal.py):
-          [0] BackLink (spine)  [1] FrontLink (spine)
-          [2] MiddleLeft        [3] MiddleRight
-          [4] BackLeft          [5] BackRight
-          [6] FrontLeft         [7] FrontRight
+          [0] BackLink_Joint (spine)  [1] FrontLink_Joint (spine)
+          [2] MiddleLeft_Joint        [3] MiddleRight_Joint
+          [4] BackLeft_Joint          [5] BackRight_Joint
+          [6] FrontLeft_Joint         [7] FrontRight_Joint
 
-        Tripod A (swing at phase [0, π]):  MiddleRight[3], BackLeft[4], FrontLeft[6]
-        Tripod B (swing at phase [π, 2π]): MiddleLeft[2],  BackRight[5], FrontRight[7]
+        Tripod A (swing at phase [0, π]):  MiddleRight_Joint[3], BackLeft_Joint[4], FrontLeft_Joint[6]
+        Tripod B (swing at phase [π, 2π]): MiddleLeft_Joint[2],  BackRight_Joint[5], FrontRight_Joint[7]
 
-        Spine undulation: BackLink[0] and FrontLink[1] oscillate in opposition.
+        Spine undulation: BackLink_Joint[0] and FrontLink_Joint[1] oscillate in opposition.
         """
         phase = np.linspace(0.0, 1.0, self._n, endpoint=False)
         omega = 2.0 * np.pi * phase
@@ -242,18 +243,18 @@ class MotionReference:
         ref = np.zeros((self._n, NUM_JOINTS), dtype=np.float32)
 
         # --- Spine joints ---
-        ref[:, 0] = SPINE_AMP * np.sin(omega)  # BackLink
-        ref[:, 1] = SPINE_AMP * np.sin(omega + np.pi)  # FrontLink (opposite)
+        ref[:, 0] = SPINE_AMP * np.sin(omega)  # BackLink_Joint
+        ref[:, 1] = SPINE_AMP * np.sin(omega + np.pi)  # FrontLink_Joint (opposite)
 
         # --- Leg joints ---
         # Tripod A: sin > 0 during first half-cycle → leg lifts above standing pose
-        ref[:, 3] = LEG_OFFSET + LEG_AMP * np.sin(omega)  # MiddleRight (A)
-        ref[:, 4] = LEG_OFFSET + LEG_AMP * np.sin(omega)  # BackLeft    (A)
-        ref[:, 6] = LEG_OFFSET + LEG_AMP * np.sin(omega)  # FrontLeft   (A)
+        ref[:, 3] = LEG_OFFSET + LEG_AMP * np.sin(omega)  # MiddleRight_Joint (A)
+        ref[:, 4] = LEG_OFFSET + LEG_AMP * np.sin(omega)  # BackLeft_Joint    (A)
+        ref[:, 6] = LEG_OFFSET + LEG_AMP * np.sin(omega)  # FrontLeft_Joint   (A)
 
         # Tripod B: opposite phase
-        ref[:, 2] = LEG_OFFSET + LEG_AMP * np.sin(omega + np.pi)  # MiddleLeft  (B)
-        ref[:, 5] = LEG_OFFSET + LEG_AMP * np.sin(omega + np.pi)  # BackRight   (B)
-        ref[:, 7] = LEG_OFFSET + LEG_AMP * np.sin(omega + np.pi)  # FrontRight  (B)
+        ref[:, 2] = LEG_OFFSET + LEG_AMP * np.sin(omega + np.pi)  # MiddleLeft_Joint  (B)
+        ref[:, 5] = LEG_OFFSET + LEG_AMP * np.sin(omega + np.pi)  # BackRight_Joint   (B)
+        ref[:, 7] = LEG_OFFSET + LEG_AMP * np.sin(omega + np.pi)  # FrontRight_Joint  (B)
 
         return ref

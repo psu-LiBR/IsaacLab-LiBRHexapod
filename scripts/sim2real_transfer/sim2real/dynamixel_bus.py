@@ -36,6 +36,14 @@ LEN_GOAL_POSITION = 4
 LEN_PRESENT_VELOCITY = 4
 LEN_PRESENT_POSITION = 4
 
+# Present-velocity (128-131) and present-position (132-135) are contiguous in the
+# X-series control table, so read_positions_and_velocities() below fetches both
+# with a single bulk-read transaction instead of two. Asserted rather than just
+# assumed, since a silent control-table layout change would otherwise corrupt
+# data without erroring.
+assert ADDR_PRESENT_POSITION == ADDR_PRESENT_VELOCITY + LEN_PRESENT_VELOCITY
+LEN_PRESENT_VEL_AND_POS = LEN_PRESENT_VELOCITY + LEN_PRESENT_POSITION
+
 TORQUE_ENABLE = 1
 TORQUE_DISABLE = 0
 
@@ -64,6 +72,14 @@ class DynamixelBus(ABC):
     @abstractmethod
     def read_velocities(self) -> np.ndarray:
         """Returns rad/s in the device's native sign convention, real DOF order."""
+
+    def read_positions_and_velocities(self) -> tuple[np.ndarray, np.ndarray]:
+        """Convenience combo of read_positions() + read_velocities(). Subclasses
+        backed by a real bus should override this to fetch both in a single
+        transaction -- see RealDynamixelBus, where at 50 Hz the per-transaction
+        round trip (not payload size) dominates loop time, so combining two
+        reads into one roughly halves their combined cost."""
+        return self.read_positions(), self.read_velocities()
 
     @abstractmethod
     def write_goal_positions(self, ticks: np.ndarray) -> None:
@@ -113,6 +129,7 @@ class RealDynamixelBus(DynamixelBus):
         self._bulk_write = GroupBulkWrite(self.port_handler, self.packet_handler)
         self._bulk_read_pos = GroupBulkRead(self.port_handler, self.packet_handler)
         self._bulk_read_vel = GroupBulkRead(self.port_handler, self.packet_handler)
+        self._bulk_read_pos_vel = GroupBulkRead(self.port_handler, self.packet_handler)
 
         if not self.port_handler.openPort():
             raise RuntimeError(f"failed to open Dynamixel port {port}")
@@ -129,6 +146,9 @@ class RealDynamixelBus(DynamixelBus):
         for dxl_id in self.motor_ids:
             if not self._bulk_read_vel.addParam(dxl_id, ADDR_PRESENT_VELOCITY, LEN_PRESENT_VELOCITY):
                 raise RuntimeError(f"GroupBulkRead addParam failed for ID {dxl_id} (velocity)")
+        for dxl_id in self.motor_ids:
+            if not self._bulk_read_pos_vel.addParam(dxl_id, ADDR_PRESENT_VELOCITY, LEN_PRESENT_VEL_AND_POS):
+                raise RuntimeError(f"GroupBulkRead addParam failed for ID {dxl_id} (velocity+position)")
 
     def torque_enable(self, on: bool) -> None:
         value = TORQUE_ENABLE if on else TORQUE_DISABLE
@@ -151,6 +171,18 @@ class RealDynamixelBus(DynamixelBus):
             rpm = _to_signed32(raw) * _VELOCITY_UNIT_RPM
             radps[i] = rpm * _RPM_TO_RADPS
         return radps
+
+    def read_positions_and_velocities(self) -> tuple[np.ndarray, np.ndarray]:
+        self._bulk_read_pos_vel.txRxPacket()
+        ticks = np.empty(len(self.motor_ids), dtype=np.int64)
+        radps = np.empty(len(self.motor_ids), dtype=np.float64)
+        for i, dxl_id in enumerate(self.motor_ids):
+            raw_vel = self._bulk_read_pos_vel.getData(dxl_id, ADDR_PRESENT_VELOCITY, LEN_PRESENT_VELOCITY)
+            raw_pos = self._bulk_read_pos_vel.getData(dxl_id, ADDR_PRESENT_POSITION, LEN_PRESENT_POSITION)
+            rpm = _to_signed32(raw_vel) * _VELOCITY_UNIT_RPM
+            radps[i] = rpm * _RPM_TO_RADPS
+            ticks[i] = _to_signed32(raw_pos)
+        return ticks, radps
 
     def write_goal_positions(self, ticks: np.ndarray) -> None:
         self._bulk_write.clearParam()

@@ -74,7 +74,10 @@ parser.add_argument(
     "validation via scripts/sim2real_transfer/tools/validate_onnx.py. Only "
     "meaningful for the hexapod flat/goal policy obs layout (gyro, gravity, "
     "command, joint_pos_rel, joint_vel, last_action, in that fixed order) -- "
-    "use with --num_envs 1.",
+    "use with --num_envs 1. The dumped joint_pos_N columns are the raw absolute "
+    "joint positions (matching robot.data.joint_pos), not the joint_pos_rel term "
+    "baked into obs_N -- validate_onnx.py's pipeline mode subtracts q_default_sim "
+    "itself to reconstruct joint_pos_rel from these.",
 )
 parser.add_argument("--external_callback", default=None, help="Fully qualified path to an externally defined callback.")
 cli_args.add_rsl_rl_args(parser)
@@ -276,7 +279,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                         action_row = actions[0].detach().cpu().numpy()
                         gyro, gravity = obs_row[0:3], obs_row[3:6]
                         command = obs_row[6 : 6 + cmd_dim]
-                        joint_pos = obs_row[6 + cmd_dim : 6 + cmd_dim + num_joints]
+                        # NOTE: obs_row's joint-pos slice is already joint_pos_rel (joint_pos - default), per
+                        # profiles.py's obs term order. validate_onnx.py's pipeline mode re-subtracts
+                        # q_default_sim itself, so this column must hold the raw absolute joint position, not
+                        # the obs-vector slice, or leg joints (nonzero q_default) get double-subtracted.
+                        joint_pos = robot.data.joint_pos[0, :num_joints].detach().cpu().numpy()
                         joint_vel = obs_row[6 + cmd_dim + num_joints : 6 + cmd_dim + 2 * num_joints]
                         last_action = obs_row[6 + cmd_dim + 2 * num_joints : 6 + cmd_dim + 3 * num_joints]
                         dump_writer.writerow(

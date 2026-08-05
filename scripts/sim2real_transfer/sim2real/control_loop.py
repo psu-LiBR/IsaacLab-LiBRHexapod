@@ -87,9 +87,9 @@ def run(
                 print(f"[control_loop] watchdog tripped: {watchdog.trip_reason}")
                 break
 
-            ticks = bus.read_positions()
+            ticks, raw_vel = bus.read_positions_and_velocities()
             measured_pos_sim = joint_mapping.ticks_to_sim_rad(ticks)
-            measured_vel_sim = joint_mapping.real_radps_to_sim_radps(bus.read_velocities())
+            measured_vel_sim = joint_mapping.real_radps_to_sim_radps(raw_vel)
 
             if profile_name == "velocity":
                 command = command_source.get_command()

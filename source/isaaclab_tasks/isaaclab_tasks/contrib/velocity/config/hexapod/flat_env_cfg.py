@@ -33,14 +33,14 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         self.events.add_base_mass.params["asset_cfg"].body_names = ["CenterLink", "BackLink", "FrontLink"]
         self.events.add_base_mass.params["mass_distribution_params"] = (1.0, 1.0)  # scale factor 1.0 = no randomization
         self.events.base_com.default.params["asset_cfg"].body_names = "CenterLink"
-        # self.events.base_com.default.params["asset_cfg"].body_names=["CenterLink", "BackLink", "FrontLink"]
+        # self.events.base_com.default.params["asset_cfg"].body_names=["CenterLink_01", "BackLink_01", "FrontLink_01"]
         self.events.base_com.default.params["com_range"] = {
             "x": (0.0, 0.0),
             "y": (0.0, 0.0),
             "z": (0.0, 0.0),
         }
-        self.events.physics_material.params["static_friction_range"] = (0.5, 0.6)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.35, 0.45)
+        self.events.physics_material.params["static_friction_range"] = (0.17, 0.21)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.13, 0.17)
 
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "CenterLink"
 
@@ -95,10 +95,10 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         self.rewards.track_ang_vel_z_exp.weight = 0.45
         # self.rewards.track_ang_vel_z_exp.weight = 0.8  # original -- instantaneous, no averaging
         # self.rewards.track_ang_vel_z_exp.params["std"] = math.sqrt(0.25)*0.15  # original
-        # self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_deadzone    # deadzone version
-        # self.rewards.track_ang_vel_z_exp.params = {
-        #     "std": math.sqrt(0.25)*0.15, "command_name": "base_velocity", "deadzone": 1.6
-        # }
+        self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_deadzone    # deadzone version
+        self.rewards.track_ang_vel_z_exp.params = {
+            "std": math.sqrt(0.25)*0.15, "command_name": "base_velocity", "deadzone": 1.6
+        }
         # self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_moving_avg  # fixed-window version
         # self.rewards.track_ang_vel_z_exp.params = {
         #     "std": math.sqrt(0.25)*0.15, "command_name": "base_velocity", "window_steps": 50
@@ -106,12 +106,12 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         # self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_episode_avg
         # # caused entropy divergence (1/N vanishing gradient)
         # self.rewards.track_ang_vel_z_exp.params = {"std": math.sqrt(0.25)*0.15, "command_name": "base_velocity"}
-        self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_ema
-        self.rewards.track_ang_vel_z_exp.params = {
-            "std": math.sqrt(0.25) * 0.15,
-            "command_name": "base_velocity",
-            "alpha": 0.98,  # ~33-step effective window (~0.66 s at 0.02 s dt); tune if undulation still penalised
-        }
+        # self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_ema
+        # self.rewards.track_ang_vel_z_exp.params = {
+        #     "std": math.sqrt(0.25) * 0.15,
+        #     "command_name": "base_velocity",
+        #     "alpha": 0.98,  # ~33-step effective window (~0.66 s at 0.02 s dt); tune if undulation still penalised
+        # }
 
         # Penalties
 
@@ -189,8 +189,8 @@ class HexapodFlatEnvCfg_PLAY(HexapodFlatEnvCfg):
 
         self.commands.base_velocity.resampling_time_range = (1000.0, 1000.0)
 
-        self.events.physics_material.params["static_friction_range"] = (0.5, 0.6)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.35, 0.45)
+        self.events.physics_material.params["static_friction_range"] = (0.17, 0.21)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.13, 0.17)
         # self.scene.terrain.physics_material.static_friction= 0.8
         # self.scene.terrain.physics_material.dynamic_friction= 0.6
 

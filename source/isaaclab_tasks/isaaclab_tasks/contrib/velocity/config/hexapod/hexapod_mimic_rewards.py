@@ -156,9 +156,9 @@ def spine_pos_imitation(
 ) -> torch.Tensor:
     """Like joint_pos_imitation but restricted to the two spine joints only.
 
-    Spine joint indices in Sim DOF order: BackLink=0, FrontLink=1.
+    Spine joint indices in Sim DOF order: BackLink_Joint=0, FrontLink_Joint=1.
     """
-    SPINE_COLS_SIM_DOF = [0, 1]  # BackLink, FrontLink in Sim DOF order
+    SPINE_COLS_SIM_DOF = [0, 1]  # BackLink_Joint, FrontLink_Joint in Sim DOF order
 
     motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order)
 

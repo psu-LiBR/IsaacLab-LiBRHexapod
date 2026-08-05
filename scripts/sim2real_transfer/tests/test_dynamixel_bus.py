@@ -42,6 +42,18 @@ def test_dry_run_write_clips_to_valid_tick_range():
     assert positions[1] == 4095
 
 
+def test_read_positions_and_velocities_matches_separate_calls():
+    """DynamixelBus's base-class default combines read_positions()+read_velocities();
+    RealDynamixelBus overrides it with a single merged bulk read for speed (see
+    dynamixel_bus.py's LEN_PRESENT_VEL_AND_POS), but the two must always agree."""
+    bus = DryRunDynamixelBus(MOTOR_IDS)
+    target = np.array([100, 200, 300, 400, 500, 600, 700, 800])
+    bus.write_goal_positions(target)
+    ticks, radps = bus.read_positions_and_velocities()
+    assert np.array_equal(ticks, bus.read_positions())
+    assert np.array_equal(radps, bus.read_velocities())
+
+
 def test_real_bus_requires_dynamixel_sdk(monkeypatch):
     """Simulate dynamixel_sdk being absent regardless of the environment.
 

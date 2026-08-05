@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # SPDX-License-Identifier: BSD-3-Clause
 """Standalone Newton simulation: LiBR Hexapod, TWO-WAY coupled to MPM granular sand.
 
@@ -48,13 +53,13 @@ from __future__ import annotations
 import csv
 import os
 
-import numpy as np
-import warp as wp
-from pxr import Usd, UsdGeom, UsdPhysics
-
 import newton
 import newton.examples
+import numpy as np
+import warp as wp
 from newton.solvers import SolverImplicitMPM
+
+from pxr import Usd, UsdGeom, UsdPhysics
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 HEXAPOD_USD_PATH = os.path.join(_REPO_ROOT, "hexapod-assets", "USD", "Hexapod_Flattened.usd")
@@ -110,31 +115,35 @@ def _load_deinstanced_stage(usd_path: str) -> Usd.Stage:
 
     return stage
 
+
 JOINT_NAMES = [
-    "BackLink",
-    "FrontLink",
-    "MiddleLeft",
-    "MiddleRight",
-    "BackLeft",
-    "BackRight",
-    "FrontLeft",
-    "FrontRight",
+    "BackLink_Joint",
+    "FrontLink_Joint",
+    "MiddleLeft_Joint",
+    "MiddleRight_Joint",
+    "BackLeft_Joint",
+    "BackRight_Joint",
+    "FrontLeft_Joint",
+    "FrontRight_Joint",
 ]
-SPINE_JOINTS = {"BackLink", "FrontLink"}
+SPINE_JOINTS = {"BackLink_Joint", "FrontLink_Joint"}
+# Body/link names -- unaffected by the joint-prim rename in Hexapod_Flattened.usd
+# (only the joint prims were renamed with a "_Joint" suffix; the driven bodies kept
+# their original names to disambiguate them from the joints for omni.physx.tensors).
 LEG_LINK_NAMES = {"BackLeft", "BackRight", "FrontLeft", "FrontRight", "MiddleLeft", "MiddleRight"}
 
 SPINE_KE, SPINE_KD = 40.0, 0.4
 LEG_KE, LEG_KD = 80.0, 0.9
 
 INIT_JOINT_POS = {
-    "FrontLink": 0.0,
-    "BackLink": 0.0,
-    "MiddleLeft": -0.47,
-    "MiddleRight": -0.47,
-    "BackLeft": -0.47,
-    "BackRight": -0.47,
-    "FrontLeft": -0.47,
-    "FrontRight": -0.47,
+    "FrontLink_Joint": 0.0,
+    "BackLink_Joint": 0.0,
+    "MiddleLeft_Joint": -0.47,
+    "MiddleRight_Joint": -0.47,
+    "BackLeft_Joint": -0.47,
+    "BackRight_Joint": -0.47,
+    "FrontLeft_Joint": -0.47,
+    "FrontRight_Joint": -0.47,
 }
 
 
@@ -344,13 +353,16 @@ class Example:
         self.viewer.set_model(self.model)
         self.viewer.show_particles = True
         self.particle_render_colors = wp.full(
-            self.sand_model.particle_count, value=wp.vec3(0.76, 0.70, 0.50), dtype=wp.vec3, device=self.sand_model.device
+            self.sand_model.particle_count,
+            value=wp.vec3(0.76, 0.70, 0.50),
+            dtype=wp.vec3,
+            device=self.sand_model.device,
         )
 
         self.log_writer = None
         self.log_file = None
         if args.log_csv:
-            self.log_file = open(args.log_csv, "w", newline="")
+            self.log_file = open(args.log_csv, "w", newline="")  # noqa: SIM115 -- closed in cleanup(), spans object lifetime
             self.log_writer = csv.writer(self.log_file)
             header = ["frame", "sim_time"]
             header += ["base_pos_x", "base_pos_y", "base_pos_z"]

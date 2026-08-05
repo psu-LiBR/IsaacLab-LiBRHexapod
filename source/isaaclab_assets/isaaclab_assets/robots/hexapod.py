@@ -18,7 +18,8 @@ from isaaclab.assets import ArticulationCfg
 HEXAPOD_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path="hexapod-assets/USD/Hexapod_Flattened.usd",
+        # usd_path="hexapod-assets/USD/Hexapod_Flattened.usd",
+        usd_path="hexapod-assets/USD/HexapiFlattened.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=1.0,
@@ -41,28 +42,27 @@ HEXAPOD_CFG = ArticulationCfg(
         pos=(0.0, 0.0, 0.2),
         joint_pos={
             # ".*": 0.0,
-            "FrontLink": 0.0,
-            "BackLink": 0.0,
-            # "MiddleLeft":0.0,
-            # "MiddleRight": 0.0,
-            # "BackLeft": 0.0,
-            # "BackRight": 0.0,
-            # "FrontLeft": 0.0,
-            # "FrontRight": 0.0,
-            "MiddleLeft": -0.47,
-            "MiddleRight": -0.47,
-            "BackLeft": -0.47,
-            "BackRight": -0.47,
-            "FrontLeft": -0.47,
-            "FrontRight": -0.47,
-            # "Front Middle Joint": 1.57079,
-            # "Front Left Joint": 0,
-            # "Front Right Joint": 0,
-            # "Back Middle Joint": 1.57079,
-            # "Back Left Joint": 0,
-            # "Back Right Joint": 0,
-            # "Middle Left Joint": 0,
-            # "Middle Right Joint": 0,
+            # For Trad Hexapod Implementation ------
+            # "FrontLink_Joint": 0.0,
+            # "BackLink_Joint": 0.0,
+
+            # "MiddleLeft_Joint": -0.47,
+            # "MiddleRight_Joint": -0.47,
+            # "BackLeft_Joint": -0.47,
+            # "BackRight_Joint": -0.47,
+            # "FrontLeft_Joint": -0.47,
+            # "FrontRight_Joint": -0.47,
+
+            #For HEXAPI Implementation -------------
+            "FrontLink_Joint": 0.0,
+            "BackLink_Joint": 0.0,
+
+            "MiddleLeft_Joint": 0.47,
+            "MiddleRight_Joint": 0.47,
+            "BackLeft_Joint": 0.47,
+            "BackRight_Joint": 0.47,
+            "FrontLeft_Joint": 0.47,
+            "FrontRight_Joint": 0.47,
         },
     ),
     soft_joint_pos_limit_factor=0.9,
@@ -71,10 +71,10 @@ HEXAPOD_CFG = ArticulationCfg(
         # Lower stiffness reduces peak torque demand (at stiffness=40, error=0.15 rad before saturation vs 0.075 at 80).
         # The real servo's internal firmware handles gravity loading better than a pure PD controller.
         "body_joints": ImplicitActuatorCfg(
-            joint_names_expr=["FrontLink", "BackLink"],
-            stiffness=40,
+            joint_names_expr=["FrontLink_Joint", "BackLink_Joint"],
+            stiffness=10,
             # stiffness = 80,   # too stiff -- small tracking lag generates huge torques; consistently saturates
-            damping=0.4,
+            damping=0.3,
             # raised: if sin wave step changes require >5.5 rad/s, velocity cap accumulates lag →
             # torque saturates regardless of effort limit
             velocity_limit_sim=15.0,
@@ -83,12 +83,19 @@ HEXAPOD_CFG = ArticulationCfg(
         ),
         # Leg joints: intermittent ground contact, shorter duration at peak torque
         "leg_joints": ImplicitActuatorCfg(
-            joint_names_expr=["MiddleLeft", "MiddleRight", "BackLeft", "BackRight", "FrontLeft", "FrontRight"],
-            stiffness=80,
+            joint_names_expr=[
+                "MiddleLeft_Joint",
+                "MiddleRight_Joint",
+                "BackLeft_Joint",
+                "BackRight_Joint",
+                "FrontLeft_Joint",
+                "FrontRight_Joint",
+            ],
+            stiffness=20,
             # stiffness = 37,   # original -- too low: max correctable error = 1.4/37 = 0.038 rad before saturation
             damping=0.9,
             # damping = 0.32,   # original
-            velocity_limit_sim=6.0,
+            velocity_limit_sim=10.0,
             effort_limit_sim=4.5,
             # effort_limit_sim = 1.4,  # XL430-W250-T rated stall torque at 12V (physical spec)
         ),
