@@ -44,17 +44,6 @@ def progress_to_goal(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     return progress
 
 
-def reached_goal_bonus(env: ManagerBasedRLEnv, command_name: str, radius: float) -> torch.Tensor:
-    """Returns 1.0 on the step the robot is inside `radius` of the goal, 0 otherwise.
-
-    Paired with the reach_goal termination, this fires exactly once per successful
-    episode.  Set the reward weight to the desired bonus magnitude (e.g. 100.0).
-    """
-    command = env.command_manager.get_command(command_name)
-    distance = torch.norm(command[:, :3], dim=1)
-    return (distance < radius).float()
-
-
 def constant_per_step(env: ManagerBasedRLEnv) -> torch.Tensor:
     """1.0 every env every step -- pair with a negative weight as a time penalty."""
     return torch.ones(env.num_envs, device=env.device)
@@ -63,6 +52,27 @@ def constant_per_step(env: ManagerBasedRLEnv) -> torch.Tensor:
 def termination_signal(env: ManagerBasedRLEnv, termination_name: str) -> torch.Tensor:
     """Return a one-step float signal for a named termination condition."""
     return env.termination_manager.get_term(termination_name).float()
+
+
+def time_decayed_termination_signal(
+    env: ManagerBasedRLEnv,
+    termination_name: str,
+    episode_length_s: float,
+    min_fraction: float = 0.5,
+) -> torch.Tensor:
+    """Terminal signal scaled down linearly as episode time elapses.
+
+    Fires ``decay`` on the step ``termination_name`` is True, 0 otherwise, where ``decay``
+    goes from 1.0 immediately after reset to ``min_fraction`` at ``episode_length_s``. Pair
+    with a positive weight so a fast success is worth more than a slow one, concentrating
+    the speed pressure into the single high-salience terminal transition instead of relying
+    solely on the per-step time penalty.
+    """
+    fired = env.termination_manager.get_term(termination_name).float()
+    elapsed_s = env.episode_length_buf.float() * env.step_dt
+    frac_elapsed = torch.clamp(elapsed_s / episode_length_s, max=1.0)
+    decay = 1.0 - (1.0 - min_fraction) * frac_elapsed
+    return fired * decay
 
 
 def reached_goal_done(env: ManagerBasedRLEnv, command_name: str, radius: float) -> torch.Tensor:

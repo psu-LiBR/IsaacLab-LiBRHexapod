@@ -83,6 +83,31 @@ def test_terminal_signal_mirrors_named_termination_term():
     torch.testing.assert_close(goal_rewards.termination_signal(env, "base_contact"), torch.tensor([0.0, 1.0]))
 
 
+def test_time_decayed_termination_signal_decays_linearly_to_min_fraction():
+    env = FakeEnv()
+    env.episode_length_buf = torch.tensor([450, 2250])  # 9s and 45s elapsed at step_dt=0.02
+
+    result = goal_rewards.time_decayed_termination_signal(
+        env, "reach_goal", episode_length_s=45.0, min_fraction=0.5
+    )
+
+    torch.testing.assert_close(result, torch.tensor([0.9, 0.0]))
+
+
+def test_time_decayed_termination_signal_clamps_past_episode_length():
+    env = FakeEnv()
+    env.episode_length_buf = torch.tensor([9000, 2])  # far past episode_length_s
+    env.termination_manager = FakeTerminationManager(
+        {"reach_goal": torch.tensor([True, True]), "base_contact": torch.tensor([False, False])}
+    )
+
+    result = goal_rewards.time_decayed_termination_signal(
+        env, "reach_goal", episode_length_s=45.0, min_fraction=0.5
+    )
+
+    torch.testing.assert_close(result, torch.tensor([0.5, 1.0 - 0.5 * (0.04 / 45.0)]))
+
+
 def make_curriculum_env(success_count: int, episode_count: int = 10) -> FakeEnv:
     env = FakeEnv()
     env.num_envs = episode_count
@@ -98,14 +123,15 @@ def make_curriculum_env(success_count: int, episode_count: int = 10) -> FakeEnv:
     return env
 
 
-def apply_curriculum(env: FakeEnv, window_size: int = 10):
+def apply_curriculum(env: FakeEnv, window_size: int = 10, demotion_threshold: float | None = None):
     return goal_curriculum.goal_distance_curriculum(
         env,
         torch.arange(env.num_envs),
         command_name="pose_command",
         distances=(1.0, 2.0, 3.5, 5.0),
         success_threshold=0.7,
-        window_size=window_size,
+        window_sizes=(window_size, window_size, window_size, window_size),
+        demotion_threshold=demotion_threshold,
     )
 
 
@@ -150,6 +176,48 @@ def test_curriculum_never_advances_past_five_meters():
     assert env._goal_curriculum_stage == 3
 
 
+def test_curriculum_demotes_on_low_success_rate():
+    env = make_curriculum_env(success_count=7)
+    apply_curriculum(env, demotion_threshold=0.4)
+    assert env._goal_curriculum_stage == 1
+
+    env = make_curriculum_env(success_count=2)
+    apply_curriculum(env, demotion_threshold=None)  # seed the ad hoc state attrs
+    env._goal_curriculum_stage = 1
+    state = apply_curriculum(env, demotion_threshold=0.4)
+
+    assert state["success_rate"] == 0.2
+    assert env._goal_curriculum_stage == 0
+    assert state["distance"] == 1.0
+
+
+def test_curriculum_does_not_demote_below_first_stage_or_without_threshold():
+    env = make_curriculum_env(success_count=0)
+    apply_curriculum(env, demotion_threshold=0.4)
+    assert env._goal_curriculum_stage == 0
+
+    env = make_curriculum_env(success_count=2)
+    apply_curriculum(env, demotion_threshold=None)  # seed the ad hoc state attrs
+    env._goal_curriculum_stage = 1
+    apply_curriculum(env, demotion_threshold=None)
+    assert env._goal_curriculum_stage == 1
+
+
+def test_curriculum_uses_per_stage_window_size():
+    env = make_curriculum_env(success_count=3, episode_count=5)
+    state = goal_curriculum.goal_distance_curriculum(
+        env,
+        torch.arange(env.num_envs),
+        command_name="pose_command",
+        distances=(1.0, 2.0, 3.5, 5.0),
+        success_threshold=0.7,
+        window_sizes=(5, 10, 10, 10),
+    )
+
+    assert state["success_rate"] == 0.6
+    assert env._goal_curriculum_episodes == 0  # stage-0 window of 5 already closed
+
+
 def test_phase_one_source_configuration():
     env_source = (HEXAPOD_DIR / "hexapod_goal_env_cfg.py").read_text()
     obs_source = (HEXAPOD_DIR / "hexapod_goal_obs_cfg.py").read_text()
@@ -158,12 +226,13 @@ def test_phase_one_source_configuration():
     for expected in (
         "GOAL_DISTANCES = (1.0, 2.0, 3.5, 5.0)",
         "EPISODE_LENGTH_S = 45.0",
+        "CURRICULUM_DEMOTION_THRESHOLD = 0.4",
         "weight=10.0",
         "weight=2500.0",
         "weight=-1250.0",
-        "weight=-0.2",
-        "self.rewards.action_rate_l2 = None",
-        "self.rewards.feet_air_time = None",
+        "weight=-1.0",
+        "self.rewards.action_rate_l2.weight = -0.002",
+        "self.rewards.feet_air_time.weight = 1.0",
         "self.rewards.dof_pos_limits.weight = -1.0",
         "self.curriculum.goal_distance = None",
     ):
@@ -172,6 +241,8 @@ def test_phase_one_source_configuration():
     assert "class PolicyCfg" in obs_source and "self.enable_corruption = True" in obs_source
     assert "class CriticCfg" in obs_source and "self.enable_corruption = False" in obs_source
     assert "self.num_steps_per_env = 96" in agent_source
-    assert "self.algorithm.gamma = 0.999" in agent_source
+    assert "self.algorithm.gamma = 0.9995" in agent_source
+    assert "self.algorithm.lam = 0.97" in agent_source
+    assert "self.algorithm.entropy_coef = 0.003" in agent_source
     assert "self.policy.actor_obs_normalization = True" in agent_source
     assert "self.policy.critic_obs_normalization = True" in agent_source

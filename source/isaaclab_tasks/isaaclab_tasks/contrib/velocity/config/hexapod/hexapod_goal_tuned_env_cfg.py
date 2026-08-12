@@ -17,8 +17,9 @@ actions, optional foot-slide penalty) over to the goal-reaching task.
 
 Two details the base class forces us to handle explicitly:
 
-1. `HexapodGoalEnvCfg` sets ``rewards.feet_air_time = None``, so the term has to be
-   rebuilt rather than edited.
+1. `HexapodGoalEnvCfg` only tweaks ``rewards.feet_air_time.weight``/threshold, so
+   the term is rebuilt here (rather than edited in place) to also swap its
+   ``command_name`` param (see point 2) in one shot.
 2. The default term in ``velocity_env_cfg.py`` hardcodes
    ``command_name="base_velocity"``. The goal environment replaces that command with
    ``pose_command``, so reusing the default parameters raises
