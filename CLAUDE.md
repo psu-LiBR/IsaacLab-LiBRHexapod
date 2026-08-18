@@ -68,6 +68,13 @@ isaaclab.bat -p scripts/environments/list_envs.py
 
 :: Run with a specific checkpoint
 isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --checkpoint <path>
+
+:: Periodically record training videos (progress checks without a manual play run). --video_interval is in
+:: env *steps*, not PPO iterations -- multiply the desired iteration interval by the task's num_steps_per_env
+:: (48 for flat/rough/mimic tasks, 96 for the goal task) to get the --video_interval value. --video auto-enables
+:: camera rendering. MP4s land in logs/rsl_rl/<experiment_name>/<timestamp>/videos/train/.
+:: Example: every 250 iterations on the goal task (num_steps_per_env=96 -> 250*96=24000):
+isaaclab.bat train --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096 --video --video_interval 24000 --video_length 200
 ```
 
 ```bat
@@ -295,7 +302,13 @@ Distinct from `scripts/sim2real_transfer/` (see below): `playReal.py` replays a 
 
 ## Offline PyVista Rendering Pipeline
 
-GPU driver 596.36 causes RTX scenedb crashes in Isaac Sim's normal rendering path on this machine. This driver **cannot be rolled back** due to enterprise security policy. The offline rendering pipeline bypasses Isaac Sim's RTX renderer entirely by logging per-frame body world poses during play and replaying them through VTK/PyVista on the CPU.
+**Note:** this pipeline was originally built to work around a GPU driver bug (driver 596.36 causing RTX
+scenedb crashes in Isaac Sim's normal rendering path). That issue does not apply to the current setup —
+Isaac Sim 6.0's normal RTX rendering path (`--video` / `--enable_cameras`) works fine on this machine. The
+pipeline below is kept as an optional CPU-only alternative (e.g. for headless/no-GPU-for-rendering
+scenarios), not as the required path for viewing training results.
+
+The offline rendering pipeline bypasses Isaac Sim's RTX renderer entirely by logging per-frame body world poses during play and replaying them through VTK/PyVista on the CPU.
 
 **Two-step workflow:**
 

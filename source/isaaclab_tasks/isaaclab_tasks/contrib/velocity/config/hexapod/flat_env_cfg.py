@@ -39,8 +39,8 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
             "y": (0.0, 0.0),
             "z": (0.0, 0.0),
         }
-        self.events.physics_material.params["static_friction_range"] = (0.17, 0.21)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.13, 0.17)
+        self.events.physics_material.params["static_friction_range"] = (0.2, 0.3)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.2, 0.25)
 
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "CenterLink"
 

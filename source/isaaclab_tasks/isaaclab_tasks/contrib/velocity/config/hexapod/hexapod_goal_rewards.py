@@ -17,8 +17,52 @@ from typing import TYPE_CHECKING
 
 import torch
 
+from isaaclab.assets import RigidObject
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.sensors import ContactSensor
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
+
+
+def ang_vel_z_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize z-axis (yaw) base angular velocity using an L2 squared kernel.
+
+    Mirrors the generic ``mdp.ang_vel_xy_l2`` (roll/pitch) penalty, but for yaw. The goal task
+    drops ``track_ang_vel_z_exp`` since there is no yaw command to track, which otherwise leaves
+    yaw rate completely unpenalized -- nothing then discourages the robot from spinning in place
+    en route to the goal.
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.square(asset.data.root_ang_vel_b.torch[:, 2])
+
+
+def feet_air_time_ungated(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+    threshold: float,
+) -> torch.Tensor:
+    """Reward long steps taken by the feet using an L2 kernel, with no command gate.
+
+    Identical to the generic ``mdp.feet_air_time`` except it drops the "zero reward when the
+    command is near zero" gate. That gate assumes the command's first two components are a
+    velocity (m/s) -- appropriate for the base-velocity task, where it is meaningless to reward
+    stepping while the robot is commanded to stand still. The goal task has no equivalent
+    "stand still" command state: its command's first two components are a position error (m)
+    toward a fixed goal, and ``reach_goal`` already ends the episode the moment the robot
+    arrives -- so gating on "close to the goal" only zeroes the stepping reward during the
+    final approach, discouraging the steps needed to actually close the distance.
+
+    Args:
+        env: The RL environment instance.
+        sensor_cfg: Scene entity config pointing at the contact-force sensor.
+            Set ``body_names`` to the six leg bodies.
+        threshold: Air-time threshold [s] above which a step is rewarded.
+    """
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    first_contact = contact_sensor.compute_first_contact(env.step_dt)[:, sensor_cfg.body_ids]
+    last_air_time = contact_sensor.data.last_air_time[:, sensor_cfg.body_ids]
+    return torch.sum((last_air_time - threshold) * first_contact, dim=1)
 
 
 def progress_to_goal(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:

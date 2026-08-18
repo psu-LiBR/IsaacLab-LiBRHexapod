@@ -25,10 +25,11 @@ from .hexapod_goal_curriculum import goal_distance_curriculum
 from .hexapod_goal_obs_cfg import HexapodGoalObservationsCfg
 
 # GOAL_DISTANCES = (1.0, 2.0, 3.5, 5.0)
-GOAL_DISTANCES = (0.2, 0.5, 1.0, 2.0)
+GOAL_DISTANCES = (0.5, 1.0, 1.5, 2.0)
 
-REACH_RADIUS = 0.05
-EPISODE_LENGTH_S = 45.0
+REACH_RADIUS = 0.2
+# EPISODE_LENGTH_S = 45.0
+EPISODE_LENGTH_S = 25.0
 CURRICULUM_SUCCESS_THRESHOLD = 0.7
 # Below this windowed success rate, the curriculum steps back down one stage instead of
 # holding -- catches post-advance regressions (e.g. catastrophic forgetting of the shorter
@@ -37,7 +38,7 @@ CURRICULUM_DEMOTION_THRESHOLD = 0.4
 # Fraction of scene.num_envs pooled into one curriculum evaluation window, per stage. Easier
 # stages advance on less data; the final stage keeps a full window's worth of confidence.
 # Tune freely -- these are a starting guess, not a validated schedule.
-CURRICULUM_WINDOW_FRACTIONS = (0.5, 0.75, 1.0, 1.0)
+CURRICULUM_WINDOW_FRACTIONS = (1.0, 1.0, 1.0, 1.0)
 
 
 @configclass
@@ -77,14 +78,26 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # than a full flat-walking template so the policy can still find a fast
         # locomotion style.
         self.rewards.lin_vel_z_l2.weight = -1.0e-4
-        self.rewards.ang_vel_xy_l2.weight = -0.02
-        self.rewards.dof_torques_l2.weight = -3.0e-5
+        self.rewards.ang_vel_xy_l2.weight = -0.000001
+        # track_ang_vel_z_exp (above) is dropped since there's no yaw command to track, which
+        # otherwise leaves yaw rate completely unpenalized -- add an explicit penalty so the
+        # robot can still turn to face the goal without being free to spin wildly en route.
+        self.rewards.ang_vel_z_l2 = RewTerm(func=goal_rewards.ang_vel_z_l2, weight=-1.0e-2)
+        self.rewards.dof_torques_l2.weight = -3.0e-7
         self.rewards.dof_acc_l2.weight = -2.5e-7
-        self.rewards.action_rate_l2.weight = -0.0008
-        self.rewards.feet_air_time.weight = 0.2
-        # Default params hardcode command_name="base_velocity" (velocity_env_cfg.py), but that
-        # command is removed above in favor of pose_command -- retarget the movement gate to it.
-        self.rewards.feet_air_time.params["command_name"] = "pose_command"
+        self.rewards.action_rate_l2.weight = -0.0001
+        self.rewards.feet_air_time.weight = 0.15
+        # The default mdp.feet_air_time gates on ||command[:, :2]|| > 0.1, assuming a velocity
+        # command (m/s). Retargeting command_name to "pose_command" would silently turn that
+        # into a position-error (m) gate instead, zeroing the reward once the robot got within
+        # 10cm of the goal -- inside REACH_RADIUS's buffer, discouraging the final steps
+        # needed to actually reach it. The goal task has no "stand still" command state to
+        # begin with (reach_goal ends the episode on arrival), so drop the gate entirely
+        # instead of retargeting it.
+        self.rewards.feet_air_time.func = goal_rewards.feet_air_time_ungated
+        del self.rewards.feet_air_time.params["command_name"]
+        self.rewards.feet_air_time.params["threshold"] = 0.1  # your new value, in seconds
+
         self.rewards.undesired_contacts.weight = -1.0
         self.rewards.dof_pos_limits.weight = -1.0
 
@@ -92,16 +105,21 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
 
         # Isaac Lab applies value * weight * dt. Progress is in m/s, so a weight
         # of 10 integrates to ten reward units per meter advanced.
+        # Cut further from 0.3 -- progress_to_goal is raw, uncapped closing velocity, so a
+        # leap/dive burst earns reward proportional to however fast it momentarily closes the
+        # distance. Lowering the weight doesn't stop that (a clamp on the velocity itself would
+        # be the targeted fix), but it shrinks the exploit's payoff relative to the other reward
+        # terms (anti-jump shaping, time_penalty, reach_bonus) so it's less worth the risk.
         self.rewards.progress = RewTerm(
             func=goal_rewards.progress_to_goal,
-            weight=0.5,
+            weight=0.1,
             params={"command_name": "pose_command"},
         )
 
-        # Time-decayed: fires at full weight (2500) immediately after reset, decaying
-        # linearly to half weight (1250) by episode_length_s -- concentrates speed
-        # pressure into the single high-salience terminal transition instead of relying
-        # only on the (much smaller) per-step time_penalty differential.
+        # Time-decayed: fires at full weight immediately after reset, decaying linearly to
+        # half weight by episode_length_s -- concentrates speed pressure into the single
+        # high-salience terminal transition instead of relying only on the (much smaller)
+        # per-step time_penalty differential.
         self.rewards.reach_bonus = RewTerm(
             func=goal_rewards.time_decayed_termination_signal,
             weight=2.0,
@@ -120,7 +138,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # the speed-pressure fix).
         self.rewards.time_penalty = RewTerm(
             func=goal_rewards.constant_per_step,
-            weight=-0.2,
+            weight=-0.005,
             params={},
         )
 
@@ -169,6 +187,6 @@ class HexapodGoalEnvCfg_PLAY(HexapodGoalEnvCfg):
         self.events.push_robot = None
 
         # Camera: fixed world view showing the full 5m goal-reaching path
-        self.viewer.eye = (-1.0, -6.0, 1.5)
+        self.viewer.eye = (-1.0, -3.0, 1.5)
         self.viewer.lookat = (2.5, 0.0, 0.2)
         self.viewer.origin_type = "world"
