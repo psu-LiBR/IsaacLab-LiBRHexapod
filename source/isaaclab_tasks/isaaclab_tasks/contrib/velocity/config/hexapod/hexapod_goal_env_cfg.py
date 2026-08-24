@@ -16,8 +16,11 @@ Inherits HexapodFlatEnvCfg (scene, robot, terrain, actions, and base events) and
 from isaaclab.envs.mdp.commands import UniformPose2dCommandCfg
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.utils.configclass import configclass
+
+import isaaclab_tasks.core.velocity.mdp as mdp  # for feet_slide
 
 from . import hexapod_goal_rewards as goal_rewards
 from .flat_env_cfg import HexapodFlatEnvCfg
@@ -82,11 +85,38 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # track_ang_vel_z_exp (above) is dropped since there's no yaw command to track, which
         # otherwise leaves yaw rate completely unpenalized -- add an explicit penalty so the
         # robot can still turn to face the goal without being free to spin wildly en route.
-        self.rewards.ang_vel_z_l2 = RewTerm(func=goal_rewards.ang_vel_z_l2, weight=-1.0e-2)
-        self.rewards.dof_torques_l2.weight = -3.0e-7
+        self.rewards.ang_vel_z_l2 = RewTerm(func=goal_rewards.ang_vel_z_l2, weight=-1.0e-4)
+        # Penalize horizontal foot velocity while planted (continuous, scales with slide speed --
+        # not a hard gate), so lateral movement itself stays unpenalized and only the sliding
+        # mechanism is taxed: a fast slide costs more than a slow one, some slip is still cheap.
+        # Kept far below the Rshape variant's -0.6 (flat_env_cfg_rshape.py) -- that weight was
+        # validated against static friction 0.9-1.0, while this task inherits flat_env_cfg's much
+        # lower 0.2-0.3, where forced slip is bigger and more common even under a good gait. Start
+        # low and raise from play videos only if "crazy" sliding is still visible.
+        self.rewards.feet_slide = RewTerm(
+            func=mdp.feet_slide,
+            weight=-0.1,
+            params={
+                "sensor_cfg": SceneEntityCfg(
+                    "contact_forces",
+                    body_names=["MiddleLeft", "MiddleRight", "BackLeft", "BackRight", "FrontLeft", "FrontRight"],
+                ),
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    body_names=["MiddleLeft", "MiddleRight", "BackLeft", "BackRight", "FrontLeft", "FrontRight"],
+                ),
+            },
+        )
+        # Bias the gait toward the body's own forward axis, on top of feet_slide above --
+        # this penalizes net sideways drift at the body level regardless of mechanism, whereas
+        # feet_slide only taxes the specific case of a foot sliding while planted. Start at the
+        # same order of magnitude as ang_vel_z_l2 and raise if the walk still tracks noticeably
+        # off a straight line to the goal.
+        self.rewards.lin_vel_y_l2 = RewTerm(func=goal_rewards.lin_vel_y_l2, weight=-5.0e-4)
+        self.rewards.dof_torques_l2.weight = -3.0e-4
         self.rewards.dof_acc_l2.weight = -2.5e-7
-        self.rewards.action_rate_l2.weight = -0.0001
-        self.rewards.feet_air_time.weight = 0.15
+        self.rewards.action_rate_l2.weight = -0.0005
+        self.rewards.feet_air_time.weight = 0.2
         # The default mdp.feet_air_time gates on ||command[:, :2]|| > 0.1, assuming a velocity
         # command (m/s). Retargeting command_name to "pose_command" would silently turn that
         # into a position-error (m) gate instead, zeroing the reward once the robot got within
@@ -96,7 +126,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # instead of retargeting it.
         self.rewards.feet_air_time.func = goal_rewards.feet_air_time_ungated
         del self.rewards.feet_air_time.params["command_name"]
-        self.rewards.feet_air_time.params["threshold"] = 0.1  # your new value, in seconds
+        self.rewards.feet_air_time.params["threshold"] = 0.12  # your new value, in seconds
 
         self.rewards.undesired_contacts.weight = -1.0
         self.rewards.dof_pos_limits.weight = -1.0
@@ -112,7 +142,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # terms (anti-jump shaping, time_penalty, reach_bonus) so it's less worth the risk.
         self.rewards.progress = RewTerm(
             func=goal_rewards.progress_to_goal,
-            weight=0.1,
+            weight=0.2,
             params={"command_name": "pose_command"},
         )
 

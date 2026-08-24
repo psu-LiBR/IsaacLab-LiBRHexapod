@@ -37,6 +37,20 @@ def ang_vel_z_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntity
     return torch.square(asset.data.root_ang_vel_b.torch[:, 2])
 
 
+def lin_vel_y_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize body-frame lateral (y-axis) base linear velocity using an L2 squared kernel.
+
+    Complements ``feet_slide``: that term taxes the sliding mechanism at the foot-contact level,
+    this taxes the resulting net drift at the body level, biasing the gait toward moving along
+    its own forward axis regardless of what causes the sideways component (slide, strafing steps,
+    asymmetric leg timing, etc). Since the goal command pins pos_y=0 and heading=0 and yaw rate is
+    already discouraged by ``ang_vel_z_l2``, body-frame y here stays close to world-frame lateral
+    drift off the straight-line path to the goal.
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.square(asset.data.root_lin_vel_b.torch[:, 1])
+
+
 def feet_air_time_ungated(
     env: ManagerBasedRLEnv,
     sensor_cfg: SceneEntityCfg,
