@@ -91,6 +91,14 @@ parser.add_argument("--goal_distance", type=float, default=2.0,
 parser.add_argument("--policy", nargs=3, action="append", metavar=("TYPE", "NAME", "PATH"), default=[],
                     help="TYPE in {net,muzero,muzero_s,bits}; PATH is a checkpoint or a *_pattern.npz")
 parser.add_argument("--no_baselines", action="store_true")
+parser.add_argument("--fix_reset_command", action="store_true",
+                    help="Recompute the command manager after env.reset(). IsaacLab's "
+                         "ManagerBasedEnv.reset() calls _reset_idx() -> sim.forward() -> "
+                         "observation_manager.compute() but never command_manager.compute(), so the "
+                         "first observation of a rollout carries the base-frame goal left over from "
+                         "the previous rollout. step() does call it, so training is unaffected; only "
+                         "explicit-reset evaluation rollouts are. Off by default so existing numbers "
+                         "reproduce bit-for-bit.")
 parser.add_argument("--tripod_npz", default="",
                     help="tripod bit-demo npz for the third baseline (default: runs_discrete/demos_tripod_bits/tripod_bit_demos.npz)")
 parser.add_argument("--v_min", type=float, default=-10.0, help="C51 support lower bound")
@@ -325,6 +333,10 @@ def run(policy_fn, label, meta=None):
     """One fixed-window rollout. policy_fn(obs, t) -> int64 actions [N]."""
     torch.manual_seed(args.seed)
     obs, _ = env.reset(seed=args.seed)
+    if args.fix_reset_command:
+        # See --fix_reset_command. Two lines, no physics touched.
+        base.command_manager.compute(dt=0.0)
+        obs = base.observation_manager.compute()
     o = obs["policy"]
 
     # opening transient: take --warmup steps before the measurement window opens

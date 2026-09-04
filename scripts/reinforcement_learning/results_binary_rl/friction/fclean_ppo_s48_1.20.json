@@ -1,0 +1,94 @@
+{
+  "protocol": {
+    "task": "Isaac-Goal-Flat-Hexapod-Binary-v0",
+    "num_envs": 64,
+    "steps": 300,
+    "seed": 7,
+    "goal_distance": 2.0,
+    "warmup_steps_discarded": 1,
+    "fall_threshold_N": 1.0,
+    "step_dt": 0.02,
+    "no_reset": true,
+    "body_length_m": 0.265,
+    "gait_period_s": 1.0,
+    "n_cycles": 6.0,
+    "audit": [
+      "events.add_base_mass.mass_distribution_params: (1.0, 1.0) -> (1.0, 1.0)",
+      "events.base_com.com_range: {'x': (0.0, 0.0), 'y': (0.0, 0.0), 'z': (0.0, 0.0)} -> zeros",
+      "events.physics_material.static_friction_range: (0.2, 0.3) -> (0.25, 0.25)",
+      "events.physics_material.dynamic_friction_range: (0.2, 0.25) -> (0.225, 0.225)",
+      "events.physics_material.restitution_range: (0.0, 0.0) -> (0.0, 0.0)",
+      "events.physics_material.num_buckets: 64 -> 1",
+      "events.reset_robot_joints.position_range: (0.5, 1.5) -> (1.0, 1.0)",
+      "events.reset_robot_joints.velocity_range: (0.0, 0.0) -> (0.0, 0.0)",
+      "OVERRIDE static_friction_range: (0.25, 0.25) -> (1.2, 1.2)",
+      "OVERRIDE dynamic_friction_range: (0.225, 0.225) -> (1.08, 1.08)",
+      "observations.policy.enable_corruption -> False",
+      "curriculum.goal_distance -> None",
+      "commands.pose_command: pinned to (2.0, 0, 0), no resample",
+      "episode_length_s: 25.0 -> 1e6 (time_out can never fire)",
+      "terminations.base_contact.threshold: 1.0 -> 1e12 (fall never resets)",
+      "terminations.reach_goal: kept (radius 0.2), goal at 2.0 m -> unreachable inside the window; firings are reported"
+    ]
+  },
+  "results": [
+    {
+      "policy": "ppo_s48",
+      "reward_per_step": -0.01808,
+      "net_displacement_m": 0.4842,
+      "x_displacement_m": 0.3986,
+      "x_disp_BL_per_cycle": 0.2507,
+      "path_length_m": 1.2551,
+      "straightness": 0.386,
+      "action_entropy_nats": 1.458,
+      "entropy_pct_of_uniform": 35.1,
+      "mean_stance_legs": 4.343,
+      "stance_hist": [
+        0.0,
+        0.001,
+        0.047,
+        0.121,
+        0.272,
+        0.558,
+        0.001
+      ],
+      "frac_5plus_stance": 0.559,
+      "max_step_jump_m": 0.0614,
+      "disp_std_m": 0.1803,
+      "n_terminated": 0,
+      "n_truncated": 0,
+      "top_actions": [
+        [
+          47,
+          0.516
+        ],
+        [
+          27,
+          0.271
+        ],
+        [
+          25,
+          0.073
+        ],
+        [
+          34,
+          0.043
+        ]
+      ],
+      "fall_rate": 0.0,
+      "survival_s": 6.0,
+      "survival_s_min": 6.0,
+      "frac_steps_base_contact": 0.0,
+      "window_s": 6.0,
+      "arch": "elu",
+      "state_key": "policy",
+      "obs_scaler": true,
+      "hidden": [
+        128,
+        128,
+        128
+      ],
+      "checkpoint": "/home/longyaohao/isaac6/wt-retrain/runs_discrete_gap_20260902/gz_13_ppo_s48_g7_gap_matrix_gz_13_20260902_022042_full/checkpoints/agent_84000.pt"
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "protocol": {
+    "task": "Isaac-Goal-Flat-Hexapod-Binary-v0",
+    "num_envs": 64,
+    "steps": 300,
+    "seed": 7,
+    "goal_distance": 2.0,
+    "warmup_steps_discarded": 1,
+    "fall_threshold_N": 1.0,
+    "step_dt": 0.02,
+    "no_reset": true,
+    "body_length_m": 0.265,
+    "gait_period_s": 1.0,
+    "n_cycles": 6.0,
+    "audit": [
+      "events.add_base_mass.mass_distribution_params: (1.0, 1.0) -> (1.0, 1.0)",
+      "events.base_com.com_range: {'x': (0.0, 0.0), 'y': (0.0, 0.0), 'z': (0.0, 0.0)} -> zeros",
+      "events.physics_material.static_friction_range: (0.2, 0.3) -> (0.25, 0.25)",
+      "events.physics_material.dynamic_friction_range: (0.2, 0.25) -> (0.225, 0.225)",
+      "events.physics_material.restitution_range: (0.0, 0.0) -> (0.0, 0.0)",
+      "events.physics_material.num_buckets: 64 -> 1",
+      "events.reset_robot_joints.position_range: (0.5, 1.5) -> (1.0, 1.0)",
+      "events.reset_robot_joints.velocity_range: (0.0, 0.0) -> (0.0, 0.0)",
+      "OVERRIDE static_friction_range: (0.25, 0.25) -> (1.2, 1.2)",
+      "OVERRIDE dynamic_friction_range: (0.225, 0.225) -> (1.08, 1.08)",
+      "observations.policy.enable_corruption -> False",
+      "curriculum.goal_distance -> None",
+      "commands.pose_command: pinned to (2.0, 0, 0), no resample",
+      "episode_length_s: 25.0 -> 1e6 (time_out can never fire)",
+      "terminations.base_contact.threshold: 1.0 -> 1e12 (fall never resets)",
+      "terminations.reach_goal: kept (radius 0.2), goal at 2.0 m -> unreachable inside the window; firings are reported"
+    ]
+  },
+  "results": [
+    {
+      "policy": "BASE_all_stance_63",
+      "reward_per_step": -0.146631,
+      "net_displacement_m": 1.9378,
+      "x_displacement_m": -0.4807,
+      "x_disp_BL_per_cycle": -0.3024,
+      "path_length_m": 4.9505,
+      "straightness": 0.391,
+      "action_entropy_nats": 0.0,
+      "entropy_pct_of_uniform": 0.0,
+      "mean_stance_legs": 6.0,
+      "stance_hist": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "frac_5plus_stance": 1.0,
+      "max_step_jump_m": 0.0932,
+      "disp_std_m": 1.1627,
+      "n_terminated": 0,
+      "n_truncated": 0,
+      "top_actions": [
+        [
+          63,
+          1.0
+        ],
+        [
+          2,
+          0.0
+        ],
+        [
+          0,
+          0.0
+        ],
+        [
+          1,
+          0.0
+        ]
+      ],
+      "fall_rate": 0.078,
+      "survival_s": 5.788,
+      "survival_s_min": 1.88,
+      "frac_steps_base_contact": 0.001,
+      "window_s": 6.0,
+      "arch": "fixed action 63 = all six feet down"
+    },
+    {
+      "policy": "BASE_all_lift_0",
+      "reward_per_step": -0.039441,
+      "net_displacement_m": 0.0698,
+      "x_displacement_m": 0.0683,
+      "x_disp_BL_per_cycle": 0.043,
+      "path_length_m": 0.719,
+      "straightness": 0.097,
+      "action_entropy_nats": 0.0,
+      "entropy_pct_of_uniform": 0.0,
+      "mean_stance_legs": 0.0,
+      "stance_hist": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frac_5plus_stance": 0.0,
+      "max_step_jump_m": 0.0041,
+      "disp_std_m": 0.0026,
+      "n_terminated": 0,
+      "n_truncated": 0,
+      "top_actions": [
+        [
+          0,
+          1.0
+        ],
+        [
+          3,
+          0.0
+        ],
+        [
+          1,
+          0.0
+        ],
+        [
+          2,
+          0.0
+        ]
+      ],
+      "fall_rate": 0.0,
+      "survival_s": 6.0,
+      "survival_s_min": 6.0,
+      "frac_steps_base_contact": 0.0,
+      "window_s": 6.0,
+      "arch": "fixed action 0 = all six feet up"
+    },
+    {
+      "policy": "BASE_uniform_random",
+      "reward_per_step": -0.01314,
+      "net_displacement_m": 0.0959,
+      "x_displacement_m": -0.048,
+      "x_disp_BL_per_cycle": -0.0302,
+      "path_length_m": 0.8802,
+      "straightness": 0.109,
+      "action_entropy_nats": 4.157,
+      "entropy_pct_of_uniform": 100.0,
+      "mean_stance_legs": 2.995,
+      "stance_hist": [
+        0.017,
+        0.095,
+        0.235,
+        0.31,
+        0.231,
+        0.095,
+        0.016
+      ],
+      "frac_5plus_stance": 0.112,
+      "max_step_jump_m": 0.0179,
+      "disp_std_m": 0.0587,
+      "n_terminated": 0,
+      "n_truncated": 0,
+      "top_actions": [
+        [
+          57,
+          0.017
+        ],
+        [
+          4,
+          0.017
+        ],
+        [
+          5,
+          0.017
+        ],
+        [
+          55,
+          0.017
+        ]
+      ],
+      "fall_rate": 0.047,
+      "survival_s": 5.814,
+      "survival_s_min": 1.4,
+      "frac_steps_base_contact": 0.0,
+      "window_s": 6.0,
+      "arch": "uniform random 6-bit"
+    },
+    {
+      "policy": "BASE_tripod_csv_bits",
+      "reward_per_step": -0.011915,
+      "net_displacement_m": 0.6178,
+      "x_displacement_m": 0.6036,
+      "x_disp_BL_per_cycle": 0.3796,
+      "path_length_m": 1.0463,
+      "straightness": 0.59,
+      "action_entropy_nats": 0.692,
+      "entropy_pct_of_uniform": 16.6,
+      "mean_stance_legs": 3.0,
+      "stance_hist": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frac_5plus_stance": 0.0,
+      "max_step_jump_m": 0.0083,
+      "disp_std_m": 0.0076,
+      "n_terminated": 0,
+      "n_truncated": 0,
+      "top_actions": [
+        [
+          25,
+          0.52
+        ],
+        [
+          38,
+          0.48
+        ],
+        [
+          0,
+          0.0
+        ],
+        [
+          1,
+          0.0
+        ]
+      ],
+      "fall_rate": 0.0,
+      "survival_s": 6.0,
+      "survival_s_min": 6.0,
+      "frac_steps_base_contact": 0.0,
+      "window_s": 6.0,
+      "arch": "open-loop table (period 50)",
+      "unique_actions": 2
+    }
+  ]
+}
