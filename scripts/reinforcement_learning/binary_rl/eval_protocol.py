@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -22,6 +22,12 @@ Protocol (identical for every policy, baselines included)
 * all domain randomisation pinned to deterministic values (audited term by term over
   the whole config inheritance chain, project rule 2026-08-09) -- printed at startup.
 * goal distance pinned, curriculum off, observation corruption off, pushes off.
+* after env.reset() the command manager is recomputed (ManagerBasedEnv.reset() skips it,
+  leaving the goal command from the previous rollout); ``--legacy_reset`` restores the
+  old behaviour for reproducing pre-2026-09 tables. ``--warmup`` (>= 1, default 1) then
+  flushes the IMU / contact-sensor buffers, which only refresh on a real step().
+* per-policy reward-term breakdown (``reward_terms``) is reported for the baselines too,
+  so the tripod gait and the learned policies are scored against identical reward terms.
 
 Reported per policy
 -------------------
@@ -70,58 +76,113 @@ comparison for orientation, never as a replication claim.
 Baselines run first, every time, as the anchors of the table:
     all-stance (63), all-lift (0), uniform random, tripod-CSV bit sequence.
 
-Run (from a worktree, .venv activated):
-  CUDA_VISIBLE_DEVICES=<idle> python scripts/reinforcement_learning/eval_protocol.py \
-      --policy net dqn_100k /path/agent_100000.pt \
-      --policy muzero mz_final /path/ckpt_final.pt \
-      --out runs_discrete/eval_protocol/results.json
+Run (from the repo root):
+  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/eval_protocol.py ^
+      --policy net dqn_100k runs_binary/dqn_s42/checkpoints/agent_100000.pt ^
+      --policy net ppo_masked_100k runs_binary/ppo_masked_s42/checkpoints/agent_100000.pt ^
+      --out eval_results.json
+
+The four baselines (all-stance 63, all-lift 0, uniform random, tripod-CSV bits) run
+first every time as the anchors of the table. A masked-PPO checkpoint is recognised by
+the ``run_meta.json`` written next to it (the greedy argmax is then restricted to the
+recorded legal set). ``--legacy_reset`` reproduces the pre-2026-09 reset behaviour.
 """
 
 import argparse
+import os
+import sys
 
-from isaaclab.app import AppLauncher
+# allow running from any CWD (e.g. the repo root, so relative asset paths resolve)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from isaaclab.app import AppLauncher  # noqa: E402
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--task", default="Isaac-Goal-Flat-Hexapod-Binary-v0")
 parser.add_argument("--num_envs", type=int, default=64)
 parser.add_argument("--steps", type=int, default=300)
 parser.add_argument("--seed", type=int, default=7)
-parser.add_argument("--goal_distance", type=float, default=2.0,
-                    help="pinned goal distance (m); far enough that reach_goal cannot fire in the window")
-parser.add_argument("--policy", nargs=3, action="append", metavar=("TYPE", "NAME", "PATH"), default=[],
-                    help="TYPE in {net,muzero,muzero_s,bits}; PATH is a checkpoint or a *_pattern.npz")
+parser.add_argument(
+    "--goal_distance",
+    type=float,
+    default=2.0,
+    help="pinned goal distance (m); far enough that reach_goal cannot fire in the window",
+)
+parser.add_argument(
+    "--policy",
+    nargs=3,
+    action="append",
+    metavar=("TYPE", "NAME", "PATH"),
+    default=[],
+    help="TYPE in {net, bits}; PATH is a skrl checkpoint (.pt) or, for 'bits', a "
+    "phase-table .npz. A 'net' checkpoint with a sibling run_meta.json declaring "
+    "an action_mask is evaluated with the greedy argmax restricted to that set.",
+)
 parser.add_argument("--no_baselines", action="store_true")
-parser.add_argument("--fix_reset_command", action="store_true",
-                    help="Recompute the command manager after env.reset(). IsaacLab's "
-                         "ManagerBasedEnv.reset() calls _reset_idx() -> sim.forward() -> "
-                         "observation_manager.compute() but never command_manager.compute(), so the "
-                         "first observation of a rollout carries the base-frame goal left over from "
-                         "the previous rollout. step() does call it, so training is unaffected; only "
-                         "explicit-reset evaluation rollouts are. Off by default so existing numbers "
-                         "reproduce bit-for-bit.")
-parser.add_argument("--tripod_npz", default="",
-                    help="tripod bit-demo npz for the third baseline (default: runs_discrete/demos_tripod_bits/tripod_bit_demos.npz)")
+parser.add_argument(
+    "--legacy_reset",
+    action="store_true",
+    help="Reproduce the pre-fix reset behaviour bit-for-bit (for comparing against "
+    "old result tables). By default this script now refreshes the scene and the "
+    "command manager after env.reset() -- IsaacLab's ManagerBasedEnv.reset() runs "
+    "_reset_idx() -> sim.forward() -> observation_manager.compute() but skips the "
+    "per-step scene.update() and command_manager.compute() that step() does, so "
+    "the first observation of a rollout otherwise carries stale IMU / "
+    "projected-gravity buffers and the goal command left over from the previous "
+    "rollout. Training is unaffected (its resets go through step()); only "
+    "explicit-reset evaluation rollouts were. See run().",
+)
+parser.add_argument(
+    "--tripod_npz",
+    default="",
+    help="tripod bit-demo npz for the tripod baseline (default: the tripod_bit_demos.npz "
+    "committed next to this script)",
+)
 parser.add_argument("--v_min", type=float, default=-10.0, help="C51 support lower bound")
 parser.add_argument("--v_max", type=float, default=10.0, help="C51 support upper bound")
 parser.add_argument("--repeat", type=int, default=1, help="run each policy N times (determinism self-check)")
-parser.add_argument("--warmup", type=int, default=1,
-                    help="steps taken before measurement starts; discards the opening transient "
-                         "(first-step termination/reward pollution is a known quirk of this goal env family)")
-parser.add_argument("--fall_threshold", type=float, default=1.0,
-                    help="contact force on the base body counted as a fall (matches the env's own base_contact rule)")
-parser.add_argument("--body_length_m", type=float, default=0.265,
-                    help="robot body length used for the BL/cycle column; 0.265 m is the value Jackson quoted "
-                         "with the reference gait CSVs and the one every earlier calibration here used")
-parser.add_argument("--gait_period_s", type=float, default=1.0,
-                    help="one gait cycle in s for the BL/cycle column; must match GAIT_PERIOD_S in "
-                         "hexapod_binary_env_cfg.py (scripted spine sinusoid period, = tripod CSV 50 rows x 0.02 s)")
-parser.add_argument("--spine_gain", type=float, default=1.0,
-                    help="ABLATION, opt-in: multiply the scripted spine sinusoid amplitudes by this. "
-                         "1.0 (default) leaves the env exactly as trained/evaluated; 0.0 freezes the "
-                         "waist so only the legs can propel the robot")
-parser.add_argument("--spine_offset_gain", type=float, default=1.0,
-                    help="ABLATION, opt-in: same for the spine's constant offset (keep at 1.0 to hold "
-                         "the neutral posture while only the wave is removed)")
+parser.add_argument(
+    "--warmup",
+    type=int,
+    default=1,
+    help="steps taken before measurement starts; discards the opening transient "
+    "(first-step termination/reward pollution is a known quirk of this goal env family)",
+)
+parser.add_argument(
+    "--fall_threshold",
+    type=float,
+    default=1.0,
+    help="contact force on the base body counted as a fall (matches the env's own base_contact rule)",
+)
+parser.add_argument(
+    "--body_length_m",
+    type=float,
+    default=0.265,
+    help="robot body length used for the BL/cycle column; 0.265 m is the value Jackson quoted "
+    "with the reference gait CSVs and the one every earlier calibration here used",
+)
+parser.add_argument(
+    "--gait_period_s",
+    type=float,
+    default=1.0,
+    help="one gait cycle in s for the BL/cycle column; must match GAIT_PERIOD_S in "
+    "hexapod_binary_env_cfg.py (scripted spine sinusoid period, = tripod CSV 50 rows x 0.02 s)",
+)
+parser.add_argument(
+    "--spine_gain",
+    type=float,
+    default=1.0,
+    help="ABLATION, opt-in: multiply the scripted spine sinusoid amplitudes by this. "
+    "1.0 (default) leaves the env exactly as trained/evaluated; 0.0 freezes the "
+    "waist so only the legs can propel the robot",
+)
+parser.add_argument(
+    "--spine_offset_gain",
+    type=float,
+    default=1.0,
+    help="ABLATION, opt-in: same for the spine's constant offset (keep at 1.0 to hold "
+    "the neutral posture while only the wave is removed)",
+)
 parser.add_argument("--out", default="eval_protocol_results.json")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
@@ -129,14 +190,13 @@ args.headless = True
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
 
-import json
-import os
+import json  # noqa: E402
 
-import gymnasium as gym
-import numpy as np
-import torch
+import gymnasium as gym  # noqa: E402
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
 
-import isaaclab_tasks  # noqa: F401
+import isaaclab_tasks  # noqa: F401, E402
 
 try:
     from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
@@ -287,14 +347,16 @@ device = env.device
 N = env.num_envs
 obs_dim = int(base.single_observation_space["policy"].shape[-1])
 robot = base.scene[list(base.scene.articulations.keys())[0]]
-EYE = torch.eye(N_ACT, device=device)
 POPCNT = torch.tensor([bin(i).count("1") for i in range(N_ACT)], device=device, dtype=torch.float32)
 
 print("[protocol] ===== pinned configuration audit =====", flush=True)
 for line in AUDIT:
     print("[protocol]   " + line, flush=True)
-print(f"[protocol] task={args.task} num_envs={N} steps={args.steps} seed={args.seed} "
-      f"obs_dim={obs_dim} step_dt={base.step_dt}", flush=True)
+print(
+    f"[protocol] task={args.task} num_envs={N} steps={args.steps} seed={args.seed} "
+    f"obs_dim={obs_dim} step_dt={base.step_dt}",
+    flush=True,
+)
 
 
 def root_rel():
@@ -312,8 +374,11 @@ try:
     _fall_sensor = base.scene.sensors[_bc.params["sensor_cfg"].name]
     _names = _bc.params["sensor_cfg"].body_names
     _fall_body_ids = _fall_sensor.find_bodies(_names)[0]
-    print(f"[protocol] fall judge: sensor='{_bc.params['sensor_cfg'].name}' bodies={_names} "
-          f"ids={_fall_body_ids} threshold={args.fall_threshold} N", flush=True)
+    print(
+        f"[protocol] fall judge: sensor='{_bc.params['sensor_cfg'].name}' bodies={_names} "
+        f"ids={_fall_body_ids} threshold={args.fall_threshold} N",
+        flush=True,
+    )
 except Exception as _exc:  # pragma: no cover
     print(f"[protocol] WARNING: fall judge unavailable ({_exc}); fall columns will be null", flush=True)
 
@@ -324,8 +389,9 @@ def fallen_now():
         return None
     f = _fall_sensor.data.net_forces_w_history
     f = f.torch if hasattr(f, "torch") else f
-    return torch.any(torch.max(torch.linalg.norm(f[:, :, _fall_body_ids], dim=-1), dim=1)[0]
-                     > args.fall_threshold, dim=1)
+    return torch.any(
+        torch.max(torch.linalg.norm(f[:, :, _fall_body_ids], dim=-1), dim=1)[0] > args.fall_threshold, dim=1
+    )
 
 
 @torch.no_grad()
@@ -333,11 +399,26 @@ def run(policy_fn, label, meta=None):
     """One fixed-window rollout. policy_fn(obs, t) -> int64 actions [N]."""
     torch.manual_seed(args.seed)
     obs, _ = env.reset(seed=args.seed)
-    if args.fix_reset_command:
-        # See --fix_reset_command. Two lines, no physics touched.
+    if not args.legacy_reset:
+        # ManagerBasedEnv.reset() runs _reset_idx() -> sim.forward() -> observation
+        # compute, but skips the command_manager.compute() that step() does, so the first
+        # observation carries the base-frame goal command from the *previous* rollout.
+        # Recompute it (dt=0.0: no integration, nothing moves) and recompute observations.
         base.command_manager.compute(dt=0.0)
         obs = base.observation_manager.compute()
     o = obs["policy"]
+    # The IMU / contact sensors and the articulation acceleration buffers only refresh on
+    # a real step() (they divide by dt, so a dt=0 refresh is not possible), and reset()
+    # does not step. --warmup therefore MUST be >= 1: the discarded warmup steps also
+    # flush those stale-after-reset sensor buffers. This is why the residual
+    # projected_gravity / imu_ang_vel offset the RESULTS notes could not be explained by
+    # the command manager alone.
+    if args.warmup < 1:
+        print(
+            "[protocol] WARNING: --warmup 0 leaves stale IMU/contact buffers on the first "
+            "measured step; >= 1 is strongly recommended",
+            flush=True,
+        )
 
     # opening transient: take --warmup steps before the measurement window opens
     for t in range(args.warmup):
@@ -347,6 +428,12 @@ def run(policy_fn, label, meta=None):
     start = root_rel()
     prev = start.clone()
     tot_r = 0.0
+    # Per-term reward breakdown: accumulated for EVERY policy (baselines included) so the
+    # tripod gait and the learned policies are scored against the identical reward terms
+    # -- makes shaping penalties (action_rate_l2 etc.) visible and comparable instead of
+    # only affecting what the RL policy was trained on.
+    rterm_names = list(getattr(base, "reward_manager", None).active_terms) if hasattr(base, "reward_manager") else []
+    rterm_sum = torch.zeros(len(rterm_names), device=device)
     path = torch.zeros(N, device=device)
     hist = torch.zeros(N_ACT, device=device)
     stance_hist = torch.zeros(7, device=device)
@@ -366,13 +453,16 @@ def run(policy_fn, label, meta=None):
         path += d
         prev = cur
         tot_r += float(rew.mean())
+        if rterm_names:
+            # _step_reward is the weight-applied per-term rate (reward / dt); * step_dt
+            # puts it in the same "reward per step" units as reward_per_step.
+            rterm_sum += base.reward_manager._step_reward.mean(dim=0) * base.step_dt
         term_n += int(terminated.sum())
         trunc_n += int(truncated.sum())
         fl = fallen_now()
         if fl is not None:
             fall_steps += fl.float()
-            first_fall = torch.where(fl & torch.isnan(first_fall),
-                                     torch.full_like(first_fall, float(t)), first_fall)
+            first_fall = torch.where(fl & torch.isnan(first_fall), torch.full_like(first_fall, float(t)), first_fall)
     end = root_rel()
     net_v = (end - start)[:, :2]
     net = torch.linalg.norm(net_v, dim=1)
@@ -388,8 +478,8 @@ def run(policy_fn, label, meta=None):
         # Derived column, added 2026-08-31: same measurement, group-standard unit.
         # Nothing below reads it; it changes no existing column and no judgement.
         "x_disp_BL_per_cycle": round(
-            float(net_v[:, 0].mean()) / args.body_length_m
-            / (args.steps * base.step_dt / args.gait_period_s), 4),
+            float(net_v[:, 0].mean()) / args.body_length_m / (args.steps * base.step_dt / args.gait_period_s), 4
+        ),
         "path_length_m": round(float(path.mean()), 4),
         "straightness": round(float(net.mean() / max(float(path.mean()), 1e-9)), 3),
         "action_entropy_nats": round(ent, 3),
@@ -403,16 +493,20 @@ def run(policy_fn, label, meta=None):
         "n_truncated": trunc_n,
         "top_actions": [(int(i), round(float(v / hist.sum()), 3)) for i, v in zip(top.indices, top.values)],
     }
+    if rterm_names:
+        res["reward_terms"] = {n: round(float(v) / args.steps, 6) for n, v in zip(rterm_names, rterm_sum)}
     if _fall_sensor is not None:
         ever = ~torch.isnan(first_fall)
         surv = torch.where(ever, first_fall, torch.full_like(first_fall, float(args.steps))) * base.step_dt
-        res.update({
-            "fall_rate": round(float(ever.float().mean()), 3),
-            "survival_s": round(float(surv.mean()), 3),
-            "survival_s_min": round(float(surv.min()), 3),
-            "frac_steps_base_contact": round(float((fall_steps / args.steps).mean()), 3),
-            "window_s": round(args.steps * base.step_dt, 2),
-        })
+        res.update(
+            {
+                "fall_rate": round(float(ever.float().mean()), 3),
+                "survival_s": round(float(surv.mean()), 3),
+                "survival_s_min": round(float(surv.min()), 3),
+                "frac_steps_base_contact": round(float((fall_steps / args.steps).mean()), 3),
+                "window_s": round(args.steps * base.step_dt, 2),
+            }
+        )
     if meta:
         res.update(meta)
     print("[protocol] " + json.dumps(res), flush=True)
@@ -445,6 +539,9 @@ def make_net_policy(path):
                 state, src = ck[key], key
                 break
     state = {(k[4:] if k.startswith("net.") else k): v for k, v in state.items()}
+    # Keep only the Sequential layer tensors ("<i>.weight" / "<i>.bias"); drop any mixin
+    # buffers a policy model may carry (e.g. MaskedCategoricalMixin's "_action_mask").
+    state = {k: v for k, v in state.items() if k.split(".")[0].isdigit()}
     # Linear weights are 2-D; a 1-D ".weight" can only be a LayerNorm (PQN-style net).
     has_ln = any(k.endswith(".weight") and v.dim() == 1 for k, v in state.items())
     net = build_mlp(state, has_ln).to(device)
@@ -461,14 +558,33 @@ def make_net_policy(path):
         scaler.load_state_dict(ck["observation_preprocessor"])
         scaler.eval()
     arch = ("layernorm-relu" if has_ln else "elu") + (f"-c51x{atoms}" if atoms > 1 else "")
-    meta = {"arch": arch, "state_key": src, "obs_scaler": scaler is not None,
-            "hidden": [m.out_features for m in net if isinstance(m, torch.nn.Linear)][:-1]}
+    meta = {
+        "arch": arch,
+        "state_key": src,
+        "obs_scaler": scaler is not None,
+        "hidden": [m.out_features for m in net if isinstance(m, torch.nn.Linear)][:-1],
+    }
+
+    # A masked-policy run records its legal action set in run_meta.json (written next to
+    # the checkpoint's parent dir). Honour it here so the greedy argmax can never pick an
+    # action the policy was never allowed to explore.
+    legal = None
+    meta_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(path))), "run_meta.json")
+    if os.path.isfile(meta_path):
+        with open(meta_path) as _mf:
+            _rm = json.load(_mf)
+        if isinstance(_rm.get("action_mask"), dict) and _rm["action_mask"].get("legal_actions"):
+            legal = torch.zeros(N_ACT, dtype=torch.bool, device=device)
+            legal[torch.tensor(_rm["action_mask"]["legal_actions"], device=device)] = True
+            meta["action_mask_legal"] = int(legal.sum())
 
     def fn(o, t):
         x = scaler(o, train=False) if scaler is not None else o
         q = net(x)
         if support is not None:
             q = (torch.softmax(q.view(-1, N_ACT, atoms), dim=-1) * support).sum(-1)
+        if legal is not None:
+            q = q.masked_fill(~legal, float("-inf"))
         return torch.argmax(q, dim=1)
 
     return fn, meta
@@ -489,91 +605,6 @@ def make_bits_policy(path):
     return fn, meta
 
 
-def _mz_unscale(x):
-    s = torch.sign(x)
-    a = torch.abs(x)
-    return s * (((torch.sqrt(1 + 4 * 1e-3 * (a + 1 + 1e-3)) - 1) / (2 * 1e-3)) ** 2 - 1)
-
-
-def make_muzero_policy(path, stochastic=False):
-    ck = torch.load(path, map_location=device, weights_only=False)
-    cfg = ck["args"]
-    L, H = cfg["latent"], cfg["hidden"]
-
-    def mlp(i, o, h, layers=2, out_act=False):
-        mods, d = [], i
-        for _ in range(layers):
-            mods += [torch.nn.Linear(d, h), torch.nn.ELU()]
-            d = h
-        mods += [torch.nn.Linear(d, o)]
-        if out_act:
-            mods += [torch.nn.ELU()]
-        return torch.nn.Sequential(*mods)
-
-    class Rep(torch.nn.Module):
-        def __init__(s):
-            super().__init__(); s.net = mlp(obs_dim, L, H); s.norm = torch.nn.LayerNorm(L)
-        def forward(s, o):
-            return s.norm(s.net(o))
-
-    class Dyn(torch.nn.Module):
-        def __init__(s):
-            super().__init__(); s.trunk = mlp(L + N_ACT, H, H, layers=1, out_act=True)
-            s.to_state = torch.nn.Linear(H, L); s.to_reward = torch.nn.Linear(H, 1)
-            s.norm = torch.nn.LayerNorm(L)
-        def forward(s, x, a):
-            h = s.trunk(torch.cat([x, a], -1))
-            return s.norm(s.to_state(h)), s.to_reward(h).squeeze(-1)
-
-    class Pred(torch.nn.Module):
-        def __init__(s):
-            super().__init__(); s.trunk = mlp(L, H, H, layers=1, out_act=True)
-            s.to_policy = torch.nn.Linear(H, N_ACT); s.to_value = torch.nn.Linear(H, 1)
-        def forward(s, x):
-            h = s.trunk(x)
-            return s.to_policy(h), s.to_value(h).squeeze(-1)
-
-    rep, dyn, pred = Rep().to(device), Dyn().to(device), Pred().to(device)
-    rep.load_state_dict(ck["rep"]); dyn.load_state_dict(ck["dyn"]); pred.load_state_dict(ck["pred"])
-    rep.eval(); dyn.eval(); pred.eval()
-    rm, rv = ck["run_mean"].to(device), ck["run_var"].to(device)
-    m, depth, sig, gam = cfg["n_cand"], cfg["search_depth"], cfg["sigma_scale"], cfg["discount"]
-    meta = {"arch": f"muzero latent{L} hidden{H} cand{m} depth{depth}",
-            "mode": "stochastic" if stochastic else "greedy"}
-
-    def fn(o, t):
-        x = torch.clamp((o - rm) / torch.sqrt(rv + 1e-8), -5.0, 5.0)
-        s0 = rep(x)
-        logits, _ = pred(s0)
-        if stochastic:
-            u = torch.rand_like(logits).clamp(1e-20, 1.0 - 1e-7)
-            g = -torch.log(-torch.log(u))
-            cand = torch.topk(g + logits, m, dim=1).indices
-        else:
-            g = torch.zeros_like(logits)
-            cand = torch.topk(logits, m, dim=1).indices
-        s = s0.unsqueeze(1).expand(-1, m, -1).reshape(N * m, -1)
-        a = cand.reshape(N * m)
-        q = torch.zeros(N * m, device=device)
-        disc = 1.0
-        for d in range(depth):
-            s, r = dyn(s, EYE[a])
-            q = q + disc * _mz_unscale(r)
-            disc *= gam
-            lg, v = pred(s)
-            if d == depth - 1:
-                q = q + disc * _mz_unscale(v)
-            else:
-                a = lg.argmax(1)
-        q = q.reshape(N, m)
-        qh = (q - q.min(1, keepdim=True).values) / (
-            q.max(1, keepdim=True).values - q.min(1, keepdim=True).values).clamp_min(1e-8)
-        pick = torch.argmax(torch.gather(g + logits, 1, cand) + sig * qh, dim=1)
-        return torch.gather(cand, 1, pick.unsqueeze(1)).squeeze(1)
-
-    return fn, meta
-
-
 # ---------------------------------------------------------------- run everything
 RESULTS = []
 
@@ -584,27 +615,48 @@ def do(fn, label, meta=None):
         try:
             RESULTS.append(run(fn, tag, meta))
         except Exception as exc:  # never let one policy kill the sweep
-            print(f"[protocol] FAILED {tag}: {type(exc).__name__}: {exc}", flush=True)
+            import traceback
+
+            print(f"[protocol] FAILED {tag}: {type(exc).__name__}: {exc}\n{traceback.format_exc()}", flush=True)
             RESULTS.append({"policy": tag, "error": f"{type(exc).__name__}: {exc}"})
         with open(args.out, "w") as f:
-            json.dump({"protocol": {"task": args.task, "num_envs": N, "steps": args.steps,
-                                    "seed": args.seed, "goal_distance": args.goal_distance,
-                                    "warmup_steps_discarded": args.warmup,
-                                    "fall_threshold_N": args.fall_threshold,
-                                    "step_dt": base.step_dt, "no_reset": True,
-                                    # BL/cycle conversion constants, recorded so any
-                                    # result file states its own unit basis.
-                                    "body_length_m": args.body_length_m,
-                                    "gait_period_s": args.gait_period_s,
-                                    "n_cycles": round(args.steps * base.step_dt / args.gait_period_s, 4),
-                                    "audit": AUDIT}, "results": RESULTS}, f, indent=2)
+            json.dump(
+                {
+                    "protocol": {
+                        "task": args.task,
+                        "num_envs": N,
+                        "steps": args.steps,
+                        "seed": args.seed,
+                        "goal_distance": args.goal_distance,
+                        "warmup_steps_discarded": args.warmup,
+                        "fall_threshold_N": args.fall_threshold,
+                        "step_dt": base.step_dt,
+                        "no_reset": True,
+                        # BL/cycle conversion constants, recorded so any
+                        # result file states its own unit basis.
+                        "body_length_m": args.body_length_m,
+                        "gait_period_s": args.gait_period_s,
+                        "n_cycles": round(args.steps * base.step_dt / args.gait_period_s, 4),
+                        "audit": AUDIT,
+                    },
+                    "results": RESULTS,
+                },
+                f,
+                indent=2,
+            )
 
 
 if not args.no_baselines:
-    do(lambda o, t: torch.full((N,), 63, dtype=torch.long, device=device), "BASE_all_stance_63",
-       {"arch": "fixed action 63 = all six feet down"})
-    do(lambda o, t: torch.full((N,), 0, dtype=torch.long, device=device), "BASE_all_lift_0",
-       {"arch": "fixed action 0 = all six feet up"})
+    do(
+        lambda o, t: torch.full((N,), 63, dtype=torch.long, device=device),
+        "BASE_all_stance_63",
+        {"arch": "fixed action 63 = all six feet down"},
+    )
+    do(
+        lambda o, t: torch.full((N,), 0, dtype=torch.long, device=device),
+        "BASE_all_lift_0",
+        {"arch": "fixed action 0 = all six feet up"},
+    )
     rand_gen = torch.Generator(device=device)
 
     def rand_pol(o, t):
@@ -613,7 +665,7 @@ if not args.no_baselines:
         return torch.randint(0, N_ACT, (N,), device=device, generator=rand_gen)
 
     do(rand_pol, "BASE_uniform_random", {"arch": "uniform random 6-bit"})
-    trip = args.tripod_npz or "runs_discrete/demos_tripod_bits/tripod_bit_demos.npz"
+    trip = args.tripod_npz or os.path.join(os.path.dirname(os.path.abspath(__file__)), "tripod_bit_demos.npz")
     if os.path.isfile(trip):
         f, m = make_bits_policy(trip)
         do(f, "BASE_tripod_csv_bits", m)
@@ -630,12 +682,8 @@ for kind, name, path in args.policy:
             f, m = make_net_policy(path)
         elif kind == "bits":
             f, m = make_bits_policy(path)
-        elif kind == "muzero":
-            f, m = make_muzero_policy(path, stochastic=False)
-        elif kind == "muzero_s":
-            f, m = make_muzero_policy(path, stochastic=True)
         else:
-            raise ValueError(f"unknown policy type {kind}")
+            raise ValueError(f"unknown policy type {kind!r} (expected 'net' or 'bits')")
     except Exception as exc:
         print(f"[protocol] LOAD FAILED {name}: {type(exc).__name__}: {exc}", flush=True)
         RESULTS.append({"policy": name, "error": f"load: {type(exc).__name__}: {exc}", "path": path})

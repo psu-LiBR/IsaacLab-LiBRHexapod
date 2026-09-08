@@ -5,19 +5,65 @@
 
 import numpy as np
 import pytest
-from sim2real.profiles import PROFILES, GoalObsBuilder, VelocityObsBuilder, make_obs_builder
+from sim2real.profiles import PROFILES, BinaryObsBuilder, GoalObsBuilder, VelocityObsBuilder, make_obs_builder
 
 
 def test_velocity_profile_dims():
     spec = PROFILES["velocity"]
     assert spec.obs_dim == 33
     assert spec.action_dim == 8
+    assert spec.last_action_dim == 8
 
 
 def test_goal_profile_dims():
     spec = PROFILES["goal"]
     assert spec.obs_dim == 34
     assert spec.action_dim == 8
+    assert spec.last_action_dim == 8
+
+
+def test_binary_profile_dims():
+    spec = PROFILES["binary"]
+    # gyro(3) + gravity(3) + command(4) + joint_pos_rel(8) + joint_vel(8) + last_action(6)
+    assert spec.obs_dim == 32
+    assert spec.action_dim == 6
+    assert spec.last_action_dim == 6
+    assert spec.command_dim == 4
+
+
+def test_binary_obs_order_has_6dim_last_action_tail():
+    builder = BinaryObsBuilder()
+    gyro = np.array([1.0, 2.0, 3.0])
+    gravity = np.array([0.0, 0.0, -1.0])
+    joint_pos = np.arange(10.0, 18.0)
+    joint_vel = np.arange(20.0, 28.0)
+    last_action = np.array([1.0, -1.0, 1.0, -1.0, 1.0, -1.0])  # 6 leg bits
+    q_default = np.zeros(8)
+    command = np.array([2.0, 0.0, 0.0, 0.0])
+
+    obs = builder.build(gyro, gravity, joint_pos, joint_vel, last_action, q_default, command)
+
+    assert obs.shape == (32,)
+    assert np.allclose(obs[0:3], gyro)
+    assert np.allclose(obs[3:6], gravity)
+    assert np.allclose(obs[6:10], command)
+    assert np.allclose(obs[10:18], joint_pos - q_default)
+    assert np.allclose(obs[18:26], joint_vel)
+    assert np.allclose(obs[26:32], last_action)
+
+
+def test_binary_obs_rejects_8dim_last_action():
+    builder = BinaryObsBuilder()
+    with pytest.raises(ValueError, match="last_action_sim"):
+        builder.build(
+            np.zeros(3),
+            np.array([0.0, 0.0, -1.0]),
+            np.zeros(8),
+            np.zeros(8),
+            np.zeros(8),  # wrong: binary last_action is 6-dim
+            np.zeros(8),
+            np.zeros(4),
+        )
 
 
 def test_velocity_obs_order():
@@ -90,5 +136,6 @@ def test_wrong_command_dim_raises():
 def test_make_obs_builder_factory():
     assert isinstance(make_obs_builder("velocity"), VelocityObsBuilder)
     assert isinstance(make_obs_builder("goal"), GoalObsBuilder)
+    assert isinstance(make_obs_builder("binary"), BinaryObsBuilder)
     with pytest.raises(ValueError):
         make_obs_builder("bogus")

@@ -45,18 +45,15 @@ HEXAPOD_CFG = ArticulationCfg(
             # For Trad Hexapod Implementation ------
             # "FrontLink_Joint": 0.0,
             # "BackLink_Joint": 0.0,
-
             # "MiddleLeft_Joint": -0.47,
             # "MiddleRight_Joint": -0.47,
             # "BackLeft_Joint": -0.47,
             # "BackRight_Joint": -0.47,
             # "FrontLeft_Joint": -0.47,
             # "FrontRight_Joint": -0.47,
-
-            #For HEXAPI Implementation -------------
+            # For HEXAPI Implementation -------------
             "FrontLink_Joint": 0.0,
             "BackLink_Joint": 0.0,
-
             "MiddleLeft_Joint": 0.47,
             "MiddleRight_Joint": 0.47,
             "BackLeft_Joint": 0.47,
@@ -65,7 +62,7 @@ HEXAPOD_CFG = ArticulationCfg(
             "FrontRight_Joint": 0.47,
         },
     ),
-    soft_joint_pos_limit_factor=0.9,
+    soft_joint_pos_limit_factor=1.0,
     actuators={
         # Spine joints: sinusoidal body undulation sustains high torque at wave peaks against body inertia.
         # Lower stiffness reduces peak torque demand (at stiffness=40, error=0.15 rad before saturation vs 0.075 at 80).

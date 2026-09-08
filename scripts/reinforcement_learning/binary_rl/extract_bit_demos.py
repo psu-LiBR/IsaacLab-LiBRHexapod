@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -30,8 +30,7 @@ import os
 import numpy as np
 
 CSV_DEFAULT = os.path.join("hexapod-assets", "Sim Gaits", "tripod_B11BL0_sim.csv")
-LEG_COLS = {"FrontRight": 7, "FrontLeft": 6, "MiddleRight": 3, "MiddleLeft": 2,
-            "BackRight": 5, "BackLeft": 4}
+LEG_COLS = {"FrontRight": 7, "FrontLeft": 6, "MiddleRight": 3, "MiddleLeft": 2, "BackRight": 5, "BackLeft": 4}
 BIT_ORDER = ["FrontRight", "FrontLeft", "MiddleRight", "MiddleLeft", "BackRight", "BackLeft"]
 STANCE_LEVEL = -0.460194236365692
 LIFT_LEVEL = -1.180398216278
@@ -41,8 +40,7 @@ DT = 0.02
 parser = argparse.ArgumentParser()
 parser.add_argument("--csv", default=CSV_DEFAULT)
 parser.add_argument("--out_dir", default="runs_discrete/demos_tripod_bits")
-parser.add_argument("--level_tol", type=float, default=0.02,
-                    help="max |value - nearest level| accepted, rad")
+parser.add_argument("--level_tol", type=float, default=0.02, help="max |value - nearest level| accepted, rad")
 args = parser.parse_args()
 
 data = np.loadtxt(args.csv, delimiter=",")
@@ -51,9 +49,7 @@ T = data.shape[0]
 
 legs = data[:, [LEG_COLS[n] for n in BIT_ORDER]]  # [T, 6] in bit order
 dev = np.minimum(np.abs(legs - STANCE_LEVEL), np.abs(legs - LIFT_LEVEL))
-assert dev.max() <= args.level_tol, (
-    f"leg values are not two-level within tol: max deviation {dev.max():.4f} rad"
-)
+assert dev.max() <= args.level_tol, f"leg values are not two-level within tol: max deviation {dev.max():.4f} rad"
 bits = (legs > THRESHOLD).astype(np.uint8)  # 1 = stance
 action_idx = (bits * (1 << np.arange(6))[None, :]).sum(axis=1).astype(np.int16)  # LSB = FR
 
@@ -67,16 +63,25 @@ with open(args.csv, "rb") as f:
 os.makedirs(args.out_dir, exist_ok=True)
 np.savez(
     os.path.join(args.out_dir, "tripod_bit_demos.npz"),
-    bits=bits, action_idx=action_idx, dt=DT, period_steps=period,
-    bit_order=np.array(BIT_ORDER), leg_csv_cols=np.array([LEG_COLS[n] for n in BIT_ORDER]),
-    threshold=THRESHOLD, stance_level=STANCE_LEVEL, lift_level=LIFT_LEVEL,
-    source_csv=args.csv, source_sha256=sha,
+    bits=bits,
+    action_idx=action_idx,
+    dt=DT,
+    period_steps=period,
+    bit_order=np.array(BIT_ORDER),
+    leg_csv_cols=np.array([LEG_COLS[n] for n in BIT_ORDER]),
+    threshold=THRESHOLD,
+    stance_level=STANCE_LEVEL,
+    lift_level=LIFT_LEVEL,
+    source_csv=args.csv,
+    source_sha256=sha,
 )
 with open(os.path.join(args.out_dir, "tripod_bit_demos.md"), "w") as f:
     f.write("# Tripod 6-bit demonstration sequence\n\n")
     f.write(f"- source: `{args.csv}` (sha256 `{sha[:16]}...`), {T} rows x 8 cols, {DT} s/row\n")
-    f.write(f"- levels: stance {STANCE_LEVEL:.4f} / lift {LIFT_LEVEL:.4f} rad, "
-            f"threshold {THRESHOLD:.4f}, max level deviation {dev.max():.5f} rad\n")
+    f.write(
+        f"- levels: stance {STANCE_LEVEL:.4f} / lift {LIFT_LEVEL:.4f} rad, "
+        f"threshold {THRESHOLD:.4f}, max level deviation {dev.max():.5f} rad\n"
+    )
     f.write(f"- bit order (int LSB first): {BIT_ORDER}\n")
     f.write(f"- periodic: row[0] == row[-1] -> {periodic}, period = {period} steps ({period * DT:.2f} s)\n")
     f.write(f"- per-leg stance fraction over one period: {np.round(stance_frac, 3).tolist()}\n")

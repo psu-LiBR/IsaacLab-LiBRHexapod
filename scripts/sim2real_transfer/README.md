@@ -64,13 +64,28 @@ python run_policy.py --policy <policy.onnx> --profile velocity --config config/d
 `--profile`); `PolicyRunner` shape-checks it against the profile at load, so a
 mismatched pairing fails immediately instead of producing garbage actions. No
 config or code changes needed to switch between checkpoints of the same
-profile (`velocity` or `goal`).
+profile (`velocity`, `goal`, or `binary`).
+
+## Profiles
+
+- `velocity` (obs 33, act 8) -- flat velocity-tracking policy.
+- `goal` (obs 34, act 8) -- goal-reaching policy; needs the localizer.
+- `binary` (obs 32, act 6) -- the binary-contact policy from
+  `scripts/reinforcement_learning/binary_rl`. Needs the localizer *and* a
+  `binary:` section in the deployment config, so **copy
+  `config/deployment.binary.example.yaml`** (not `deployment.example.yaml`) --
+  it carries the HexapI positive-leg joint convention. Export the checkpoint
+  with `binary_rl/export_binary_onnx.py`. The six leg joints snap between the
+  two fixed stance/lift angles from the policy bits; the two spine joints run a
+  scripted sinusoid recreated host-side. `--action-scale-mult < 1` damps the
+  whole target toward `q_default` for bring-up.
 
 ## Layout
 
 - `sim2real/` -- the package: `joint_mapping.py` (Sim<->Real DOF conversion,
-  most safety-critical file), `profiles.py` (obs schemas), `deployment_config.py`
-  (typed `deployment.yaml` loader), `policy_runner.py` (onnxruntime wrapper),
+  most safety-critical file), `profiles.py` (obs schemas), `binary_profile.py`
+  (binary-contact action decode + host-side spine sinusoid),
+  `deployment_config.py` (typed `deployment.yaml` loader), `policy_runner.py` (onnxruntime wrapper),
   `dynamixel_bus.py` / `imu.py` (hardware interfaces, each with a
   hardware-free dry-run/fake counterpart), `command_source.py` /
   `localization.py` (velocity/goal command handling), `safety.py` (watchdog,
@@ -86,7 +101,9 @@ profile (`velocity` or `goal`).
   `tools/log_imu_rotation_test.py`, `tools/log_imu_axis_alignment_test.py` --
   standalone hardware calibration/diagnostic helpers, not part of the bring-up
   sequence above.
-- `config/deployment.example.yaml` -- hardware facts template; copy to
-  `deployment.yaml` (gitignored) and calibrate before real bring-up.
+- `config/deployment.example.yaml` -- hardware facts template (velocity/goal);
+  copy to `deployment.yaml` (gitignored) and calibrate before real bring-up.
+- `config/deployment.binary.example.yaml` -- same, for the `binary` profile
+  (HexapI positive-leg convention + a `binary:` section).
 - `tests/` -- `python -m pytest tests/` from this directory, or
   `python -m pytest scripts/sim2real_transfer/tests/` from the repo root.

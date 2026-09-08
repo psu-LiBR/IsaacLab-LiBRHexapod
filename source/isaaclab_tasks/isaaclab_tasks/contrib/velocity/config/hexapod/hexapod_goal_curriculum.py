@@ -75,11 +75,7 @@ def goal_distance_curriculum(
         env._goal_curriculum_last_rate = success_rate
         if success_rate >= success_threshold and env._goal_curriculum_stage < len(distances) - 1:
             env._goal_curriculum_stage += 1
-        elif (
-            demotion_threshold is not None
-            and success_rate < demotion_threshold
-            and env._goal_curriculum_stage > 0
-        ):
+        elif demotion_threshold is not None and success_rate < demotion_threshold and env._goal_curriculum_stage > 0:
             env._goal_curriculum_stage -= 1
         env._goal_curriculum_episodes = 0
         env._goal_curriculum_successes = 0

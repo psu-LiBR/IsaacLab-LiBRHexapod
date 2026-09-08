@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import time
 
+from .binary_profile import BinaryActionAdapter
 from .command_source import CommandSource
 from .deployment_config import DeploymentConfig
 from .dynamixel_bus import DynamixelBus
@@ -36,6 +37,9 @@ from .logging_utils import CsvRunLogger
 from .policy_runner import PolicyRunner
 from .profiles import ObsBuilder
 from .safety import Watchdog, all_finite, soft_start_ramp, soft_stop_ramp, ticks_in_valid_range
+
+# Profiles whose command is a world-frame goal pose resolved through the localizer.
+_GOAL_LIKE_PROFILES = ("goal", "binary")
 
 
 def run(
@@ -54,9 +58,12 @@ def run(
     rate_hz: float | None = None,
     action_scale_multiplier: float | None = None,
     duration_s: float | None = None,
+    binary_adapter: BinaryActionAdapter | None = None,
 ) -> None:
-    if profile_name == "goal" and localizer is None:
-        raise ValueError("goal profile requires a localizer")
+    if profile_name in _GOAL_LIKE_PROFILES and localizer is None:
+        raise ValueError(f"{profile_name} profile requires a localizer")
+    if profile_name == "binary" and binary_adapter is None:
+        raise ValueError("binary profile requires a binary_adapter")
 
     rate_hz = rate_hz if rate_hz is not None else cfg.control.rate_hz
     action_scale_multiplier = (
@@ -91,12 +98,12 @@ def run(
             measured_pos_sim = joint_mapping.ticks_to_sim_rad(ticks)
             measured_vel_sim = joint_mapping.real_radps_to_sim_radps(raw_vel)
 
-            if profile_name == "velocity":
-                command = command_source.get_command()
-            else:
+            if profile_name in _GOAL_LIKE_PROFILES:
                 goal = command_source.get_command()
                 localizer.update(period, gyro[2])
                 command = localizer.get_pose_command(goal[:3], goal[3])
+            else:
+                command = command_source.get_command()
 
             obs = obs_builder.build(
                 gyro,
@@ -112,7 +119,17 @@ def run(
                 break
 
             raw_action = policy_runner.step(obs)
-            target_sim = q_default_sim + cfg.control.action_scale * action_scale_multiplier * raw_action
+            if profile_name == "binary":
+                # raw_action is 6 leg contact bits in {-1, +1}; legs snap to stance/lift and
+                # the two spine joints follow the scripted sinusoid at elapsed time = step * period
+                # (mirrors SpineSineAction's `t = episode_length_buf * step_dt`, which is 0 on the
+                # first post-reset step). action_scale_multiplier < 1 damps the whole target toward
+                # q_default for bring-up (bits are absolute, so the velocity branch's scale knob
+                # does not apply directly).
+                full_target = binary_adapter.targets_sim(raw_action, step * period)
+                target_sim = q_default_sim + action_scale_multiplier * (full_target - q_default_sim)
+            else:
+                target_sim = q_default_sim + cfg.control.action_scale * action_scale_multiplier * raw_action
             target_sim = joint_mapping.clip_to_soft_limits(target_sim)
             target_ticks = joint_mapping.sim_target_to_ticks(target_sim)
 

@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Fold QR-DQN's quantile head into an equivalent plain-Q head, so the OFFICIAL ruler
 (eval_protocol.py, byte-unchanged) scores it with the right math.
 

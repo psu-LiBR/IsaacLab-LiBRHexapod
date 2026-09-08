@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 import yaml
 
+from .binary_profile import BinaryActionCfg, BinarySpineCfg
 from .imu import DEFAULT_MAX_STALENESS_S
 
 
@@ -71,6 +72,8 @@ class DeploymentConfig:
     imu: ImuCfg
     control: ControlCfg
     commands: CommandsCfg
+    # Only required for `--profile binary`; absent for velocity/goal deployments.
+    binary: BinaryActionCfg | None = None
 
 
 def _require(d: dict, key: str, path: str):
@@ -131,4 +134,20 @@ def load_deployment_config(path: str) -> DeploymentConfig:
         goal=dict(_require(commands_raw, "goal", "commands")),
     )
 
-    return DeploymentConfig(serial=serial, joints=joints, imu=imu, control=control, commands=commands)
+    binary = None
+    if "binary" in raw:
+        binary_raw = raw["binary"]
+        spine_raw = _require(binary_raw, "spine", "binary")
+        binary = BinaryActionCfg(
+            stance_pos=float(_require(binary_raw, "stance_pos", "binary")),
+            lift_pos=float(_require(binary_raw, "lift_pos", "binary")),
+            leg_joint_order=list(_require(binary_raw, "leg_joint_order", "binary")),
+            spine=BinarySpineCfg(
+                amplitude={k: float(v) for k, v in _require(spine_raw, "amplitude", "binary.spine").items()},
+                phase={k: float(v) for k, v in _require(spine_raw, "phase", "binary.spine").items()},
+                offset={k: float(v) for k, v in _require(spine_raw, "offset", "binary.spine").items()},
+                period=float(_require(spine_raw, "period", "binary.spine")),
+            ),
+        )
+
+    return DeploymentConfig(serial=serial, joints=joints, imu=imu, control=control, commands=commands, binary=binary)

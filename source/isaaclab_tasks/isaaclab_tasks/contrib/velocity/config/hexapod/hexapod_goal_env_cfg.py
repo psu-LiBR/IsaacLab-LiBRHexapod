@@ -188,9 +188,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # newly selected fixed distance.
         # Window sizes scale off scene.num_envs (not a hardcoded constant) so changing
         # num_envs doesn't silently change how much data each curriculum decision pools.
-        window_sizes = tuple(
-            max(1, round(self.scene.num_envs * fraction)) for fraction in CURRICULUM_WINDOW_FRACTIONS
-        )
+        window_sizes = tuple(max(1, round(self.scene.num_envs * fraction)) for fraction in CURRICULUM_WINDOW_FRACTIONS)
         self.curriculum.goal_distance = CurrTerm(
             func=goal_distance_curriculum,
             params={

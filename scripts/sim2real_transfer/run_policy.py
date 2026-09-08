@@ -28,6 +28,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sim2real import control_loop  # noqa: E402
+from sim2real.binary_profile import BinaryActionAdapter  # noqa: E402
 from sim2real.command_source import make_command_source  # noqa: E402
 from sim2real.deployment_config import load_deployment_config  # noqa: E402
 from sim2real.dynamixel_bus import DryRunDynamixelBus, RealDynamixelBus  # noqa: E402
@@ -88,7 +89,13 @@ def main() -> None:
     policy = PolicyRunner(args.policy, profile)
     obs_builder = make_obs_builder(args.profile)
     command_source = make_command_source(args.profile, cfg.commands)
-    localizer = DeadReckoningLocalizer() if args.profile == "goal" else None
+    localizer = DeadReckoningLocalizer() if args.profile in ("goal", "binary") else None
+
+    binary_adapter = None
+    if args.profile == "binary":
+        if cfg.binary is None:
+            raise SystemExit(f"--profile binary requires a 'binary:' section in {args.config}")
+        binary_adapter = BinaryActionAdapter(cfg.binary, cfg.joints.sim_order)
 
     if args.dry_run:
         bus = DryRunDynamixelBus(joint_mapping.motor_ids)
@@ -126,6 +133,7 @@ def main() -> None:
             rate_hz=args.rate_hz,
             action_scale_multiplier=args.action_scale_mult,
             duration_s=args.duration,
+            binary_adapter=binary_adapter,
         )
     finally:
         bus.close()

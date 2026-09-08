@@ -1,0 +1,4 @@
+Test-only: added source/isaaclab_tasks/test/test_hexapod_binary_mask.py and
+test_binary_onnx_export.py covering the binary-contact RL helpers
+(scripts/reinforcement_learning/binary_rl/). No library code changed in this
+package; the binary-contact env config itself shipped in an earlier PR.

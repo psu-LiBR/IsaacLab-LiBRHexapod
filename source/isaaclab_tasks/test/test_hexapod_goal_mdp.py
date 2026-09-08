@@ -87,9 +87,7 @@ def test_time_decayed_termination_signal_decays_linearly_to_min_fraction():
     env = FakeEnv()
     env.episode_length_buf = torch.tensor([450, 2250])  # 9s and 45s elapsed at step_dt=0.02
 
-    result = goal_rewards.time_decayed_termination_signal(
-        env, "reach_goal", episode_length_s=45.0, min_fraction=0.5
-    )
+    result = goal_rewards.time_decayed_termination_signal(env, "reach_goal", episode_length_s=45.0, min_fraction=0.5)
 
     torch.testing.assert_close(result, torch.tensor([0.9, 0.0]))
 
@@ -101,9 +99,7 @@ def test_time_decayed_termination_signal_clamps_past_episode_length():
         {"reach_goal": torch.tensor([True, True]), "base_contact": torch.tensor([False, False])}
     )
 
-    result = goal_rewards.time_decayed_termination_signal(
-        env, "reach_goal", episode_length_s=45.0, min_fraction=0.5
-    )
+    result = goal_rewards.time_decayed_termination_signal(env, "reach_goal", episode_length_s=45.0, min_fraction=0.5)
 
     torch.testing.assert_close(result, torch.tensor([0.5, 1.0 - 0.5 * (0.04 / 45.0)]))
 

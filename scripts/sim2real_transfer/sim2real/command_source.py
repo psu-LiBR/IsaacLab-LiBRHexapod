@@ -49,6 +49,8 @@ class ConstantGoalCommand(CommandSource):
 def make_command_source(profile_name: str, cfg: CommandsCfg) -> CommandSource:
     if profile_name == "velocity":
         return ConstantVelocityCommand(cfg)
-    if profile_name == "goal":
+    if profile_name in ("goal", "binary"):
+        # The binary-contact task is goal-reaching with a swapped action space, so it
+        # takes the same 4-dim [x, y, z, heading] world-frame goal.
         return ConstantGoalCommand(cfg)
     raise ValueError(f"unknown profile '{profile_name}'")

@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -106,7 +106,7 @@ if isinstance(ckpt, dict):
             state = ckpt[key]
             break
 # skrl Model state dict prefixes layers with "net."
-state = { (k[4:] if k.startswith("net.") else k): v for k, v in state.items() }
+state = {(k[4:] if k.startswith("net.") else k): v for k, v in state.items()}
 qnet, out_dim, arch = build_qnet(state, obs_dim)
 qnet = qnet.to(device)
 qnet.load_state_dict(state)
@@ -147,11 +147,15 @@ for t in range(args.steps):
     if t % 100 == 0:
         print(f"  step {t}: mean cum reward {total_rew.mean().item():+.3f}")
 
-print(f"[play_discrete] {args.steps} steps x {env.num_envs} envs | mean total reward {total_rew.mean().item():+.3f} "
-      f"| terminated {terminated_n} truncated {truncated_n}")
+print(
+    f"[play_discrete] {args.steps} steps x {env.num_envs} envs | mean total reward {total_rew.mean().item():+.3f} "
+    f"| terminated {terminated_n} truncated {truncated_n}"
+)
 top = torch.topk(action_counts, 8)
-print("[play_discrete] top-8 greedy 6-bit patterns (int: count):",
-      {f"{int(i):06b}": int(c) for i, c in zip(top.indices, top.values)})
+print(
+    "[play_discrete] top-8 greedy 6-bit patterns (int: count):",
+    {f"{int(i):06b}": int(c) for i, c in zip(top.indices, top.values)},
+)
 print(f"[play_discrete] video dir: {out_dir}")
 
 env.close()
