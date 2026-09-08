@@ -30,8 +30,8 @@ For reference: the tripod gait occupies only two of the 64 actions, `25` and `38
 | File | Purpose |
 |---|---|
 | `hexapod_binary_env_cfg.py` | the binary-contact environment (under `isaaclab_tasks/contrib/velocity/config/hexapod/`) |
-| `discrete_action_wrapper.py` | maps `Discrete(64)` to joint targets |
-| `train_discrete.py` | DQN |
+| `discrete_action_wrapper.py` | decodes `Discrete(64)` into `[N, 6]` +/-1 contact bits; the joint targets are applied env-side |
+| `train_discrete.py` | DQN and Double DQN (`--algo dqn|ddqn`) |
 | `train_sac_d.py` | discrete SAC (categorical actor + twin critics) |
 | `train_discrete_c51.py` | C51 |
 | `train_discrete_qrdqn.py` | QR-DQN |
@@ -41,25 +41,27 @@ For reference: the tripod gait occupies only two of the 64 actions, `25` and `38
 | `train_dqfd.py` | DQfD (needs a demonstration `.npz`) |
 | `eval_protocol.py` | the shared evaluation protocol — all reported numbers come from this |
 | `fold_qrdqn_meanQ.py` | folds QR-DQN quantile heads to mean-Q so the shared evaluator can load them |
+| `play_discrete.py` | replays a checkpoint in the viewer |
 | `play_discrete_closeup.py` | renders a checkpoint to video |
+| `extract_bit_demos.py` | builds `tripod_bit_demos.npz` from the tripod contact CSV |
 | `tripod_bit_demos.npz` | tripod contact sequence, used as the baseline and as DQfD demonstrations |
 
 ## 3. Training
 
 ```bash
 # DQN / C51 / QR-DQN / PQN, 4096 envs
-python scripts/reinforcement_learning/train_discrete.py \
+python scripts/reinforcement_learning/binary_rl/train_discrete.py \
   --num_envs 4096 --timesteps 100000 --seed 42 \
   --learning_starts 20 --random_timesteps 10 --batch_size 256 --memory_slots 200 \
   --experiment_name dqn_s42 --directory runs_binary --checkpoint_interval 2000
 
 # discrete SAC
-python scripts/reinforcement_learning/train_sac_d.py \
+python scripts/reinforcement_learning/binary_rl/train_sac_d.py \
   --num_envs 4096 --timesteps 100000 --seed 42 \
   --batch_size 256 --memory_slots 200 --out_dir runs_binary/sacd_s42 --checkpoint_interval 2000
 
 # PPO
-python scripts/reinforcement_learning/train_discrete_ppo.py \
+python scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py \
   --num_envs 4096 --timesteps 100000 --seed 42 \
   --rollouts 16 --learning_epochs 2 --mini_batches 2 \
   --experiment_name ppo_s42 --directory runs_binary --checkpoint_interval 2000
@@ -83,9 +85,9 @@ All reported numbers come from `eval_protocol.py`, run identically for every met
 | primary metric | forward displacement, reported as BL/cycle | body length 0.265 m over 6 cycles, so BL/cycle = metres / 1.59 |
 
 ```bash
-python scripts/reinforcement_learning/eval_protocol.py \
+python scripts/reinforcement_learning/binary_rl/eval_protocol.py \
   --num_envs 64 --steps 300 --seed 7 --warmup 1 \
-  --tripod_npz scripts/reinforcement_learning/tripod_bit_demos.npz \
+  --tripod_npz scripts/reinforcement_learning/binary_rl/tripod_bit_demos.npz \
   --policy net "dqn_s42@100000" runs_binary/dqn_s42/checkpoints/agent_100000.pt \
   --out eval_results.json
 ```
