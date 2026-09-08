@@ -215,3 +215,27 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_goal_cfg:HexapodGoalPPORunnerCfg",
     },
 )
+
+# ---------------------------------------------------------------------------
+# Binary (contact-bit) action-space variant of the goal-reaching environment.
+# Action-space swap only: 6 leg bits (RL) + scripted spine sinusoid.
+# No RL library config wired up yet (deliberate -- algorithm choice pending).
+# ---------------------------------------------------------------------------
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Binary-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_binary_env_cfg:HexapodBinaryEnvCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Binary-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_binary_env_cfg:HexapodBinaryEnvCfg_PLAY",
+    },
+)

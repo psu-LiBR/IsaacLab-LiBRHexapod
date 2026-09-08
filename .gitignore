@@ -89,3 +89,7 @@ docs/superpowers/
 # Personal/local Claude Code agents and skill backups (not shared repo content)
 .claude/agents/
 .claude/skills_local_backup/
+
+# binary-contact RL results are kept outside the repo
+scripts/reinforcement_learning/results_binary_rl/
+runs_discrete*/
