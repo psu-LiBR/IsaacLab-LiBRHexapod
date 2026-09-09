@@ -95,20 +95,36 @@ Fall rate (fraction of envs whose base contact exceeds 1.0 N at any point):
 
 Same runs, each evaluated at its 100k checkpoint. No checkpoint selection.
 
-| algorithm | s46 | s47 | s48 | s49 | mean | vs tripod |
-|---|---:|---:|---:|---:|---:|---:|
-| dqfd | 0.4000 | 0.4000 | 0.4000 | 0.4000 | 0.4000 | 100% |
-| sac_d | 0.0425 | 0.1242 | 0.4287 | -0.0769 | 0.1296 | 32% |
-| vmpo | 0.1069 | 0.0892 | 0.0654 | 0.1837 | 0.1113 | 28% |
-| dqn | 0.2011 | 0.0565 | 0.1440 | -0.0965 | 0.0763 | 19% |
-| pqn | -0.0676 | 0.0061 | 0.0185 | 0.1210 | 0.0195 | 5% |
-| c51 | 0.0638 | -0.0327 | 0.1747 | -0.2076 | -0.0005 | -0% |
-| qrdqn | -0.0023 | -0.0043 | -0.0134 | -0.1267 | -0.0367 | -9% |
-| ppo | -0.0422 | 0.0940 | -0.0369 | -0.2322 | -0.0543 | -14% |
+A dagger marks a cell whose rollout ended with `fall_rate = 1.0`: the robot is on the
+ground and the displacement is slide, not gait. Those cells do not meet the acceptance
+rule stated in `README_binary_rl.md` (fall rate 0 and 6.00 s survival) and should not be
+read as locomotion.
 
-No run reaches the tripod replay. DQfD returns 0.4000 on all four seeds; it is trained on the
-tripod demonstrations, so this is consistent with it reproducing the demonstration rather than
-departing from it (its action histogram has not been checked yet).
+| algorithm | s46 | s47 | s48 | s49 | valid cells |
+|---|---:|---:|---:|---:|---:|
+| dqfd | 0.4000 | 0.4000 | 0.4000 | 0.4000 | 4/4 |
+| sac_d | 0.0425 | 0.1242 | **0.4287** | -0.0769 † | 3/4 |
+| dqn | 0.2011 † | 0.0565 | 0.1440 | -0.0965 | 3/4 |
+| ppo | -0.0422 | 0.0940 † | -0.0369 | -0.2322 | 3/4 |
+| qrdqn | -0.0023 | -0.0043 † | -0.0134 | -0.1267 † | 2/4 |
+| vmpo | 0.1069 † | 0.0892 † | 0.0654 | 0.1837 † | 1/4 |
+| pqn | -0.0676 † | 0.0061 † | 0.0185 † | 0.1210 † | 0/4 |
+| c51 | 0.0638 † | -0.0327 † | 0.1747 † | -0.2076 † | 0/4 |
+
+16 of the 32 cells are marked. Means over a column that mixes gait with slide are not
+meaningful, so the mean column has been dropped.
+
+**Correction (2026-09-09).** An earlier version of this line read "No run reaches the tripod
+replay." That was wrong. **sac_d seed 48 reaches 0.4287 BL/cycle, 106.8% of the tripod replay
+(0.4014), with fall rate 0.000 and the full 6.00 s of survival.** It was re-run in three
+independent processes and returned 0.4287 bit-identically each time, so this is not measurement
+noise. The original line was written from a table that had no fall-rate column, which is what the
+dagger column above now fixes.
+
+Apart from that one cell, no run exceeds the tripod replay at this budget. DQfD returns 0.4000 on
+all four seeds; it is trained on the tripod demonstrations, so this is consistent with it
+reproducing the demonstration rather than departing from it (its action histogram has not been
+checked yet).
 
 DQN and SAC-D also have 300k checkpoints:
 
