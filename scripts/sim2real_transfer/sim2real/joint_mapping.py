@@ -34,13 +34,11 @@ _CORRECTIONS: dict[str, tuple[float, float]] = {
     # valid zero_tick in [0, 4095] under this -pi branch, not +pi -- see
     # tools/calibrate_encoders.py zero-tick output and CLAUDE.md.
     "leg_negate_minus_pi": (-1.0, -math.pi),
-    # HexapI USD leg convention (used by the `binary` profile -- hexapod_binary_env_cfg.py
-    # gives the legs positive angles). The HexapI USD flips the leg-joint sign vs the old
-    # USD, so sim_hexapi = -sim_old. Substituting into this robot's *calibrated* old map
-    # real = -sim_old - pi (leg_negate_minus_pi) gives real = sim_hexapi - pi. Same -pi
-    # phase branch, so the identical real encoder angle and the identical calibrated leg
-    # zero_tick carry over unchanged from the velocity/goal deployment.yaml
-    # (HexapI stance +0.46 -> 0.46 - pi == old stance -0.46 -> -(-0.46) - pi).
+    # real = sim - pi. A -pi phase branch on a passthrough sign, kept for setups
+    # whose leg servos sit a half-turn off the sim zero. NOTE: this robot's `binary`
+    # (HexapI) leg map is plain `negate`, not this -- the HexapI USD only sign-flips
+    # the legs (sim_hexapi = -sim_old) on top of the calibrated old-USD `unchanged`
+    # leg map, giving real = -sim_hexapi. See config/deployment.binary.example.yaml.
     "leg_minus_pi": (1.0, -math.pi),
 }
 

@@ -15,6 +15,7 @@ the simulator.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 from typing import Any
@@ -50,6 +51,11 @@ def add_common_cli(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--checkpoint_interval", type=int, default=2000)
     parser.add_argument("--write_interval", type=int, default=50)
     parser.add_argument("--resume", default="", help="checkpoint to warm-start from")
+    # Weights & Biases (the binary-RL equivalent of rsl_rl's --logger wandb --log_project_name)
+    parser.add_argument("--wandb", action="store_true", help="log this run to Weights & Biases")
+    parser.add_argument("--wandb_project", default="discrete-RL", help="W&B project name")
+    parser.add_argument("--wandb_group", default="", help="W&B group (default: the algorithm name)")
+    parser.add_argument("--wandb_name", default="", help="W&B run name (default: --experiment_name)")
 
 
 def add_mask_cli(parser: argparse.ArgumentParser) -> None:
@@ -194,6 +200,80 @@ def write_run_meta(run_dir: str, algo: str, obs_dim: int, n_actions: int, **extr
     with open(path, "w") as f:
         json.dump(meta, f, indent=2)
     return path
+
+
+# --------------------------------------------------------------------------------------
+# Weights & Biases
+# --------------------------------------------------------------------------------------
+def _bridge_skrl_writer_to_wandb(wandb_module: Any) -> None:
+    """Forward skrl's tracking scalars to ``wandb.log``.
+
+    skrl (>= 2.1) ships its **own** ``SummaryWriter`` (``skrl.utils.tensorboard``) that
+    writes tfevents directly via ``tensorboard.summary.writer`` -- it is not
+    ``torch.utils.tensorboard`` or ``tensorboardX``, so ``wandb.init(sync_tensorboard=True)``
+    never sees it and the W&B run ends up with only the config and no metric history.
+    This wraps skrl's ``add_scalar`` so every scalar it records (losses, rewards,
+    episode stats -- whatever the agent tracks) is also sent to the active W&B run.
+    Idempotent; a no-op if skrl is not importable (the SAC-D trainer, which logs
+    explicitly).
+    """
+    try:
+        from skrl.utils.tensorboard import SummaryWriter as _SkrlWriter
+    except Exception:  # noqa: BLE001 -- skrl absent / API moved: nothing to bridge
+        return
+    if getattr(_SkrlWriter, "_wandb_bridged", False):
+        return
+    _orig = _SkrlWriter.add_scalar
+
+    def add_scalar(self: Any, *, tag: str, value: float, timestep: int) -> None:
+        _orig(self, tag=tag, value=value, timestep=timestep)
+        with contextlib.suppress(Exception):  # never let logging break training
+            wandb_module.log({tag: value}, step=int(timestep))
+
+    _SkrlWriter.add_scalar = add_scalar  # type: ignore[method-assign]
+    _SkrlWriter._wandb_bridged = True
+
+
+def maybe_init_wandb(
+    args: argparse.Namespace,
+    experiment_name: str,
+    algo: str,
+    config: dict[str, Any] | None = None,
+):
+    """Start a Weights & Biases run when ``--wandb`` was passed, else return ``None``.
+
+    Bridges skrl's custom TensorBoard writer to ``wandb.log`` (see
+    :func:`_bridge_skrl_writer_to_wandb`) so the DQN / DDQN / PPO / masked-PPO runs report
+    their loss / reward / episode metrics; the single-file SAC-D trainer additionally logs
+    its metrics with :func:`wandb.log` directly. The caller must invoke ``.finish()`` on
+    the returned handle at the end of the run.
+
+    Args:
+        args: Parsed CLI namespace carrying the ``--wandb*`` flags from :func:`add_common_cli`.
+        experiment_name: Run-folder name; the default W&B run name.
+        algo: Algorithm tag; the default W&B group, also recorded in the run config.
+        config: Extra key/value pairs to record in the W&B run config.
+
+    Returns:
+        The ``wandb`` run handle, or ``None`` when logging is disabled or ``wandb`` is not
+        installed.
+    """
+    if not getattr(args, "wandb", False):
+        return None
+    try:
+        import wandb
+    except ImportError:
+        print("[binary_common] --wandb set but 'wandb' is not installed; continuing without it", flush=True)
+        return None
+    run = wandb.init(
+        project=getattr(args, "wandb_project", "") or "discrete-RL",
+        group=getattr(args, "wandb_group", "") or algo,
+        name=getattr(args, "wandb_name", "") or experiment_name,
+        config={**vars(args), "algo": algo, **(config or {})},
+    )
+    _bridge_skrl_writer_to_wandb(wandb)
+    print(f"[binary_common] W&B: project={run.project} name={run.name} id={run.id}", flush=True)
+    return run
 
 
 # --------------------------------------------------------------------------------------

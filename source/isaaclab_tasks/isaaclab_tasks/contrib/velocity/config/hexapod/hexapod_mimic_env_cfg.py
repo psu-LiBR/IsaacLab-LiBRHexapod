@@ -115,6 +115,12 @@ class HexapodMimicEnvCfg(HexapodFlatEnvCfg):
     def __post_init__(self) -> None:
         super().__post_init__()
 
+        # 2026-09 real-robot friction sweep calibration: training randomizes the effective
+        # ground friction over 0.18-0.25 (inherited from the flat/rough base; restated here
+        # so the calibrated band is explicit for this task).
+        self.events.physics_material.params["static_friction_range"] = (0.18, 0.25)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.18, 0.25)
+
         # --- Imitation reward ---
         # Params contain only OmegaConf-compatible primitives (str, float, list[int]).
         # MotionReference is built lazily inside the reward function on first call.
@@ -186,8 +192,10 @@ class HexapodMimicEnvCfg_PLAY(HexapodMimicEnvCfg):
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
         self.commands.base_velocity.resampling_time_range = (1000.0, 1000.0)
 
-        self.events.physics_material.params["static_friction_range"] = (0.5, 0.6)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.35, 0.45)
+        # 2026-09 real-robot friction sweep calibration: eval/PLAY pins the effective
+        # ground friction to the single best sweep row (mu = 0.21).
+        self.events.physics_material.params["static_friction_range"] = (0.21, 0.21)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.21, 0.21)
 
         self.viewer.eye = (-1.0, 0.0, 0.5)
         self.viewer.lookat = (0.0, 0.0, 0.0)

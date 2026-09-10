@@ -69,7 +69,7 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym  # noqa: E402
 import torch  # noqa: E402
-from binary_common import build_env, mlp, write_run_meta  # noqa: E402
+from binary_common import build_env, maybe_init_wandb, mlp, write_run_meta  # noqa: E402
 from skrl.agents.torch.ddqn import DDQN, DDQN_CFG
 from skrl.agents.torch.dqn import DQN, DQN_CFG
 from skrl.envs.wrappers.torch import wrap_env
@@ -175,6 +175,8 @@ write_run_meta(
     replay_transitions=memory_slots * env.num_envs,
 )
 
+wandb_run = maybe_init_wandb(args, experiment_name, args.algo, {"replay_transitions": memory_slots * env.num_envs})
+
 params_before = torch.cat([p.detach().flatten().clone() for p in models["q_network"].parameters()])
 trainer.train()
 params_after = torch.cat([p.detach().flatten().clone() for p in models["q_network"].parameters()])
@@ -184,5 +186,8 @@ print(f"[train_discrete] experiment dir: {agent.experiment_dir}")
 
 ckpt_dir = os.path.join(agent.experiment_dir, "checkpoints")
 print(f"[train_discrete] checkpoints: {sorted(os.listdir(ckpt_dir)) if os.path.isdir(ckpt_dir) else 'NONE WRITTEN'}")
+
+if wandb_run is not None:
+    wandb_run.finish()
 
 simulation_app.close()

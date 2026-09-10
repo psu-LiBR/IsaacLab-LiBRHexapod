@@ -20,7 +20,7 @@ warm-up system.
 
 - Isaac Sim 6.0+ installed and on PATH (or at `_isaac_sim` symlink)
 - Python 3.11, PyTorch 2.7.0 + CUDA 12.8
-- Hexapod USD model at `hexapod-assets/USD/Hexapod_Flattened.usd` (repo-relative)
+- Hexapod USD model at `hexapod-assets/USD/HexapiFlattened.usd` (repo-relative; a `Hexapod_Flattened.usd` path is commented out just above it in `hexapod.py`)
 - Data output directory at `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/`
 
 ## Common Commands
@@ -62,6 +62,10 @@ isaaclab.bat train --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-v0 --num_e
 
 :: Play/evaluate a goal-reaching checkpoint
 isaaclab.bat play --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-Play-v0 --num_envs 1
+
+:: Train the binary contact-bit goal env (fork-only scripts, no --rl_library; e.g. categorical PPO).
+:: Also: train_discrete.py (DQN/DDQN), train_sac_d.py, run_discrete_pipeline.py -- see binary_rl/README_binary_rl.md
+isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py --num_envs 4096 --timesteps 100000 --seed 42 --experiment_name ppo_s42
 
 :: List all registered environments
 isaaclab.bat -p scripts/environments/list_envs.py
@@ -166,18 +170,35 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
   (a `"hexapod-assets/USD/Hexapod_Flattened.usd"` line is present but commented out immediately above it —
   verify which USD is actually active before relying on the path).
 - 8 joints total: `FrontLink`, `BackLink` (spine), + 6 leg joints (`MiddleLeft/Right`, `BackLeft/Right`, `FrontLeft/Right`)
-- **Two actuator groups** (split because spine and legs have different loading profiles). Values below are
-  **current on-disk** (this file is under active tuning); in-file comments record rejected alternatives:
-  - `body_joints` (FrontLink, BackLink): stiffness=10, damping=0.3, velocity_limit_sim=15.0 rad/s,
-    effort_limit_sim=4.5 N·m. Comment: stiffness=80 was tried and rejected ("too stiff -- small tracking
-    lag generates huge torques; consistently saturates"); velocity_limit_sim=5.5 was the original value,
-    raised because body sin-wave undulation needs faster tracking than that cap allows.
-  - `leg_joints` (all 6 legs): stiffness=20, damping=0.9, velocity_limit_sim=10.0 rad/s, effort_limit_sim=4.5 N·m.
-    Comment: stiffness=37/damping=0.32 were the original values (rejected as too low — max correctable
-    error 1.4/37=0.038 rad before saturation); effort_limit_sim=1.4 (the XL430's physical stall torque)
-    was also tried and rejected as a sim value.
-  - Physical spec: Dynamixel XL430-W250-T, stall torque 1.4 N·m at 12V, no-load speed 5.97 rad/s
-  - `effort_limit_sim` is NOT a 1:1 analog of physical torque; it caps the PD output and needs headroom for damping term (`damping × velocity` can exceed physical stall torque)
+- **Actuator model: `DCMotorCfg`** — migrated from `ImplicitActuatorCfg` (**breaking**: closed-loop
+  joint dynamics change for every hexapod task, existing checkpoints must be retrained; see
+  `source/isaaclab_assets/changelog.d/hexapod-dcmotor-actuator.rst`). Still **two groups** (spine vs.
+  legs), now split only so `stiffness` can differ. Values below are **current on-disk** (still under
+  active tuning); the file's comment header carries the full XL430-W250-T datasheet derivation.
+  - Shared by both groups: `saturation_effort=1.4` N·m (== stall torque), `effort_limit=1.4` N·m,
+    `velocity_limit=5.97` rad/s (== no-load speed, 11.1 V column, used directly — no voltage scaling),
+    `damping=0.35`, `armature=1.3e-3` kg·m² (reflected rotor inertia ≈ J_rotor·258.5²; also needed for
+    explicit-integration stability at `sim.dt=5e-3`), `friction=0.04` / `dynamic_friction=0.03` N·m
+    (geartrain Coulomb / breakaway; modeled as a torque in Isaac Sim 5.0+, not a coefficient).
+  - `body_joints` (FrontLink, BackLink): `stiffness=10.0`.
+  - `leg_joints` (all 6 legs): `stiffness=50.0` (raised from 20 — a mild bump over the firmware
+    P-Gain=640 default, motivated by open-loop tripod-gait tracking tests, trivially settable on the
+    real servo).
+  - DCMotor enforces the velocity-dependent torque-speed curve
+    `tau_max(qd) = clip(saturation_effort * (1 - qd / velocity_limit), -inf, effort_limit)`, so
+    deliverable torque collapses to ~0 as a joint approaches no-load speed — exactly like the real
+    servo. This is the main sim2real gain over the old implicit model (which could deliver full torque
+    at any speed). By design the sim will **not** perfectly track an aggressive open-loop reference gait.
+  - `effort_limit_sim` / `velocity_limit_sim` are now left **unset**: DCMotor clips the physical
+    envelope itself (no solver double-clip; the torque-speed curve governs joint speed).
+  - Physical spec: Dynamixel XL430-W250-T — stall torque 1.4 N·m at 1.3 A, no-load speed 5.97 rad/s
+    (57 rev/min) at 11.1 V, 258.5:1 gearing, 4096 pulse/rev (12 V column, for reference: 1.5 N·m stall,
+    6.39 rad/s).
+  - Rejected `ImplicitActuatorCfg` alternatives (kept for history, all **moot since the DCMotor swap**):
+    `effort_limit_sim=4.5` N·m (3.2× physical stall — inflated headroom for the combined implicit
+    PD+damping clamp); `body_joints` stiffness=80 ("too stiff -- small tracking lag generates huge
+    torques; consistently saturates") and `velocity_limit_sim=5.5`; `leg_joints` stiffness=37 /
+    damping=0.32 (max correctable error 1.4/37=0.038 rad before saturation) and `effort_limit_sim=1.4`.
 - Init pose: spine joints (`FrontLink_Joint`, `BackLink_Joint`) at 0.0 rad. Leg joints are **currently
   +0.47 rad** under a `# For HEXAPI Implementation` block in `init_state.joint_pos`; an older
   `# For Trad Hexapod Implementation` block using **-0.47 rad** is present but commented out directly
@@ -191,6 +212,7 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `Isaac-Velocity-Rough-Hexapod-v0` / `Isaac-Velocity-Rough-Hexapod-Play-v0`
 - `Isaac-Velocity-Flat-Hexapod-Mimic-v0` / `Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0`
 - `Isaac-Goal-Flat-Hexapod-v0` / `Isaac-Goal-Flat-Hexapod-Play-v0`
+- `Isaac-Goal-Flat-Hexapod-Binary-v0` / `Isaac-Goal-Flat-Hexapod-Binary-Play-v0` (binary contact-bit action space; **no `rsl_rl_cfg_entry_point`** — trained by the fork-only scripts in `scripts/reinforcement_learning/binary_rl/`, see **Binary-Contact RL System** below)
 - Reward-shaping/tuned variants (`Isaac-Velocity-Flat-Hexapod-Rshape-*`, `Isaac-Goal-Flat-Hexapod-BigStep-*`) —
   see `flat_env_cfg_rshape.py` / `hexapod_goal_tuned_env_cfg.py` below and the task-specific
   `config/hexapod/README.md` for the full parameter table
@@ -199,11 +221,20 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 
 - Velocity target: lin_vel_x=(0.2, 0.2) m/s training / (0.16, 0.16) play, y=0, yaw=0 (forward-only gait)
 - No height scanner, no terrain curriculum, flat plane terrain
-- Friction: static=(0.5, 0.6), dynamic=(0.35, 0.45) — tuned for PLA on wood
+- Friction: training randomizes static & dynamic friction over (0.18, 0.25); PLAY/eval pins both to
+  (0.21, 0.21). This is a **2026-09 real-robot open-loop-gait friction-sweep calibration**
+  (not flat-only): applied via the robot-side `events.physics_material`
+  (`randomize_rigid_body_material`) ranges on the flat, rough, mimic, goal (incl. tuned/BigStep) and
+  binary configs plus every `_PLAY` variant; terrain material and `friction_combine_mode` unchanged.
+  The `Isaac-Velocity-Flat-Hexapod-Rshape-*` reward-shaping variants are the exception — they keep
+  their own higher `static=(0.9, 1.0)/dynamic=(0.7, 0.8)`. Supersedes the earlier mixed ranges
+  (flat-train `(0.2, 0.3)/(0.2, 0.25)`, the `(0.5, 0.6)/(0.35, 0.45)` "PLA on wood" guess in
+  mimic-play, and the core `(0.8, 0.8)/(0.6, 0.6)` default the rough config fell through to). See
+  `source/isaaclab_tasks/changelog.d/hexapod-friction-calibration.rst`.
 - Asymmetric actor-critic observations: actor sees proprioceptive-only (hardware-available), critic adds ground-truth base_lin_vel during training
 - `obs_groups = {"policy": ["policy"], "critic": ["critic"]}` routes groups to actor/critic in PPO runner
 - Action scale effectively 0.5: `q = q_default + 0.5 * action`
-- `q_default` for legs: -0.47 rad (matches init_state); spine joints: 0.0 rad
+- `q_default` for legs: currently +0.47 rad (matches `init_state`'s active "For HEXAPI Implementation" block; the -0.47 convention used elsewhere in this doc is unreconciled — see the Robot asset note above); spine joints: 0.0 rad
 - `track_ang_vel_z_exp` uses EMA (exponential moving average, alpha=0.98, ~33-step window) rather than instantaneous yaw rate — sinusoidal undulation produces zero net drift so the EMA reward stays near 1.0, while sustained turning shifts the mean and gets penalized
 
 **Hexapod-specific files in config folder:**
@@ -223,6 +254,8 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `agents/rsl_rl_ppo_goal_cfg.py` — `HexapodGoalPPORunnerCfg`: 3000 iterations, `num_steps_per_env=96`, `gamma=0.999`, `entropy_coef=0.003`, logs to `logs/rsl_rl/hexapod_goal/`
 - `flat_env_cfg_rshape.py` — `HexapodFlatRshapeEnvCfg` (+ `_PLAY` and `Slide045/035/025` foot-slide-weight variants): reward-shaping on top of the flat baseline that trades short/rapid steps for longer swing phases (looser velocity-tracking std, higher `feet_air_time` weight/threshold, added `feet_slide` penalty, higher ground friction)
 - `hexapod_goal_tuned_env_cfg.py` — `HexapodGoalBigStepEnvCfg` family (+ `Slide06/035`, `Minimal`, `_PLAY`): carries the same flat-shaping deltas over to the goal-reaching task
+- `hexapod_binary_env_cfg.py` — `HexapodBinaryEnvCfg` / `HexapodBinaryEnvCfg_PLAY`: `HexapodGoalEnvCfg` with the 8-dim continuous joint action replaced by 6 leg contact bits + a scripted spine wave, and six inherited reward weights rebalanced by `_rebalance_binary_rewards()`; also holds the "CANONICAL SPINE-WAVE DEFINITION" block (Wave 1 / Wave 2 coefficients); see **Binary-Contact RL System** below
+- `hexapod_binary_actions.py` — `SpineSineAction` / `SpineSineActionCfg`: zero-width (`action_dim == 0`) scripted action term that plays a truncated Fourier spine wave every step (no RL slot); `sin_coef`/`cos_coef` cfg fields, plus `set_waveform()` to swap Wave 1 → Wave 2 at runtime
 - `README.md` — task-variant reference table (which reward params each `-Rshape-*`/`-BigStep-*` task ID changes) and CLI examples; kept current with the registrations in `__init__.py`
 
 **Mimic System** (`hexapod_mimic_env_cfg.py`, `hexapod_mimic_rewards.py`, `hexapod_mimic_motion.py`):
@@ -251,25 +284,41 @@ PPO tuning for mimic: `init_noise_std`/`entropy_coef` are intentionally left at 
 
 **Goal-Reaching System** (`hexapod_goal_env_cfg.py`, `hexapod_goal_curriculum.py`, `hexapod_goal_rewards.py`, `hexapod_goal_obs_cfg.py`, `hexapod_goal_tuned_env_cfg.py`):
 
-`HexapodGoalEnvCfg` inherits `HexapodFlatEnvCfg` and replaces the velocity-tracking task with "reach a fixed point N meters forward as fast as possible". Module-level constants (`hexapod_goal_env_cfg.py`): `GOAL_DISTANCES = (1.0, 2.0, 3.5, 5.0)` m, `REACH_RADIUS = 0.3` m, `EPISODE_LENGTH_S = 45.0` s, `CURRICULUM_SUCCESS_THRESHOLD = 0.7`, `CURRICULUM_WINDOW_SIZE = 4096`.
+`HexapodGoalEnvCfg` inherits `HexapodFlatEnvCfg` and replaces the velocity-tracking task with "reach a fixed point N meters forward as fast as possible". Module-level constants (`hexapod_goal_env_cfg.py`, current on-disk — the earlier `(1.0, 2.0, 3.5, 5.0)` / `0.3` / `45.0` values are commented out directly above each): `GOAL_DISTANCES = (0.5, 1.0, 1.5, 2.0)` m, `REACH_RADIUS = 0.2` m, `EPISODE_LENGTH_S = 25.0` s, `CURRICULUM_SUCCESS_THRESHOLD = 0.7`, `CURRICULUM_DEMOTION_THRESHOLD = 0.4`, `CURRICULUM_WINDOW_FRACTIONS = (1.0, 1.0, 1.0, 1.0)` (per-stage fraction of `scene.num_envs` pooled into one curriculum window; all stages currently use a full window).
 
-- **Command**: `commands.base_velocity = None`; `commands.pose_command` is a `UniformPose2dCommandCfg` with `resampling_time_range=(45.0, 45.0)` (== `episode_length_s`, so it never resamples mid-episode) and `ranges.pos_x` pinned to `(distance, distance)` for the active curriculum stage (`pos_y`/`heading` fixed at 0). The curriculum term mutates `command_term.cfg.ranges.pos_x` directly on every call — distance is set externally, never sampled.
+- **Command**: `commands.base_velocity = None`; `commands.pose_command` is a `UniformPose2dCommandCfg` with `resampling_time_range=(25.0, 25.0)` (== `episode_length_s`, so it never resamples mid-episode) and `ranges.pos_x` pinned to `(distance, distance)` for the active curriculum stage (`pos_y`/`heading` fixed at 0). The curriculum term mutates `command_term.cfg.ranges.pos_x` directly on every call — distance is set externally, never sampled.
 - **Observations** (`HexapodGoalObservationsCfg`): `PolicyCfg` (6 terms, `enable_corruption=True`): `base_ang_vel` (`mdp.imu_ang_vel`, Unoise ±0.2), `projected_gravity` (Unoise ±0.05), `pose_command` (`mdp.generated_commands`, 4-dim: x, y, z, heading in robot base frame, no noise), `joint_pos` (`joint_pos_rel`, Unoise ±0.01), `joint_vel` (`joint_vel_rel`, Unoise ±1.5), `actions` (`last_action`). `CriticCfg` prepends `base_lin_vel` (ground-truth, Unoise ±0.1, `enable_corruption=False` for the whole critic group) ahead of the same 6 terms — asymmetric actor/critic as in the flat task.
-- **Rewards** (current on-disk weights — this file has uncommitted edits on this branch, see WIP note below):
-  - `progress = progress_to_goal(command_name="pose_command")`, weight **10.0**. Computes `(prev_dist_to_goal - curr_dist_to_goal) / env.step_dt` (closing-speed toward goal in m/s, using the x/y/z of the 4-dim pose command), seeding `prev_dist = curr_dist` on the first post-reset step so no spurious cross-episode jump is scored. The `RewardManager` multiplies the returned value by `weight * step_dt`, so the `/step_dt` cancels and each step contributes `weight * (prev_dist - curr_dist)`; summed over an episode this telescopes to `weight * (initial_dist - final_dist)` — total net displacement toward the goal in reward units.
-  - `reach_bonus = time_decayed_termination_signal(termination_name="reach_goal", episode_length_s=45.0, min_fraction=0.5)`, weight **2500.0** → fires between +2500 (immediately after reset) and +1250 (linearly decayed by `episode_length_s`) the one step `reach_goal` fires. Replaces a flat, undecayed bonus — see the time-pressure note below for why.
-  - `fall_penalty = termination_signal(termination_name="base_contact")`, weight **-1250.0** → -1250 the one step a fall is detected.
-  - `time_penalty = constant_per_step()`, weight **-1.0**/step (the function returns a constant 1.0 tensor; the weight supplies sign/scale). Raised from an earlier `-0.2` — at `-0.2` the full-episode differential between a fast and slow success was only ~6 reward units against a ~97-unit successful episode (`RewardManager` applies `value * weight * dt`, so `constant_per_step`'s per-step contribution integrates to `weight * episode_duration_seconds`), i.e. `time_penalty` was barely selecting for speed at all. Combined with the `reach_bonus` decay above, both halves of "as fast as possible" now carry real weight.
+- **Rewards** (current on-disk weights — `hexapod_goal_env_cfg.py` is under active tuning, verify against the file). The whole progress/terminal/time stack was **scaled down ~40–1250×** from the earlier `progress 10.0 / reach_bonus 2500 / fall_penalty -1250 / time_penalty -0.2` era (the "hexapod goal reward scale-down" work — to stop the policy "throwing itself" at the goal, since `progress_to_goal` is raw uncapped closing velocity and a leap/dive burst scored proportional to how fast it momentarily closed distance):
+  - `progress = progress_to_goal(command_name="pose_command")`, weight **0.2**. Computes `(prev_dist_to_goal - curr_dist_to_goal) / env.step_dt` (closing-speed toward goal in m/s, using x/y/z of the 4-dim pose command), seeding `prev_dist = curr_dist` on the first post-reset step so no spurious cross-episode jump is scored. `RewardManager` multiplies by `weight * step_dt`, so `/step_dt` cancels and each step contributes `weight * (prev_dist - curr_dist)`; over an episode this telescopes to `weight * (initial_dist - final_dist)`.
+  - `reach_bonus = time_decayed_termination_signal(termination_name="reach_goal", episode_length_s=25.0, min_fraction=0.5)`, weight **2.0** → fires between +2.0 (immediately after reset) and +1.0 (linearly decayed by `episode_length_s`) the one step `reach_goal` fires. Concentrates speed pressure into the single high-salience terminal transition.
+  - `fall_penalty = termination_signal(termination_name="base_contact")`, weight **-1.0** → -1.0 the one step a fall is detected.
+  - `time_penalty = constant_per_step()`, weight **-0.005**/step (the function returns a constant 1.0 tensor; the weight supplies sign/scale). `RewardManager` applies `value * weight * dt`, so it integrates to `weight * episode_duration_seconds` over an episode.
   - `track_lin_vel_xy_exp` / `track_ang_vel_z_exp` are removed (`= None`).
-  - Anti-jump/anti-bounce terms, current value vs. the `HexapodFlatEnvCfg` baseline they override: `lin_vel_z_l2` -1.0 (flat: -1e-8), `ang_vel_xy_l2` -0.075 (flat: 0.0; lowered from an earlier -0.3, which was 6x the generic default and was suppressing legitimate body-roll gait variety), `dof_torques_l2` -3.0e-6 (flat: -5.0e-8; lowered from an earlier -2.0e-5, which was 400x the flat value and contradicted the file's own comment that goal-task shaping should be *weaker* than flat's), `dof_acc_l2` -2.5e-10 (flat: -8.5e-14), `action_rate_l2` -0.002 (flat: -2.5e-6), `feet_air_time` weight 1.0 (flat: 0.25; raised from an earlier 0.5) with threshold unchanged at 0.1 s and `command_name` retargeted to `"pose_command"` (the flat default hardcodes `"base_velocity"`, which doesn't exist on this env — the retarget is mandatory, not tuning), `undesired_contacts` -1.0 (unchanged from flat), `flat_orientation_l2` left at the inherited flat value (the goal task's own no-op `= 0.0` override line was removed — it duplicated flat's already-0.0 default), `dof_pos_limits` -1.0 (unchanged from flat). `self.scene.height_scanner = None` (matches flat).
-  - `position_command_error_tanh`-style proximity rewards are deliberately **not** used — lingering near the goal would accumulate reward, incentivizing slow approaches. Deliberately **not** adopting `HexapodGoalBigStepEnvCfg`'s `feet_slide` penalty either (see the BigStep/Slide/Minimal note below) — `feet_air_time` was tuned in isolation instead.
-  - `reached_goal_bonus()` (a dead, unused alternative to `reach_bonus` — the real term always used `termination_signal`/`time_decayed_termination_signal`) was deleted from `hexapod_goal_rewards.py`.
-- **Termination**: `reach_goal` (`reached_goal_done`, radius 0.3 m) added on top of the inherited flat/rough terminations (`time_out`, `base_contact`, etc.).
-- **Curriculum** (`goal_distance_curriculum`): state lives as ad hoc attributes on the shared `env` object (`_goal_curriculum_stage`, `_goal_curriculum_episodes`, `_goal_curriculum_successes`, `_goal_curriculum_falls`, `_goal_curriculum_last_rate`) — **global counters shared across all parallel envs, not per-env**. Each call filters `env_ids` to those with `episode_length_buf > 0` (skips the initial scene-setup call), and tallies `reach_goal` successes / `base_contact` falls from the termination manager; episodes that time out without either count toward the window denominator but neither the success nor fail numerator. Window size is now **per-stage** (`window_sizes[stage]`, a tuple the same length as `distances`) rather than one hardcoded constant — `hexapod_goal_env_cfg.py` computes it as `round(scene.num_envs * CURRICULUM_WINDOW_FRACTIONS[stage])` (fractions default to `(0.5, 0.75, 1.0, 1.0)`, freely tunable) so window cost tracks `num_envs` instead of silently decoupling from it if `num_envs` changes, and so easier early stages (1 m/2 m) can advance on less data than the harder final stages. Once the active stage's window closes, it computes `success_rate = successes/episodes`, advances one stage if `success_rate >= success_threshold` (0.7, inclusive) and not already at the last stage, **demotes one stage** if `demotion_threshold` is set (default `CURRICULUM_DEMOTION_THRESHOLD = 0.4`) and `success_rate` falls below it and the stage is not already the first, then unconditionally zeros the window counters either way — i.e. strictly non-overlapping windows. At the final stage (5.0 m) the stage index still clamps against advancing further (demotion can still bring it back down); the command distance updates every call, and success rate is still tracked/reported.
-- `HexapodGoalEnvCfg_PLAY` fixes distance at the final curriculum stage (5.0 m), disables the curriculum and domain randomization events (`base_external_force_torque`, `push_robot`), and sets a wide fixed-world camera (`viewer.eye=(-1.0,-6.0,3.0)`, `viewer.origin_type="world"`) to view the whole 5 m path across 16 envs (`scene.num_envs=16`, `env_spacing=8.0`).
-- **`HexapodGoalBigStep*`/`Minimal` variants** (`hexapod_goal_tuned_env_cfg.py`, layered on top of `HexapodGoalEnvCfg`, not the flat baseline): `HexapodGoalBigStepEnvCfg` sets `action_rate_l2.weight = -0.03` and rebuilds `feet_air_time` at `weight=2.5`, `threshold=0.16 s` (both retargeted to `command_name="pose_command"`, mirroring `flat_env_cfg_rshape.py`'s shaping). `Slide06`/`Slide035` add a `feet_slide` penalty (`-0.6` / `-0.35`) on top of `BigStep`. `Minimal` inherits `HexapodGoalEnvCfg` directly (not `BigStep`) and only rebuilds `feet_air_time` (weight 2.5 @ 0.16 s). **Dependency caveats** (from the module docstring, both still apply): (1) these variants were trained against the goal-env revision on the `sihan-physical-goal-training` branch (a distance-proportional goal command) — recorded training results correspond to that earlier revision, not necessarily current behavior; (2) `feet_slide` was ported without the friction increase `flat_env_cfg_rshape.py`'s own docstring says is required for the penalty to be meaningful against physically-forced slip, so it currently risks penalizing forced slip rather than policy quality — the base `HexapodGoalEnvCfg` deliberately does not adopt it for this reason.
-- **PPO tuning** (`rsl_rl_ppo_goal_cfg.py`, `HexapodGoalPPORunnerCfg(HexapodRoughPPORunnerCfg)`): `max_iterations=3000`, **`num_steps_per_env=96`** (2x the `48` used by flat/rough/mimic — see iteration-time note below), `gamma=0.9995` (vs. parent 0.99; raised from an earlier 0.999), `lam=0.97` (vs. parent 0.95, explicit override added), `entropy_coef=0.01` (vs. parent 0.01 — raised back to the parent baseline from an earlier 0.003, which biased toward fast collapse onto one narrow gait, cutting against the reason this task exists), `actor_hidden_dims=critic_hidden_dims=[128,128,128]` (smaller than the parent's `[512,256,128]`), `actor_obs_normalization=critic_obs_normalization=True` (parent leaves both `False`), `obs_groups={"policy": ["policy"], "critic": ["critic"]}`. Logs to `logs/rsl_rl/hexapod_goal/`. `gamma`/`lam` were raised together because the terminal `reach_bonus`/`fall_penalty` are an order of magnitude larger than any per-step term and, at the prior `gamma=0.999`, were already discounted to ~10% of value by early-episode states (`0.999**2250 ≈ 0.10` over the ~2250-step, 45 s episode) — pushing both further out extends the horizon over which that terminal credit propagates back. `num_steps_per_env` was deliberately left at 96 (not lowered for iteration-time reasons, see below, and not yet raised toward ~150-192 as GAE-horizon coverage would suggest — an open question, not settled).
-- **Iteration-time driver**: `num_steps_per_env=96` vs. `48` for every other hexapod task variant is the single clearest, directly-attributable ~2x multiplier on both rollout collection and the PPO update pass per iteration, holding `num_envs=4096` (default, unset by this task), `sim.dt=0.005` (200 Hz physics), `decimation=4` (50 Hz control), network size, and `num_learning_epochs=5`/`num_mini_batches=4` all constant vs. the flat/rough baseline. `episode_length_s=45.0` (vs. 20.0 for flat/rough) does **not** by itself add per-iteration cost — it only changes episode/curriculum cadence, not the fixed `num_steps_per_env` rollout length. Contact-sensor and IMU update at the full 200 Hz physics rate (`update_period=self.sim.dt`) and the robot has `enabled_self_collisions=True`, `solver_position_iteration_count=4` — both are baseline hexapod-sim costs shared identically by flat/rough/goal, not goal-specific. `height_scanner=None` for both flat and goal, so it is not a differentiator. No wall-clock/sec-per-iteration baseline is recorded anywhere in this repo for comparison.
+  - Anti-jump / straight-line shaping, current value vs. the `HexapodFlatEnvCfg` baseline it overrides — all intentionally weaker than a full flat-walking template so a fast locomotion style can still be found: `lin_vel_z_l2` -1.0e-4 (flat: -1e-8), `ang_vel_xy_l2` -1.0e-6 (flat: 0.0), `dof_torques_l2` -3.0e-4 (flat: -5.0e-8), `dof_acc_l2` -2.5e-7 (flat: -8.5e-14), `action_rate_l2` -5.0e-4 (flat: -2.5e-6), `undesired_contacts` -1.0 (unchanged), `dof_pos_limits` -1.0 (unchanged), `flat_orientation_l2` left at the inherited flat value. `self.scene.height_scanner = None` (matches flat).
+  - New goal-only terms (defined in `hexapod_goal_rewards.py`): `ang_vel_z_l2` -1.0e-4 (`goal_rewards.ang_vel_z_l2` — replaces the dropped `track_ang_vel_z_exp` so yaw rate is not left unpenalized; robot can still turn to face the goal but not spin wildly), `lin_vel_y_l2` -5.0e-4 (`goal_rewards.lin_vel_y_l2` — penalizes body-level sideways drift regardless of mechanism), `feet_slide` **-0.1** (`mdp.feet_slide` over the 6 leg bodies — a *small* continuous planted-foot-slide penalty, kept far below the Rshape/BigStep `-0.6/-0.35` because those were validated at much higher friction while this task runs the calibrated 0.18–0.25 band where forced slip is larger; raise from play videos only if "crazy" sliding persists). **This supersedes the old "deliberately not adopting `feet_slide`" stance.**
+  - `feet_air_time`: weight **0.2** (flat: 0.25), `func` swapped to `goal_rewards.feet_air_time_ungated` and the `command_name` gate **removed entirely** (the flat default gates on `||command[:,:2]|| > 0.1` assuming a velocity command; retargeting to `pose_command` would turn that into a position-error gate that zeros the reward within 10 cm of the goal), `threshold` 0.12 s (flat: 0.1 s).
+  - `position_command_error_tanh`-style proximity rewards are deliberately **not** used — lingering near the goal would accumulate reward, incentivizing slow approaches.
+  - `reached_goal_bonus()` (a dead, unused alternative to `reach_bonus`) was deleted from `hexapod_goal_rewards.py`.
+- **Termination**: `reach_goal` (`reached_goal_done`, radius `REACH_RADIUS` = 0.2 m) added on top of the inherited flat/rough terminations (`time_out`, `base_contact`, etc.).
+- **Curriculum** (`goal_distance_curriculum`): state lives as ad hoc attributes on the shared `env` object (`_goal_curriculum_stage`, `_goal_curriculum_episodes`, `_goal_curriculum_successes`, `_goal_curriculum_falls`, `_goal_curriculum_last_rate`) — **global counters shared across all parallel envs, not per-env**. Each call filters `env_ids` to those with `episode_length_buf > 0` (skips the initial scene-setup call), and tallies `reach_goal` successes / `base_contact` falls from the termination manager; episodes that time out without either count toward the window denominator but neither the success nor fail numerator. Window size is **per-stage** (`window_sizes[stage]`, a tuple the same length as `distances`) rather than one hardcoded constant — `hexapod_goal_env_cfg.py` computes it as `max(1, round(scene.num_envs * CURRICULUM_WINDOW_FRACTIONS[stage]))` (fractions currently `(1.0, 1.0, 1.0, 1.0)` — freely tunable, so easier early stages *could* advance on less data) so window cost tracks `num_envs` instead of silently decoupling from it. Once the active stage's window closes, it computes `success_rate = successes/episodes`, advances one stage if `success_rate >= success_threshold` (0.7, inclusive) and not already at the last stage, **demotes one stage** if `demotion_threshold` is set (default `CURRICULUM_DEMOTION_THRESHOLD = 0.4`) and `success_rate` falls below it and the stage is not already the first, then unconditionally zeros the window counters either way — i.e. strictly non-overlapping windows. At the final stage (now 2.0 m) the stage index still clamps against advancing further (demotion can still bring it back down); the command distance updates every call, and success rate is still tracked/reported.
+- `HexapodGoalEnvCfg_PLAY` fixes distance at the final curriculum stage (now 2.0 m), disables the curriculum, actor obs corruption and domain-randomization events (`base_external_force_torque`, `push_robot`), pins eval friction to `(0.21, 0.21)`, and sets a fixed-world camera (`viewer.eye=(-1.0,-3.0,1.5)`, `viewer.lookat=(2.5,0.0,0.2)`, `viewer.origin_type="world"`) across 16 envs (`scene.num_envs=16`, `env_spacing=8.0`).
+- **`HexapodGoalBigStep*`/`Minimal` variants** (`hexapod_goal_tuned_env_cfg.py`, layered on top of `HexapodGoalEnvCfg`, not the flat baseline): `HexapodGoalBigStepEnvCfg` sets `action_rate_l2.weight = -0.03` and rebuilds `feet_air_time` at `weight=2.5`, `threshold=0.16 s` (both retargeted to `command_name="pose_command"`, mirroring `flat_env_cfg_rshape.py`'s shaping). `Slide06`/`Slide035` add a `feet_slide` penalty (`-0.6` / `-0.35`) on top of `BigStep`. `Minimal` inherits `HexapodGoalEnvCfg` directly (not `BigStep`) and only rebuilds `feet_air_time` (weight 2.5 @ 0.16 s). **Dependency caveats** (from the module docstring, both still apply): (1) these variants were trained against the goal-env revision on the `sihan-physical-goal-training` branch (a distance-proportional goal command) — recorded training results correspond to that earlier revision, not necessarily current behavior; (2) `feet_slide` was ported without the friction increase `flat_env_cfg_rshape.py`'s own docstring says is required for the penalty to be meaningful against physically-forced slip, so it risks penalizing forced slip rather than policy quality. (The base `HexapodGoalEnvCfg` now carries its *own* much smaller `feet_slide` at `-0.1`, deliberately kept low for exactly this reason — see the Rewards list above.)
+- **PPO tuning** (`rsl_rl_ppo_goal_cfg.py`, `HexapodGoalPPORunnerCfg(HexapodRoughPPORunnerCfg)`): `max_iterations=3000`, **`num_steps_per_env=96`** (2x the `48` used by flat/rough/mimic — see iteration-time note below), `gamma=0.9995` (vs. parent 0.99; raised from an earlier 0.999), `lam=0.97` (vs. parent 0.95, explicit override added), `entropy_coef=0.003` (vs. parent 0.01 — kept *below* the parent baseline: raising it to 0.01 caused runaway action std >10, since the entropy term pulls std up every step and the only counterweight, the surrogate loss, is unusually noisy here given the sparse terminal rewards and the raised gamma/lam), `actor_hidden_dims=critic_hidden_dims=[128,128,128]` (smaller than the parent's `[512,256,128]`), `actor_obs_normalization=critic_obs_normalization=True` (parent leaves both `False`), `obs_groups={"policy": ["policy"], "critic": ["critic"]}`. Logs to `logs/rsl_rl/hexapod_goal/`. `gamma`/`lam` were raised together because the terminal `reach_bonus`/`fall_penalty` are larger than any per-step term and, at the prior `gamma=0.999`, were already discounted heavily by early-episode states over the ~1250-step, 25 s episode — pushing both further out extends the horizon over which that terminal credit propagates back. (The in-file comment still cites the old `0.999**2250` / 45 s episode figures — stale; the discount reasoning is unchanged.) `num_steps_per_env` was deliberately left at 96 (not lowered for iteration-time reasons, see below, and not yet raised toward ~150-192 as GAE-horizon coverage would suggest — an open question, not settled).
+- **Iteration-time driver**: `num_steps_per_env=96` vs. `48` for every other hexapod task variant is the single clearest, directly-attributable ~2x multiplier on both rollout collection and the PPO update pass per iteration, holding `num_envs=4096` (default, unset by this task), `sim.dt=0.005` (200 Hz physics), `decimation=4` (50 Hz control), network size, and `num_learning_epochs=5`/`num_mini_batches=4` all constant vs. the flat/rough baseline. `episode_length_s=25.0` (vs. 20.0 for flat/rough) does **not** by itself add per-iteration cost — it only changes episode/curriculum cadence, not the fixed `num_steps_per_env` rollout length. Contact-sensor and IMU update at the full 200 Hz physics rate (`update_period=self.sim.dt`) and the robot has `enabled_self_collisions=True`, `solver_position_iteration_count=4` — both are baseline hexapod-sim costs shared identically by flat/rough/goal, not goal-specific. `height_scanner=None` for both flat and goal, so it is not a differentiator. No wall-clock/sec-per-iteration baseline is recorded anywhere in this repo for comparison.
+
+**Binary-Contact RL System** (`hexapod_binary_env_cfg.py`, `hexapod_binary_actions.py`; training/eval scripts in `scripts/reinforcement_learning/binary_rl/`, see `README_binary_rl.md`):
+
+`HexapodBinaryEnvCfg` / `HexapodBinaryEnvCfg_PLAY` inherit `HexapodGoalEnvCfg` / `_PLAY`. Observations, events, terminations, commands, and the distance curriculum are inherited unchanged — the **only structural change is the action space**:
+
+- **6 leg contact bits** — one `BinaryJointPositionActionCfg` term per leg (policy action vector is 6-dim; the `binary_rl` scripts wrap it as `Discrete(64)` via `discrete_action_wrapper.py`). Convention: **1 / positive = stance (foot down), `STANCE_POS = 0.460` rad; 0 / negative = lift (foot up), `LIFT_POS = 1.180` rad** (leg limits `[-0.0873, +1.9199]` rad in the HexapI positive-leg convention). Bit / action-index order (matches hardware bit numbering; bits 2 & 4 inferred, pending hardware confirmation): `idx 0..5 = FrontRight, FrontLeft, MiddleRight, MiddleLeft, BackRight, BackLeft`.
+- **Scripted spine wave** (`SpineSineAction`, **not** RL-controlled): a zero-width action term that drives the two spine joints every step from a truncated Fourier series `q(t) = offset + Σ_k [sin_coef[k]·sin((k+1)·w·t) + cos_coef[k]·cos((k+1)·w·t)]`, `w = 2π/period`, `period = GAIT_PERIOD_S = 1.0` s. There are **two distinct waves**, deliberately not unified (canonical definition + coefficients in `hexapod_binary_env_cfg.py`, "CANONICAL SPINE-WAVE DEFINITION" block):
+  - **Wave 1 — the RL-env wave**, played during `Isaac-Goal-Flat-Hexapod-Binary-v0` training and `-Play-v0`: a fixed **analytic traveling body wave**, *not* fitted to any CSV. `FrontLink_Joint` is a pure sine `-0.9162978573·sin(2π·t/1.0)`; `BackLink_Joint` is the same sine shifted +90° (`-0.9162978573·cos(...)`) — magnitude `A_SPINE = 0.9162978573` rad (the **exact** open-loop gait-generator value: `deg2rad(70) · 12/16 = deg2rad(52.5)`) carried with the HexapI global spine-joint-sign flip so `sin_coef`/`cos_coef` hold **`-A_SPINE`** (corrected 2026-09-10 — a positive coefficient walked every re-evaluated policy backward; the old fitted wave had this flip as a negative amplitude and Wave 2's sim check independently confirmed the negative front-joint sign), shared offset `0.0`, only the phase differs by a quarter cycle, so the wave travels down the body. (Single-harmonic: `sin_coef`/`cos_coef` each hold one entry.) The BackLink-leads-FrontLink phase direction is still unverified (flag (a) in the config).
+  - **Wave 2 — the tripod-baseline wave**: a single-harmonic **analytic** body wave regenerated straight from the MATLAB gait generator (**not** a CSV fit), **anti-phase** across the two spine joints (`BackLink_Joint = -FrontLink_Joint`, MATLAB `body_phase = π`): `FrontLink_Joint(t) = -A_SPINE·sin(w·t − π/4)`, `BackLink_Joint(t)` its negation (`_TRIPOD_FRONT_SIGN = -1.0`, sim-verified 2026-09-10 to walk the tripod baseline forward +0.83 m; the opposite sign walks it backward). Same `A_SPINE` amplitude (70°) and `0.0` offset as Wave 1. `tripod_extendedquad_sim.csv`'s byte-identical in-phase spine columns are a MATLAB→Sim export artifact (it folded the anti-phase pair onto one column) that Wave 2 deliberately does **not** reproduce. Used by `eval_protocol.py`'s `BASE_tripod_csv_bits` anchor **and** `play_discrete_closeup.py`'s `--gait_npz tripod` replay, swapped into the live `SpineSineAction` via `SpineSineAction.set_waveform`; never played by the RL env. The tripod baseline's *leg* contact-bit timing comes from `tripod_extendedquad_sim.csv` via `tripod_bit_demos.npz` (the npz never carried the spine).
+  - `SpineSineActionCfg` fields are `sin_coef` / `cos_coef` (`dict[str, list[float]]`, one list entry per Fourier harmonic) plus unchanged `offset` / `period` — this **replaces** the earlier `amplitude` / `phase` (`dict[str, float]`) scalar fields.
+  - **Breaking**: existing `Isaac-Goal-Flat-Hexapod-Binary-*` checkpoints must be retrained — the spine trajectory changed (was a per-joint sinusoid fitted to `tripod_B11BL0_sim.csv`'s spine columns, DOF-index-swapped and globally sign-flipped). Changelog fragment: `source/isaaclab_tasks/changelog.d/hexapod-binary-spine-wave.rst`.
+- **Reward rebalance**: `__post_init__` calls `_rebalance_binary_rewards(self.rewards)` (identically for the train and play variants), which mutates six inherited goal reward weights (feet_slide, dof_acc_l2, feet_air_time, progress, undesired_contacts, time_penalty) for the discrete per-leg-bit action space. See `_rebalance_binary_rewards` in `hexapod_binary_env_cfg.py` for the current corrections and rationale (this file is under active tuning, like the actuator file — the docstring carries the `eval_protocol.py` evidence). The continuous `Isaac-Goal-Flat-Hexapod-v0` reward weights are untouched. Changelog fragment: `source/isaaclab_tasks/changelog.d/hexapod-binary-reward-rebalance.rst`.
+
+The `binary_rl/` scripts are **fork-only, no `--rl_library` registration** — run directly, e.g. `isaaclab.bat -p scripts/reinforcement_learning/binary_rl/<script>.py ...`. Set: `train_discrete.py` (DQN / Double DQN), `train_discrete_ppo.py` (categorical PPO; `--mask` for masked-categorical PPO), `train_sac_d.py` (discrete SAC), `train_sac_continuous.py` (continuous SAC baseline on the 8-DOF `Isaac-Goal-Flat-Hexapod-v0`, *outside* the contact-bit space), `eval_protocol.py` (shared eval harness — all reported numbers come from it), `run_discrete_pipeline.py` (one-shot train→eval→rank→export pipeline), `export_binary_onnx.py` (ONNX export for sim2real). Runs land in `runs_binary/` (gitignored). A matching `binary` profile exists in `scripts/sim2real_transfer/` (its own `deployment.binary.example.yaml`).
 
 **playReal.py** (`source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py`; run directly via
 `isaaclab.bat -p <path> --task ...` — it has no `--rl_library` backend registration, so it is not
@@ -387,14 +436,14 @@ python run_policy.py --policy <policy.onnx> --profile velocity --config config/d
 
 **Architecture** (`sim2real/` package):
 
-- `profiles.py` — `ProfileSpec`/`ObsBuilder` for the `velocity` and `goal` profiles; builds the obs vector in the exact term order the RL policy was trained on — `gyro(3), gravity(3), command(3 or 4), joint_pos_rel(8), joint_vel(8), last_action(8)` — mirroring `HexapodFlatObservationsCfg.PolicyCfg` / `HexapodGoalObservationsCfg.PolicyCfg` from the main Isaac Lab config
-- `joint_mapping.py` — **the single most safety-critical file in the package**: converts between sim DOF order (matches `asset.data.joint_names` / the policy's action order) and real DOF order (matches physical wiring/motor IDs), applying a per-joint `correction_group` (`unchanged` / `negate` / `leg_negate_plus_pi`) before converting radians to encoder ticks. Reorder → sign/offset correction → tick conversion are kept as separate, independently testable steps rather than one fused formula
+- `profiles.py` — `ProfileSpec`/`ObsBuilder` for the `velocity`, `goal`, and `binary` profiles; builds the obs vector in the exact term order the RL policy was trained on — `gyro(3), gravity(3), command(3 or 4), joint_pos_rel(8), joint_vel(8), last_action(8, or 6 for binary)` — mirroring `HexapodFlatObservationsCfg.PolicyCfg` / `HexapodGoalObservationsCfg.PolicyCfg` from the main Isaac Lab config. Total obs width is 33 (velocity), 34 (goal), **32 (binary)**. The `binary` policy emits only the six leg contact bits (its `last_action` obs term and action output are 6-dim, not 8); it drives the six leg joints from those bits (stance/lift snap), recreates the scripted spine sinusoid (Wave 1) host-side, and uses its own `deployment.binary.example.yaml`
+- `joint_mapping.py` — **the single most safety-critical file in the package**: converts between sim DOF order (matches `asset.data.joint_names` / the policy's action order) and real DOF order (matches physical wiring/motor IDs), applying a per-joint `correction_group` (e.g. `unchanged` / `negate` / `leg_negate_plus_pi` — `joint_mapping.py` defines five) before converting radians to encoder ticks. Reorder → sign/offset correction → tick conversion are kept as separate, independently testable steps rather than one fused formula
 - `deployment_config.py` — typed loader for `deployment.yaml`; every hardware fact (serial port, motor IDs, encoder zero ticks, soft joint limits, IMU mount offset, control rate) lives here and nowhere else — other modules never touch YAML directly
 - `policy_runner.py` — onnxruntime wrapper around policies exported by `isaaclab_rl.rsl_rl.exporter.export_policy_as_onnx`; validates the loaded graph's obs/action dims against the requested `--profile` at construction so a mismatched policy/profile pairing fails immediately instead of producing garbage actions
 - `control_loop.py` — the 50 Hz loop: reads IMU + encoder ticks, builds obs, runs inference, clips to soft limits, writes goal ticks. Runs `imu.RosImuReader`'s `rclpy` spin in a background thread while the servo/inference loop stays on the main thread (mirrors the real robot's own `hexapod_tripod_adaptive.py` + `combined_logger.py` threading split, which lives outside this repo). A `try`/`finally` guarantees `soft_stop_ramp` + `torque_enable(False)` run on normal exit, an unhandled exception, or Ctrl+C alike
 - `safety.py` — `Watchdog` (trips on comms silence or a failed sanity check — non-finite obs, out-of-range target tick) and `ramp_to_target` (linear interpolation used for both soft-start and soft-stop, so the robot never snaps to a target pose instantly)
-- `command_source.py` — swappable `CommandSource` interface; v1 only ships constant sources read from `deployment.yaml` (a future joystick/SSH-driven source can be added without touching `control_loop.py`)
-- `localization.py` — `DeadReckoningLocalizer`, **goal profile only, and the weakest link in the pipeline**: integrates gyro-z for heading and assumes a constant forward speed for position (the real robot has no GPS/mocap/AprilTag localization). Bring up the `velocity` profile first since it has zero dependency on this class; validate it separately (known-distance walk test) before trusting the `goal` profile
+- `command_source.py` — swappable `CommandSource` interface; ships `ConstantVelocityCommand`, `ConstantGoalCommand` (`goal.mode: fixed`, a stationary world point) and `RecedingGoalCommand` (`goal.mode: receding`, a goal held `goal.lookahead_m` ahead of the robot's dead-reckoned position for continuous forward walking), all read from `deployment.yaml` — a future joystick/SSH-driven source can be added without touching `control_loop.py`
+- `localization.py` — `DeadReckoningLocalizer`, **goal and binary profiles only, and the weakest link in the pipeline**: integrates gyro-z for heading and assumes a constant forward speed for position (the real robot has no GPS/mocap/AprilTag localization). Bring up the `velocity` profile first since it has zero dependency on this class; validate it separately (known-distance walk test) before trusting the `goal` or `binary` profile
 - `tools/validate_onnx.py` — offline validation in two modes: `direct` (recorded obs → onnxruntime → diff vs. recorded action) and `pipeline` (additionally rebuilds obs from raw sensor fields via the real `ObsBuilder`, isolating obs-construction bugs from ONNX/export bugs); run on both the dev machine and the actual Pi since onnxruntime/opset behavior can differ by platform
 
 Swapping policies only requires pointing `--policy` at a different exported `.onnx` file of the same `--profile` — no config or code changes.
@@ -403,23 +452,57 @@ Swapping policies only requires pointing `--policy` at a different exported `.on
 
 ## Actuator Tuning Notes
 
-The `ImplicitActuatorCfg` in Isaac Lab applies: `torque = clip(stiffness*(q_target - q) - damping*q_dot, -effort_limit, effort_limit)`
+The hexapod now uses `DCMotorCfg` (see **Robot asset** above). On top of the implicit PD law
+`torque = stiffness*(q_target - q) - damping*q_dot`, `DCMotor` additionally clips the result every step
+to the velocity-dependent envelope
+`tau_max(qd) = clip(saturation_effort*(1 - qd/velocity_limit), -inf, effort_limit)` — peak deliverable
+torque falls linearly from `saturation_effort` at zero speed to ~0 at `velocity_limit`.
 
 Key tuning insights from this project:
 
-- `effort_limit_sim` must be large enough to accommodate both position error AND damping terms simultaneously: at max velocity, `damping × velocity_limit` alone can equal or exceed the effort limit
-- The real Dynamixel XL430 runs internal PID at ~1 kHz with load awareness; the sim PD controller needs extra headroom to approximate this
-- Body (spine) joints saturate much more easily than leg joints because they sustain gravity loading through the full sin wave cycle; splitting actuator groups allows independent tuning
-- If effort_limit is raised but joint still saturates: check velocity_limit_sim — if the commanded trajectory requires higher joint velocity than the cap, position error accumulates and torque saturates regardless of effort headroom
+- The torque-speed curve now handles peak-torque saturation directly. The spine keeps `stiffness=10`
+  because its undulation is smooth and lightly loaded and the curve caps the peaks — under the old
+  implicit model the low spine stiffness (and the inflated `effort_limit_sim=4.5`) was a *workaround*
+  for that same saturation. The spine sinusoid still peaks near ~5.3 rad/s (≈ no-load speed), so it
+  under-tracks its commanded amplitude — physically accurate for the real servo.
+- Body (spine) joints saturate more easily than leg joints because they sustain gravity loading through
+  the full sin-wave cycle; splitting actuator groups still lets `stiffness` be tuned per group
+  (spine 10, legs 50).
+- The real Dynamixel XL430 runs internal PID at ~1 kHz with load awareness; `armature` (reflected rotor
+  inertia, ~20× the leg-link inertia at 258.5:1) plus geartrain `friction`/`dynamic_friction`
+  approximate the parts of that the implicit model omitted.
+- If a joint under-tracks a commanded trajectory it is now usually the torque-speed curve doing its job
+  (commanded joint velocity approaching `velocity_limit`), not a tunable clamp — intended sim2real
+  fidelity, not a bug to tune away.
+- (Historical, moot since the DCMotor swap) Under `ImplicitActuatorCfg` the single `effort_limit_sim`
+  clamp had to cover position error AND the damping term simultaneously — `damping × velocity_limit`
+  alone could equal the effort limit — which is why the old sim value (4.5 N·m) ran well above physical
+  stall (1.4 N·m).
 
 ## RSL-RL Compatibility
 
-The repo uses rsl-rl < 4.0.0. `handle_deprecated_rsl_rl_cfg` in `source/isaaclab_rl/isaaclab_rl/rsl_rl/utils.py` strips parameters unsupported by the installed version:
+The repo pins **`rsl-rl-lib==5.4.1`** (`pyproject.toml`, core deps — the earlier "< 4.0.0" note
+was stale). `handle_deprecated_rsl_rl_cfg(agent_cfg, installed_version)` in
+`source/isaaclab_rl/isaaclab_rl/rsl_rl/utils.py` is a version-spanning shim the rsl_rl
+train/play backends call with the actually-installed version
+(`importlib.metadata.version("rsl-rl-lib")`); it mutates `agent_cfg` to bridge API changes:
 
-- Removes `optimizer` field
-- Removes `share_cnn_encoders` (added in rsl-rl >= 4.0.0)
+- **< 4.0.0**: legacy `policy` is required; strips `optimizer` / `share_cnn_encoders`; clears
+  the newer `actor` / `critic` / `student` / `teacher` model configs.
+- **>= 4.0.0** (the pinned line): a legacy `policy = RslRlPpoActorCriticCfg(...)` block is
+  deprecated — the shim infers `actor` + `critic` `RslRlMLPModelCfg`s from it, prints
+  `[WARNING]` lines, then clears `policy`.
+- **>= 5.0.0** (the pinned line): legacy stochastic params (`init_noise_std`,
+  `noise_std_type`, …) are migrated into `distribution_cfg`.
 
-`HexapodFlatPPORunnerCfg` in `agents/rsl_rl_ppo_cfg.py` sets `obs_groups = {"policy": ["policy"], "critic": ["critic"]}` to route asymmetric observation groups to actor and critic networks respectively.
+Every hexapod PPO runner cfg (`HexapodRoughPPORunnerCfg` and its flat/goal/mimic subclasses in
+`agents/rsl_rl_ppo_cfg.py`) still defines the network with the deprecated
+`policy = RslRlPpoActorCriticCfg(...)` form, so each hexapod `train` / `play` run prints those
+deprecation `[WARNING]`s on startup — harmless (the shim converts them); porting each cfg to
+explicit `actor` / `critic` model configs would silence them.
+
+`HexapodFlatPPORunnerCfg` also sets `obs_groups = {"policy": ["policy"], "critic": ["critic"]}` to
+route asymmetric observation groups to actor and critic networks respectively.
 
 ## MDP Terms Location
 

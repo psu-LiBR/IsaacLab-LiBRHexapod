@@ -141,6 +141,16 @@ commands:
     vy: 0.0
     yaw_rate: 0.0
   goal:
+    # mode: fixed (default) -> walk to (x, y) in the localizer's start frame and
+    #   stop; the body-frame pose_command shrinks to zero on arrival.
+    # mode: receding -> the goal is kept `lookahead_m` ahead of the robot every
+    #   step, so the policy never leaves its "keep walking" regime and does not
+    #   slow near a target (continuous forward locomotion). `heading` is then the
+    #   world heading to hold; x/y are ignored. Only the localizer's
+    #   gyro-integrated heading matters -- position drift cancels. See
+    #   sim2real/command_source.py.
+    mode: fixed
+    lookahead_m: 2.0
     x: 5.0
     y: 0.0
     z: 0.0

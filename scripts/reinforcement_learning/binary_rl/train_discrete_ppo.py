@@ -71,7 +71,7 @@ simulation_app = app_launcher.app
 import gymnasium as gym  # noqa: E402
 import torch  # noqa: E402
 from binary_action_mask import legal_action_mask  # noqa: E402
-from binary_common import MaskedCategoricalMixin, build_env, mask_meta, mlp, write_run_meta
+from binary_common import MaskedCategoricalMixin, build_env, mask_meta, maybe_init_wandb, mlp, write_run_meta
 from skrl.agents.torch.ppo import PPO, PPO_CFG
 from skrl.envs.wrappers.torch import wrap_env
 from skrl.memories.torch import RandomMemory
@@ -197,6 +197,13 @@ write_run_meta(
     **extra_meta,
 )
 
+wandb_run = maybe_init_wandb(
+    args,
+    experiment_name,
+    "ppo_masked" if args.mask else "ppo",
+    {"asymmetric_critic": env.state_space is not None},
+)
+
 params_before = torch.cat([p.detach().flatten().clone() for p in models["policy"].parameters()])
 trainer.train()
 params_after = torch.cat([p.detach().flatten().clone() for p in models["policy"].parameters()])
@@ -207,5 +214,8 @@ ckpt_dir = os.path.join(agent.experiment_dir, "checkpoints")
 print(
     f"[train_discrete_ppo] checkpoints: {sorted(os.listdir(ckpt_dir)) if os.path.isdir(ckpt_dir) else 'NONE WRITTEN'}"
 )
+
+if wandb_run is not None:
+    wandb_run.finish()
 
 simulation_app.close()

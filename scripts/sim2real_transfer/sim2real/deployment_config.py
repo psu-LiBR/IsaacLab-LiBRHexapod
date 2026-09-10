@@ -62,7 +62,9 @@ class ControlCfg:
 @dataclass(frozen=True)
 class CommandsCfg:
     velocity: dict[str, float]
-    goal: dict[str, float]
+    # `goal` also carries the optional non-numeric key `mode` ("fixed" | "receding")
+    # and, for receding mode, `lookahead_m` -- see command_source.make_command_source.
+    goal: dict[str, float | str]
 
 
 @dataclass(frozen=True)

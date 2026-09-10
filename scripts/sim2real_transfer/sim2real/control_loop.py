@@ -121,7 +121,8 @@ def run(
             raw_action = policy_runner.step(obs)
             if profile_name == "binary":
                 # raw_action is 6 leg contact bits in {-1, +1}; legs snap to stance/lift and
-                # the two spine joints follow the scripted sinusoid at elapsed time = step * period
+                # the two spine joints follow the fixed analytic traveling wave (Wave 1) at
+                # elapsed time = step * period
                 # (mirrors SpineSineAction's `t = episode_length_buf * step_dt`, which is 0 on the
                 # first post-reset step). action_scale_multiplier < 1 damps the whole target toward
                 # q_default for bring-up (bits are absolute, so the velocity branch's scale knob

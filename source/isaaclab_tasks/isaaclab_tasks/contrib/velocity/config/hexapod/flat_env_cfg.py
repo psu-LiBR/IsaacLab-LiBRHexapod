@@ -37,8 +37,11 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
             "y": (0.0, 0.0),
             "z": (0.0, 0.0),
         }
-        self.events.physics_material.params["static_friction_range"] = (0.2, 0.3)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.2, 0.25)
+        # 2026-09 real-robot friction sweep calibration: training randomizes the effective
+        # ground friction over 0.18-0.25 (robot-side material; terrain stays mu=1.0 with
+        # friction_combine_mode="multiply", so multiply(robot_mu, 1.0) == robot_mu).
+        self.events.physics_material.params["static_friction_range"] = (0.18, 0.25)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.18, 0.25)
 
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "CenterLink"
 
@@ -189,10 +192,10 @@ class HexapodFlatEnvCfg_PLAY(HexapodFlatEnvCfg):
 
         self.commands.base_velocity.resampling_time_range = (1000.0, 1000.0)
 
-        self.events.physics_material.params["static_friction_range"] = (0.17, 0.21)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.13, 0.17)
-        # self.scene.terrain.physics_material.static_friction= 0.8
-        # self.scene.terrain.physics_material.dynamic_friction= 0.6
+        # 2026-09 real-robot friction sweep calibration: eval/PLAY pins the effective
+        # ground friction to the single best sweep row (mu = 0.21).
+        self.events.physics_material.params["static_friction_range"] = (0.21, 0.21)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.21, 0.21)
 
         # camera settings -- follow robot from behind and above
         self.viewer.eye = (-1.0, 0.0, 0.5)

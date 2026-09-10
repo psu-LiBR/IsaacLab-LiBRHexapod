@@ -88,8 +88,8 @@ def main() -> None:
 
     policy = PolicyRunner(args.policy, profile)
     obs_builder = make_obs_builder(args.profile)
-    command_source = make_command_source(args.profile, cfg.commands)
     localizer = DeadReckoningLocalizer() if args.profile in ("goal", "binary") else None
+    command_source = make_command_source(args.profile, cfg.commands, localizer=localizer)
 
     binary_adapter = None
     if args.profile == "binary":

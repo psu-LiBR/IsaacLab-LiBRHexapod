@@ -75,6 +75,13 @@ class HexapodRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         ]
         self.rewards.undesired_contacts.params["sensor_cfg"].body_names = ["CenterLink", "BackLink", "FrontLink"]
 
+        # 2026-09 real-robot friction sweep calibration: training randomizes the effective
+        # ground friction over 0.18-0.25 (robot-side material; terrain stays mu=1.0 with
+        # friction_combine_mode="multiply", so multiply(robot_mu, 1.0) == robot_mu). Set here
+        # at the shared hexapod base so every training cfg inherits it; PLAY cfgs pin 0.21.
+        self.events.physics_material.params["static_friction_range"] = (0.18, 0.25)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.18, 0.25)
+
 
 @configclass
 class HexapodRoughEnvCfg_PLAY(HexapodRoughEnvCfg):
@@ -98,3 +105,8 @@ class HexapodRoughEnvCfg_PLAY(HexapodRoughEnvCfg):
         # remove random pushing event
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+
+        # 2026-09 real-robot friction sweep calibration: eval/PLAY pins the effective
+        # ground friction to the single best sweep row (mu = 0.21).
+        self.events.physics_material.params["static_friction_range"] = (0.21, 0.21)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.21, 0.21)

@@ -2,6 +2,42 @@
 
 All numbers below were produced with `eval_protocol.py` on this branch.
 
+> **⚠ The sweep tables in this file are stale — re-measure, do not rescale.** Four
+> changes since these runs each moved the numbers. The four locomotion **anchors** have
+> now been **re-measured on the current code** — see
+> [Re-measured anchors (2026-09-10)](#re-measured-anchors-2026-09-10) below. The
+> friction-sweep, equal-budget-ranking and SAC-D-along-training tables further down have
+> **not** been re-collected and are still on the old basis:
+>
+> 1. **Body-length rebasing (2026-09).** The BL/cycle body-length constant changed from
+>    0.265 m to **0.315 m** (updated HexapI USD front-to-rear leg spacing; ~0.311 m measured
+>    from the leg-link bounding boxes). The window conversion `metres / 1.59` is now
+>    `metres / 1.89`. Every value below is on the old 0.265 m basis and reads ~1.19× too
+>    high. An end-to-end audit of the metric found **no arithmetic bug** (`step_dt` is
+>    genuinely 0.02 s, the window is exactly 6.0 cycles, `x_displacement_m` is the per-env
+>    mean net forward displacement, cross-checked against the `progress` reward term); the
+>    old-vs-video gap is the rebasing plus the no-reset continuous eval window plus possible
+>    video-fps slow-motion.
+> 2. **Tripod baseline CSV.** Every `tripod` / `tripod contact replay` number was measured
+>    against `tripod_B11BL0_sim.csv` (leg swing/stance switch at steps 7/31). The tripod
+>    baseline moved to `tripod_extendedquad_sim.csv` (switch at 13/37) — same tripod
+>    grouping and actions (25/38), different timing — so the tripod anchor and every
+>    `vs tripod` ratio below need re-measuring.
+> 3. **Spine wave split.** The scripted spine is now **two distinct waves**: the RL env
+>    plays a fixed analytic traveling body wave (FrontLink sine, BackLink +90°), while the
+>    tripod baseline alone uses an **anti-phase** analytic body wave (`BackLink = −FrontLink`,
+>    `FrontLink_Joint(t) = −A_SPINE·sin(2π·t − π/4)`), regenerated from the MATLAB spec and
+>    swapped in via `SpineSineAction.set_waveform`. Existing binary checkpoints predate this
+>    and must be retrained. (See `README_binary_rl.md` §1.)
+> 4. **DCMotor actuator swap (2026-09).** The hexapod actuators migrated from
+>    `ImplicitActuatorCfg` (4.5 N·m cap, full torque at any joint speed) to `DCMotorCfg`
+>    (XL430 torque-speed curve, 1.4 N·m cap, leg stiffness 20→50, added armature +
+>    geartrain friction). Every fixed checkpoint in the friction-sweep / equal-budget /
+>    SAC-D tables was scored under the old model. See
+>    `source/isaaclab_assets/changelog.d/hexapod-dcmotor-actuator.rst`.
+>
+> Re-run the full sweep on the 0.315 m (`÷1.89`) basis and record fresh tables; do not
+> apply a scale factor to the numbers here.
 
 ## Protocol
 
@@ -9,20 +45,104 @@ All numbers below were produced with `eval_protocol.py` on this branch.
 |---|---|
 | task | `Isaac-Goal-Flat-Hexapod-Binary-v0`, `Discrete(64)` = 6 contact bits |
 | window | 64 envs x 300 steps x 0.02 s = 6.00 s = 6 gait cycles (period 1.0 s) |
-| unit | BL/cycle = forward displacement (m) / 1.59  (body 0.265 m x 6 cycles) |
+| unit | BL/cycle = forward displacement (m) / 1.89  (body **0.315 m** x 6 cycles); the sweep tables below are still on the old `/ 1.59` (0.265 m) basis — anchors re-measured, see [Re-measured anchors (2026-09-10)](#re-measured-anchors-2026-09-10) |
 | resets | all three terminations neutralised; one continuous trajectory |
 | randomisation | 14 items pinned (see the `audit` block in every result JSON) |
 | seed | 7, warmup 1 step discarded |
 | **isolation** | **one policy per process** — see the finding below |
 
-Reference points (bit-identical across 10 independent processes):
+Reference points — **historical** (bit-identical across 10 independent processes;
+0.265 m / `÷1.59` basis, old `tripod_B11BL0_sim.csv` baseline, old fitted spine wave —
+superseded by [Re-measured anchors (2026-09-10)](#re-measured-anchors-2026-09-10)):
 
-| policy | BL/cycle |
+| policy | BL/cycle (old basis) |
 |---|---|
 | all six feet down (action 63) | 0.0734 |
 | all six feet up (action 0) | 0.0525 |
 | uniform random | 0.0589 |
 | **tripod contact replay** | **0.4014** |
+
+## Re-measured anchors (2026-09-10)
+
+> **Superseded by the Wave 1 sign fix (2026-09-10, later same day).** The non-tripod
+> anchors below (all-stance / all-lift / uniform) and every learned-policy re-eval in this
+> doc were measured with Wave 1 at `+A_SPINE`, which drives the scripted body wave the
+> wrong way — it walked every policy backward from the goal. Wave 1 now carries `−A_SPINE`
+> (the HexapI global spine-joint-sign flip). The tripod anchor is unaffected (it swaps in
+> Wave 2). Re-run `eval_protocol.py` after retraining against the corrected env.
+
+`eval_protocol.py` re-run on the **current** code: `A_SPINE = 0.9162978573` rad (analytic
+Wave 1), body-length **0.315 m**, `tripod_extendedquad_sim.csv` leg timing + anti-phase
+analytic Wave 2 spine (`BackLink = −FrontLink`, `FrontLink_Joint(t) = −A_SPINE·sin(2π·t − π/4)`)
+for the tripod anchor, corrected (non-`--legacy_reset`) reset. RTX 4060, all defaults:
+64 envs × 300 steps × 0.02 s = 6.00 s = 6.00 cycles, seed 7, warmup 1, goal 2.0 m;
+friction pinned to 0.215 (midpoint of
+the calibrated 0.18–0.25 band), `num_buckets` 1, 15 randomisation items pinned (full
+`audit` in the JSON).
+
+| anchor | x_disp (m) | BL/cycle (÷1.89) | fall_rate | survival_s | straightness |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| all-stance (action 63) | +0.0914 | +0.0484 | 0.0 | 6.00 | 0.123 |
+| all-lift (action 0) | −0.0298 | −0.0158 | 0.0 | 6.00 | 0.059 |
+| uniform random | −0.0453 | −0.0239 | 0.0 | 6.00 | 0.179 |
+| **tripod-CSV bits** | **+0.834** | **+0.441** | **0.0** | **6.00** | **0.984** |
+
+`tripod-CSV bits` `reward_terms` (per step, weight-applied): reward_per_step +0.004023;
+`progress` +0.004121, `time_penalty` −6e-05, `dof_acc_l2` −2.1e-05, `action_rate_l2`
+−1e-05, `ang_vel_z_l2` −6e-06, `dof_torques_l2` −1e-06, all others 0.0.
+
+**Sign / phase convention — anti-phase Wave 2, sim-verified 2026-09-10.** Wave 2 is
+regenerated analytically from the MATLAB gait generator as a genuine anti-phase pair:
+`FrontLink_Joint(t) = −A_SPINE·sin(2π·t − π/4)` and `BackLink_Joint(t) = −FrontLink_Joint(t)`,
+shared amplitude `A_SPINE = 0.9162978573` rad, −π/4 phase origin, `w = 2π/1.0 s`. The
+per-joint global sign (which joint is + vs −) is fixed by a dedicated Isaac Sim forward-
+displacement test; see the "CANONICAL SPINE-WAVE DEFINITION" block in
+`hexapod_binary_env_cfg.py`. The committed `tripod_extendedquad_sim.csv` has byte-identical
+spine columns because a MATLAB→Sim "body correction" negated the FrontLink column, collapsing
+MATLAB's `yy = −xx` anti-phase pair into an in-phase one — that was the bug; Wave 2 no longer
+reads the CSV spine columns.
+
+**The anti-phase Wave 2 tripod anchor walks +0.834 m / +0.441 BL/cycle forward**
+(straightness 0.98, `fall_rate` 0), verified in sim 2026-09-10. That essentially matches
+the ~0.40 BL/cycle the extended-quad gait reaches on real hardware / the pre-DCMotor sim
+(old `ImplicitActuatorCfg`, which delivered full torque at any joint speed). The earlier
+~0.05–0.06 BL/cycle recorded here was the *in-phase* Wave 2 bug: the byte-identical CSV
+spine columns barely bent the body, so almost no travel. Restoring the genuine anti-phase
+pair brings back the full body-bend amplitude and the gait works — the spine wave does
+most of the propulsion (`--spine_gain 0` shows the leg bits alone net ≈ 0). The
+`--tripod_spine_phase_deg` sweep and its old numbers (peaking near +0.15 m / 0.08 BL/cycle
+at φ ≈ 0) were on the in-phase wave and have **not** been re-run. The BL/cycle metric
+itself is sound: `body_length_m` 0.315, `n_cycles` 6.0, `step_dt` 0.02 s, and
+`x_displacement_m` is the per-env-mean net forward displacement — all confirmed in the
+result JSON's `protocol` block. (The *other* open-loop baselines — all-stance nets only
++0.048 BL/cycle — genuinely are weak under `DCMotorCfg`: the ±0.92 rad spine wave at 1 Hz
+under-tracks and the binary "lift" pose barely clears the ground.)
+
+**Waist vs. legs (`--spine_gain 0`).** Freezing the waist collapses every open-loop
+baseline to ~0 net forward motion:
+
+| anchor | x_disp normal (m) | x_disp waist-frozen (m) |
+| --- | ---: | ---: |
+| all-stance | +0.0914 | −0.0000 |
+| all-lift | −0.0298 | +0.0009 |
+| uniform random | −0.0453 | +0.0135 |
+| tripod-CSV bits | +0.834 | −0.0081 |
+
+The tripod baseline's entire forward travel (+0.834 m) is the scripted body
+wave; the tripod **leg** contact pattern alone nets −0.008 m (≈ 0) — waist-frozen figures
+are spine-independent, so this holds under the anti-phase Wave 2. Legs slightly negative;
+same story for all-stance (+0.09 m → 0). Replayed
+open-loop, the 6-bit contact action space contributes essentially no propulsion on its
+own — the waist wave does the walking.
+
+**RL checkpoints — not refreshed, no current number.** The best existing checkpoints
+(`runs_binary/pipeline_20260909_230028` `ddqn`/`sac_d` @100k, ranked +0.95 / +0.92
+BL/cycle on the old 0.265 m + old-wave basis) were trained against the pre-split fitted
+spine wave. Under the current analytic Wave 1 they **walk backward**: ddqn@100k x_disp
+−0.9422 m (−0.4985 BL/cycle), sac_d@100k −0.8532 m (−0.4514), both `fall_rate` 0,
+straightness 0.70 / 0.66, `progress` reward −0.0047 / −0.0043 per step. This matches the
+standing note that binary checkpoints predate the spine split and must be retrained —
+there is no valid "best RL gait" anchor until a policy is trained on the current env.
 
 ## Finding: `env.reset()` does not refresh the command manager
 

@@ -14,11 +14,19 @@ latest-value pattern as `combined_logger.py`'s `_CombinedLoggerNode`/`CombinedLo
 
 The old `imu_processor.py` (Hexapi) mount facts (gyro_z negated, body-forward
 `[0,1,0]`) are stale for the current mount -- the IMU board was physically
-reseated during driver debugging. A fresh 4-heading rotation test (2026-07)
-calibrated `negate_gyro_z: false` and a tilt-only `mount_offset_quat` into
-config/deployment.yaml. The horizontal forward-axis mapping for this mount is
-still uncalibrated -- run `tools/log_imu_axis_alignment_test.py` before trusting
-it for closed-loop deployment.
+reseated during driver debugging. It has since been fully recalibrated into
+config/deployment.yaml: a 4-heading rotation test (2026-07-16) fixed
+`negate_gyro_z: false`, and `tools/log_imu_axis_alignment_test.py` (2026-07-17)
+resolved the horizontal forward/left axis mapping (forward ~= IMU +X, left ~=
+IMU +Y) and composed it with the static-tilt fit into a single
+`mount_offset_quat`, cross-checked four ways. A live sanity check at bring-up is
+still worthwhile: level -> projected_gravity ~[0,0,-1]; nose-down -> +x grows.
+
+The BNO085 driver on the robot publishes the SH2 *game* rotation vector (6-axis:
+accel + gyro, no magnetometer), so `orientation` here has no absolute-yaw
+reference -- gravity/tilt is solid, but heading integrates open-loop from gyro-z
+(see localization.py). The magnetometer is available (SH2 rotation vector, or the
+driver's `/magnetic_field` topic) if bounded heading drift is ever needed.
 """
 
 from __future__ import annotations

@@ -51,6 +51,12 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
 
         self.episode_length_s = EPISODE_LENGTH_S
 
+        # 2026-09 real-robot friction sweep calibration: training randomizes the effective
+        # ground friction over 0.18-0.25 (inherited from the flat/rough base; restated here
+        # so the calibrated band is explicit for this task).
+        self.events.physics_material.params["static_friction_range"] = (0.18, 0.25)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.18, 0.25)
+
         # ===== Command: fixed pose at the active curriculum distance =====
         # UniformPose2dCommand samples (x, y, heading) per resampling interval; we pin
         # ranges to constants so each episode uses the active curriculum stage.
@@ -90,8 +96,8 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # not a hard gate), so lateral movement itself stays unpenalized and only the sliding
         # mechanism is taxed: a fast slide costs more than a slow one, some slip is still cheap.
         # Kept far below the Rshape variant's -0.6 (flat_env_cfg_rshape.py) -- that weight was
-        # validated against static friction 0.9-1.0, while this task inherits flat_env_cfg's much
-        # lower 0.2-0.3, where forced slip is bigger and more common even under a good gait. Start
+        # validated against much higher friction, while this task uses the calibrated
+        # 0.18-0.25 band, where forced slip is bigger and more common even under a good gait. Start
         # low and raise from play videos only if "crazy" sliding is still visible.
         self.rewards.feet_slide = RewTerm(
             func=mdp.feet_slide,
@@ -213,6 +219,11 @@ class HexapodGoalEnvCfg_PLAY(HexapodGoalEnvCfg):
         self.observations.policy.enable_corruption = False
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+
+        # 2026-09 real-robot friction sweep calibration: eval/PLAY pins the effective
+        # ground friction to the single best sweep row (mu = 0.21).
+        self.events.physics_material.params["static_friction_range"] = (0.21, 0.21)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.21, 0.21)
 
         # Camera: fixed world view showing the full 5m goal-reaching path
         self.viewer.eye = (-1.0, -3.0, 1.5)

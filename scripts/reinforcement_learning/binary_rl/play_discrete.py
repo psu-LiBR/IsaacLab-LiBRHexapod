@@ -10,6 +10,19 @@ runs the greedy policy (argmax Q, no exploration) on the Play variant of the tas
 records an MP4 through the regular render pipeline (real robot mesh + ground plane),
 with the camera tracking the robot root for a closeup view.
 
+Receding-horizon goal (opt-in: ``--receding_horizon`` + ``--goal_ahead_m``, default OFF):
+by default the goal env resets when the robot reaches the fixed ~2 m point ahead
+(``reach_goal``, radius ``REACH_RADIUS`` = 0.2 m). With ``--receding_horizon`` the
+``pose_command`` target is re-pinned ``--goal_ahead_m`` (default 2.0 m) ahead of the robot
+along world +x every step so it walks continuously -- a sustained gait-quality read
+rather than one dash-and-stop. ``reach_goal`` is neutralised (radius -> -1) while on, and
+``progress_to_goal``'s ``env._goal_prev_dist`` is re-seeded on each advance so the goal
+jump scores no spurious progress. Training is unaffected (live PLAY-script mutation only;
+no env config class is touched). Matches ``scripts/sim2real_transfer``'s
+``goal.mode: receding`` / ``lookahead_m`` semantics. See ``play_discrete_closeup.py``'s
+module docstring for the full rationale. NOT wired into ``eval_protocol.py``, which
+already sidesteps the stop by pinning the goal beyond its no-reset window.
+
 Run (from IsaacLab root, .venv active):
   CUDA_VISIBLE_DEVICES=<idle> ./isaaclab.sh -p scripts/reinforcement_learning/play_discrete.py \
       --checkpoint runs_discrete/<exp>/checkpoints/best_agent.pt --video_length 600
@@ -29,6 +42,20 @@ parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--out_dir", default="", help="video output dir (default: <checkpoint dir>/../videos_play)")
 parser.add_argument("--v_min", type=float, default=-10.0, help="C51 checkpoints only: support lower bound")
 parser.add_argument("--v_max", type=float, default=10.0, help="C51 checkpoints only: support upper bound")
+parser.add_argument(
+    "--receding_horizon",
+    action="store_true",
+    help="opt-in (default OFF): re-pin the pose_command goal --goal_ahead_m ahead of the "
+    "robot (world +x) every step so it walks continuously instead of stopping at the ~2 m "
+    "goal. reach_goal is neutralised while on. PLAY/visual only; see the module docstring.",
+)
+parser.add_argument(
+    "--goal_ahead_m",
+    type=float,
+    default=2.0,
+    help="receding-horizon look-ahead distance [m] (same semantics as sim2real "
+    "commands.goal.lookahead_m). Only used with --receding_horizon.",
+)
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 args.headless = True
@@ -72,6 +99,40 @@ env = gym.wrappers.RecordVideo(
 )
 env = DiscreteBitsActionWrapper(env, n_bits=6)
 device = env.device
+base = env.base_env  # raw ManagerBasedRLEnv (the wrapper's .unwrapped returns itself)
+
+
+# --- receding-horizon goal (opt-in; see the module docstring) --------------------------
+# Assumed attribute names on the live UniformPose2dCommand term (verified against
+# source/isaaclab/isaaclab/envs/mdp/commands/pose_2d_command.py): `pos_command_w`
+# [num_envs, 3] world-frame target, `heading_command_w` [num_envs]. `_update_command()`
+# rebuilds the base-frame command from these every step. NEEDS a live Isaac Sim run to confirm.
+_pose_cmd = None
+if args.receding_horizon:
+    _pose_cmd = base.command_manager.get_term("pose_command")
+    try:
+        base.termination_manager.get_term_cfg("reach_goal").params["radius"] = -1.0
+        print("[play_discrete] receding horizon ON: reach_goal neutralised (radius -> -1)")
+    except (KeyError, ValueError):
+        print("[play_discrete] receding horizon ON: no reach_goal termination to neutralise")
+    _pose_cmd.cfg.ranges.pos_x = (args.goal_ahead_m, args.goal_ahead_m)
+    print(f"[play_discrete]   goal held {args.goal_ahead_m:.2f} m ahead (world +x) every step")
+
+
+def _advance_receding_goal():
+    """Re-pin pose_command --goal_ahead_m ahead of the robot along world +x, re-seeding
+    progress_to_goal's prev_dist so the goal jump scores no spurious progress."""
+    rp = base.scene["robot"].data.root_pos_w
+    rp = rp.torch if hasattr(rp, "torch") else rp
+    origins = base.scene.env_origins
+    _pose_cmd.pos_command_w[:, 0] = rp[:, 0] + args.goal_ahead_m
+    _pose_cmd.pos_command_w[:, 1] = origins[:, 1]  # hold the straight line to the goal (pos_y = 0)
+    _pose_cmd.heading_command_w[:] = 0.0
+    prev = getattr(base, "_goal_prev_dist", None)
+    if prev is not None:
+        new_dist = torch.norm(_pose_cmd.pos_command_w - rp[:, :3], dim=1)
+        if prev.shape == new_dist.shape:
+            base._goal_prev_dist = new_dist.clone()
 
 
 # architecture is auto-detected from the checkpoint's state-dict keys/shapes:
@@ -141,6 +202,10 @@ for t in range(args.steps):
         a = torch.argmax(q, dim=1)
     action_counts += torch.bincount(a.cpu(), minlength=64)
     obs, rew, terminated, truncated, _ = env.step(a)
+    if args.receding_horizon:
+        _advance_receding_goal()
+        base.command_manager.compute(dt=0.0)
+        obs = base.observation_manager.compute()
     total_rew += rew
     terminated_n += int(terminated.sum().item())
     truncated_n += int(truncated.sum().item())

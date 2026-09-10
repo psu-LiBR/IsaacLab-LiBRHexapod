@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import ImplicitActuatorCfg
+from isaaclab.actuators import DCMotorCfg
 from isaaclab.assets import ArticulationCfg
 
 ##
@@ -24,7 +24,7 @@ HEXAPOD_CFG = ArticulationCfg(
             disable_gravity=False,
             max_depenetration_velocity=1.0,
             enable_gyroscopic_forces=True,
-            max_angular_velocity=1000.0,  # 57 rev/min is max unloaded motor speed = 5.96 rad/s **@11.1 V
+            max_angular_velocity=1000.0,  # XL430 no-load: 57 rev/min = 5.97 rad/s @11.1 V (61 rev/min = 6.39 @12 V)
             max_linear_velocity=1000.0,
             # enable_ccd=True,
         ),
@@ -64,22 +64,76 @@ HEXAPOD_CFG = ArticulationCfg(
     ),
     soft_joint_pos_limit_factor=1.0,
     actuators={
-        # Spine joints: sinusoidal body undulation sustains high torque at wave peaks against body inertia.
-        # Lower stiffness reduces peak torque demand (at stiffness=40, error=0.15 rad before saturation vs 0.075 at 80).
-        # The real servo's internal firmware handles gravity loading better than a pure PD controller.
-        "body_joints": ImplicitActuatorCfg(
+        # ------------------------------------------------------------------------------------
+        # Dynamixel XL430-W250-T explicit DC-motor model (sim2real-oriented).
+        #
+        # Datasheet (Robotis e-Manual, https://emanual.robotis.com/docs/en/dxl/x/xl430-w250/).
+        # 11.1 V is the Robotis-recommended voltage and this robot's 3S LiPo pack, so the
+        # 11.1 V column is used DIRECTLY -- no further voltage scaling:
+        #   stall torque      1.4 N.m @ 1.3 A    no-load speed   57 rev/min = 5.969 rad/s
+        #   gear ratio        258.5 : 1          resolution      4096 pulse/rev
+        #   operating voltage 6.5 - 12.0 V       weight          57.2 g   standby current 52 mA
+        #   position PID control-table defaults: P Gain=640, I Gain=0, D Gain=4000
+        #     (KPP = P/128 = 5.0, KPI = I/65536 = 0, KPD = D/16 = 250; goal-PWM limit 885)
+        #   -> velocity_limit    = 5.97   (== no-load speed; torque-speed curve x-intercept)
+        #   -> saturation_effort = 1.4    (== stall torque)
+        #  (12 V column, for reference: 1.5 N.m stall, 61 rev/min = 6.39 rad/s.)
+        #
+        # DCMotor enforces the linear four-quadrant torque-speed curve
+        #   tau_max(qd) = clip(saturation_effort * (1 - qd / velocity_limit), -inf, effort_limit)
+        # so deliverable torque collapses to ~0 as the joint approaches no-load speed, exactly
+        # like the real servo. This is the main sim2real gain over the previous ImplicitActuator
+        # (which could deliver full torque at any speed). Consequence, by design: the sim will
+        # NOT perfectly track an aggressive open-loop reference gait -- the real robot cannot
+        # either.
+        #
+        # effort_limit = saturation_effort (1.4): the e-Manual gives no separate continuous /
+        # thermal torque rating, so the curve is a pure stall->no-load line with no extra flat
+        # derate. For long continuous operation a conservative thermal choice would be ~0.6-0.9.
+        #
+        # Why effort_limit_sim is no longer 4.5: under the implicit model a single PhysX clamp
+        # saw (stiffness*err + damping*qd) combined, and 4.5 (3.2x physical stall) was inflated
+        # headroom for the damping term. DCMotor clips the physical envelope separately, so
+        # effort_limit is now the real motor number and effort_limit_sim / velocity_limit_sim
+        # are left unset (explicit-actuator default -> no solver double-clip; the torque-speed
+        # curve governs joint speed).
+        #
+        # Non-datasheet estimates (the e-Manual lists neither rotor inertia nor running
+        # no-load current, so these are engineering estimates -- tune against bench data):
+        #   armature = 1.3e-3 kg.m^2  ~= J_rotor(~2e-8) * 258.5^2 (reflected rotor inertia).
+        #     Dominant inertia at this gear ratio (~20x the leg-link inertia) AND needed for
+        #     explicit-integration stability at sim.dt = 5e-3 s (bare-leg k_max ~ 4*I/dt^2).
+        #   friction 0.04 / dynamic_friction 0.03 N.m: geartrain Coulomb / breakaway. Isaac
+        #     Sim 5.0+ models these as a torque, not a coefficient.
+        #
+        # Stiffness / damping = the XL430 firmware PID mapped to physical joint units:
+        #   k_p = saturation_effort * KPP * (4096 / 2pi) / 885,  KPP = P Gain / 128
+        #     P Gain = 640  -> k_p = 5.16   (firmware default)
+        #     P Gain ~ 1240 -> k_p = 10     (spine)
+        #     P Gain ~ 6200 -> k_p = 50     (legs)
+        #   k_d = saturation_effort * KPD * T_loop * (4096 / 2pi) / 885,  KPD = D Gain / 16
+        #     D Gain = 4000, T_loop ~ 1.4 ms -> k_d ~ 0.35  (firmware default D term, both
+        #     groups; T_loop is the internal-loop period, not published -- k_d is uncertain
+        #     to a factor of ~2 and was cross-checked against the tripod-gait sweep).
+        # Legs use k_p = 50 (a mild bump over the P Gain=640 default, motivated by open-loop
+        # tripod-gait tracking tests and trivially settable on the real servo). The spine keeps
+        # k_p = 10: the undulation is smooth and lightly loaded, and the torque-speed curve now
+        # handles the peak-torque saturation that the old stiffness=10 was a workaround for.
+        # NOTE: the spine sinusoid peaks near ~5.3 rad/s (~ the no-load speed), so it will
+        # under-track its commanded amplitude -- physically accurate for the real servo.
+        # ------------------------------------------------------------------------------------
+        "body_joints": DCMotorCfg(
             joint_names_expr=["FrontLink_Joint", "BackLink_Joint"],
-            stiffness=10,
-            # stiffness = 80,   # too stiff -- small tracking lag generates huge torques; consistently saturates
-            damping=0.3,
-            # raised: if sin wave step changes require >5.5 rad/s, velocity cap accumulates lag →
-            # torque saturates regardless of effort limit
-            velocity_limit_sim=15.0,
-            # velocity_limit_sim = 5.5,  # original -- may be binding constraint for body undulation
-            effort_limit_sim=4.5,
+            saturation_effort=1.4,
+            effort_limit=1.4,
+            velocity_limit=5.97,
+            stiffness=10.0,
+            damping=0.35,
+            armature=1.3e-3,
+            friction=0.04,
+            dynamic_friction=0.03,
         ),
-        # Leg joints: intermittent ground contact, shorter duration at peak torque
-        "leg_joints": ImplicitActuatorCfg(
+        "leg_joints": DCMotorCfg(
             joint_names_expr=[
                 "MiddleLeft_Joint",
                 "MiddleRight_Joint",
@@ -88,13 +142,14 @@ HEXAPOD_CFG = ArticulationCfg(
                 "FrontLeft_Joint",
                 "FrontRight_Joint",
             ],
-            stiffness=20,
-            # stiffness = 37,   # original -- too low: max correctable error = 1.4/37 = 0.038 rad before saturation
-            damping=0.9,
-            # damping = 0.32,   # original
-            velocity_limit_sim=10.0,
-            effort_limit_sim=4.5,
-            # effort_limit_sim = 1.4,  # XL430-W250-T rated stall torque at 12V (physical spec)
+            saturation_effort=1.4,
+            effort_limit=1.4,
+            velocity_limit=5.97,
+            stiffness=50.0,
+            damping=0.35,
+            armature=1.3e-3,
+            friction=0.04,
+            dynamic_friction=0.03,
         ),
     },
 )

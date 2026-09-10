@@ -1,6 +1,6 @@
 # sim2real_transfer
 
-Runs a trained hexapod RL policy (exported to ONNX by `play.py`) on the real
+Runs a trained hexapod RL policy (exported to ONNX by `isaaclab.bat play`, or `binary_rl/export_binary_onnx.py` for the binary profile) on the real
 robot: real IMU (via ROS2 `/imu`) + real Dynamixel servos + a Raspberry Pi,
 completely wirelessly. See `CLAUDE.md`'s sim2real plan for the full design
 rationale, key facts (obs layout, DOF ordering, motor IDs, control rate), and
@@ -77,14 +77,36 @@ profile (`velocity`, `goal`, or `binary`).
   it carries the HexapI positive-leg joint convention. Export the checkpoint
   with `binary_rl/export_binary_onnx.py`. The six leg joints snap between the
   two fixed stance/lift angles from the policy bits; the two spine joints run a
-  scripted sinusoid recreated host-side. `--action-scale-mult < 1` damps the
-  whole target toward `q_default` for bring-up.
+  fixed analytic traveling wave recreated host-side (front joint a pure sine,
+  rear joint the same sine shifted 90 deg -- Wave 1 in
+  `hexapod_binary_env_cfg.py`, not a CSV fit). `--action-scale-mult < 1` damps the
+  whole target toward `q_default` for bring-up. The joint map is **not** a
+  placeholder -- it is derived from the calibrated velocity/goal
+  `deployment.yaml` (legs `negate` = the HexapI leg-sign flip on the calibrated
+  old-USD `unchanged` map; spine emitted through the calibrated body
+  correction). The example file's header shows the full derivation and the two
+  remaining spine bring-up questions (wave phase direction, body-bend direction).
+
+## Continuous forward walking (goal / binary)
+
+`commands.goal.mode` selects how the goal-reaching policies are driven:
+
+- `fixed` (default) -- a stationary world point; the robot approaches it and
+  then has no goal left. Walks a set distance and stops.
+- `receding` -- the goal is kept `commands.goal.lookahead_m` metres ahead of the
+  robot every step, so the policy stays in its "far from the goal, keep walking"
+  regime and never slows near a target. `commands.goal.heading` is then the world
+  heading to hold. Only the localizer's gyro-integrated heading matters in this
+  mode (position drift cancels), so the constant-speed position assumption in
+  `DeadReckoningLocalizer` is not a concern -- but heading still drifts open-loop
+  (the BNO085 driver runs the game rotation vector, no magnetometer), so expect a
+  slow curve over multi-minute runs.
 
 ## Layout
 
 - `sim2real/` -- the package: `joint_mapping.py` (Sim<->Real DOF conversion,
   most safety-critical file), `profiles.py` (obs schemas), `binary_profile.py`
-  (binary-contact action decode + host-side spine sinusoid),
+  (binary-contact action decode + host-side analytic spine wave),
   `deployment_config.py` (typed `deployment.yaml` loader), `policy_runner.py` (onnxruntime wrapper),
   `dynamixel_bus.py` / `imu.py` (hardware interfaces, each with a
   hardware-free dry-run/fake counterpart), `command_source.py` /

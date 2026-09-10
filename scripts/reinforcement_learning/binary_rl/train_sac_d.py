@@ -72,7 +72,7 @@ from collections import deque  # noqa: E402
 
 import torch  # noqa: E402
 import torch.nn.functional as F  # noqa: E402
-from binary_common import build_env, mlp, nstep_return, write_run_meta  # noqa: E402
+from binary_common import build_env, maybe_init_wandb, mlp, nstep_return, write_run_meta  # noqa: E402
 
 torch.manual_seed(args.seed)
 
@@ -162,6 +162,8 @@ write_run_meta(
     timesteps=args.timesteps,
     n_step=args.n_step,
 )
+
+wandb_run = maybe_init_wandb(args, experiment_name, "sac_d", {"n_step": args.n_step})
 
 obs, _ = env.reset()
 obs_t = obs["policy"]
@@ -271,6 +273,20 @@ for step in range(args.timesteps):
             ]
         )
         csv_f.flush()
+        if wandb_run is not None:
+            wandb_run.log(
+                {
+                    "train/ep_return_mean": rmean,
+                    "train/ep_len_mean": lmean,
+                    "train/qf_loss": qf_loss_v,
+                    "train/actor_loss": actor_loss_v,
+                    "train/alpha": log_alpha.exp().item(),
+                    "train/entropy": entropy_v,
+                    "train/target_entropy": target_entropy,
+                    "train/sps": sps,
+                },
+                step=step,
+            )
         print(
             f"[sac_d {step}/{args.timesteps}] ep_ret={rmean:+.3f} ep_len={lmean:.0f} "
             f"qf={qf_loss_v:.4f} pi={actor_loss_v:+.4f} alpha={log_alpha.exp().item():.4f} "
@@ -303,5 +319,7 @@ torch.save(
 )
 csv_f.close()
 print(f"[sac_d] done. outputs in {run_dir}; checkpoints: {sorted(os.listdir(ckpt_dir))}", flush=True)
+if wandb_run is not None:
+    wandb_run.finish()
 env.close()
 simulation_app.close()

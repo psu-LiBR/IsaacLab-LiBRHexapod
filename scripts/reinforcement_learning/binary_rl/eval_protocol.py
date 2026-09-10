@@ -57,24 +57,69 @@ enter any judgement in this script.
 
 with the two constants (both overridable on the command line):
 
-  BODY_LENGTH_M  = 0.265  the robot's body length, m.  Source: Jackson's own message
-      with the reference gait CSVs -- "0.48 body lengths/cyc for b11bl0 and 0.41 BL/cyc
-      (26.5cm body length)".  This is the same constant every earlier calibration in
-      this project used, so the numbers stay comparable with our own history.
+  BODY_LENGTH_M  = 0.315  the robot's body length, m.  Source: the front-to-rear leg
+      length of the updated HexapI USD, 0.315 m (per Jackson, 2026-09).  This is the
+      quantity the BL/cycle metric should divide by (x_displacement_m / BODY_LENGTH_M /
+      n_cycles).
   GAIT_PERIOD_S  = 1.0    one gait cycle, s.  Not a choice: the env hard-codes it as
       ``GAIT_PERIOD_S`` in hexapod_binary_env_cfg.py, the scripted spine sinusoid runs at
       exactly ``sin(2*pi*t / 1.0 s)``, and the reference tripod CSV is 50 rows x 0.02 s
       (51st row duplicates the 1st) = one cycle.  step_dt is 0.02 s, so the default
-      300-step window is exactly 6.00 s = 6.00 cycles and the conversion is x / 1.59.
+      300-step window is exactly 6.00 s = 6.00 cycles and the conversion is x / 1.89.
 
 Caveat, on purpose in this docstring so it travels with the number: the paper values
-(tripod 0.48, extquad 0.41, lleg30 0.61, lleg35 0.56 BL/cycle) are *real hardware*
+(tripod/b11bl0 0.48, extquad 0.41, lleg30 0.61, lleg35 0.56 BL/cycle) are *real hardware*
 replaying joint-angle trajectories, whereas this script measures *simulation* with a
 6-bit contact action space.  The unit is shared; the experiment is not.  Use the
-comparison for orientation, never as a replication claim.
+comparison for orientation, never as a replication claim.  Those anchors were computed
+on a 26.5 cm body-length basis and are NOT directly comparable to this script's BL/cycle
+column now that it divides by 0.315 m; this script's own previously-recorded BL/cycle
+numbers must be re-measured.  The ``BASE_tripod_csv_bits`` anchor replays the
+``tripod_extendedquad_sim.csv`` LEG timing (from ``tripod_bit_demos.npz``, paper value
+0.41) AND, via ``SpineSineAction.set_waveform``, that gait's anti-phase SPINE wave (Wave 2:
+``FrontLink = +-A_SPINE * sin(w*t - pi/4)``, ``BackLink`` the negation -- anti-phase,
+regenerated analytically from the MATLAB gait generator, the global sign verified in sim
+to walk the baseline forward; ``--tripod_spine_phase_deg`` overrides the phase).  Every
+learned policy and the other baselines instead run on the analytic RL env spine wave
+(Wave 1: FrontLink sine, BackLink sine + 90 deg).  These are two different spine waves by
+design -- see the note above the tripod baseline run below.
+
+With the anti-phase Wave 2 the tripod anchor comes out around 0.44 BL/cycle forward
+(+0.83 m over the 6-cycle window, straightness ~0.98), in line with the ~0.4 of the
+hardware.  The earlier ~0.05-0.09 BL/cycle recorded here was the *in-phase* Wave 2 bug --
+the two byte-identical CSV spine columns barely bent the body.  ``step_dt`` (0.02 s),
+``n_cycles`` (6.0) and ``BODY_LENGTH_M`` (0.315) are all correct, and a ``--spine_gain 0``
+run shows the leg bits alone net ~0 so almost all of the anchor's travel is the body wave.
+
+Two more things this number is NOT, kept here so they travel with it:
+* It is measured over a NO-RESET window (every termination is neutralised -- see the
+  protocol notes above).  The root is tracked as one continuous trajectory even if the
+  robot lunges, scrabbles, or briefly noses down without tripping the CenterLink fall
+  judge, so a marginally-stable "fast" gait reads higher here than a reset-enabled play
+  video of the same checkpoint shows (the play env resets on base_contact / reach_goal
+  and never accumulates the long slide).  ``progress`` in ``reward_terms`` is an
+  independent cross-check: it telescopes to ``progress.weight * x_displacement_m`` over
+  the window.  Sanity-check a high BL/cycle against fall_rate, straightness,
+  action_entropy_nats and the play video before believing it -- there is no
+  measurement-side inflation in this column (step_dt, n_cycles and the per-env mean net-x
+  displacement were audited 2026-09), only the protocol difference just described.
+* The 0.265 m -> 0.315 m body-length change (2026-09) divides every number by an extra
+  1.189 vs. the pre-2026-09 tables: a checkpoint recorded at 0.95 BL/cycle on the old
+  0.265 m basis is 0.80 on the current 0.315 m basis (0.95 * 0.265 / 0.315).  The
+  displacement in metres is unchanged; only the unit basis moved.
 
 Baselines run first, every time, as the anchors of the table:
     all-stance (63), all-lift (0), uniform random, tripod-CSV bit sequence.
+
+The ``BASE_tripod_csv_bits`` anchor replays ``tripod_bit_demos.npz`` next to this script
+(``--tripod_npz`` overrides) for the leg timing.  That NPZ is built by
+``extract_bit_demos.py`` from ``tripod_extendedquad_sim.csv``; only its six leg columns
+are used.  For that one baseline run the scripted spine term is additionally swapped from
+the analytic RL env wave (Wave 1) to the anti-phase tripod body wave (Wave 2, regenerated
+analytically from the MATLAB gait generator) via ``SpineSineAction.set_waveform``, then
+restored so every subsequent policy in the sweep sees the RL env wave.  The two waves (constants
+``SPINE_*`` vs ``TRIPOD_SPINE_*`` in ``hexapod_binary_env_cfg.py``) are intentionally
+distinct.  ``--spine_gain != 1.0`` disables this swap (see the tripod run).
 
 Run (from the repo root):
   isaaclab.bat -p scripts/reinforcement_learning/binary_rl/eval_protocol.py ^
@@ -157,9 +202,9 @@ parser.add_argument(
 parser.add_argument(
     "--body_length_m",
     type=float,
-    default=0.265,
-    help="robot body length used for the BL/cycle column; 0.265 m is the value Jackson quoted "
-    "with the reference gait CSVs and the one every earlier calibration here used",
+    default=0.315,
+    help="robot body length used for the BL/cycle column; 0.315 m is the front-to-rear leg "
+    "length of the updated HexapI USD (per Jackson, 2026-09)",
 )
 parser.add_argument(
     "--gait_period_s",
@@ -183,6 +228,17 @@ parser.add_argument(
     help="ABLATION, opt-in: same for the spine's constant offset (keep at 1.0 to hold "
     "the neutral posture while only the wave is removed)",
 )
+parser.add_argument(
+    "--tripod_spine_phase_deg",
+    type=float,
+    default=None,
+    help="CALIBRATION, opt-in: override the tripod-baseline (Wave 2) spine phase. When set, "
+    "Wave 2 becomes s*A_SPINE * sin(w*t + radians(this)) on FrontLink_Joint and the "
+    "negation on BackLink_Joint (anti-phase, single harmonic; s = the sim-verified global "
+    "sign from the cfg default, A_SPINE from hexapod_binary_env_cfg). Default None = use "
+    "the cfg's TRIPOD_SPINE_* (equivalent to --tripod_spine_phase_deg -45). Only affects "
+    "BASE_tripod_csv_bits.",
+)
 parser.add_argument("--out", default="eval_protocol_results.json")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
@@ -197,6 +253,36 @@ import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 import isaaclab_tasks  # noqa: F401, E402
+from isaaclab_tasks.contrib.velocity.config.hexapod.hexapod_binary_env_cfg import (  # noqa: E402
+    A_SPINE,
+    SPINE_COS_COEF,
+    SPINE_OFFSET,
+    SPINE_SIN_COEF,
+    TRIPOD_SPINE_COS_COEF,
+    TRIPOD_SPINE_OFFSET,
+    TRIPOD_SPINE_SIN_COEF,
+)
+
+# Tripod-baseline (Wave 2) coefficients actually used for the swap: the cfg values, or a
+# single-harmonic anti-phase override for phase calibration. Wave 2 is anti-phase
+# (BackLink = -FrontLink); the phase override keeps that relation and the sim-verified
+# global HexapI spine sign carried by the cfg default (FrontLink sin_coef sign).
+if args.tripod_spine_phase_deg is None:
+    TRIP_SIN, TRIP_COS, TRIP_OFF = TRIPOD_SPINE_SIN_COEF, TRIPOD_SPINE_COS_COEF, TRIPOD_SPINE_OFFSET
+else:
+    import math as _math
+
+    _ph = _math.radians(args.tripod_spine_phase_deg)
+    # FrontLink = _front_sign * A_SPINE * sin(w*t + ph)
+    #           = (_front_sign*A*cos ph)*sin(w*t) + (_front_sign*A*sin ph)*cos(w*t)
+    # BackLink negates both (anti-phase). _front_sign is taken from the cfg default so this
+    # override can never disagree with the sim-verified global sign.
+    _front_sign = 1.0 if TRIPOD_SPINE_SIN_COEF["FrontLink_Joint"][0] >= 0.0 else -1.0
+    _s = _front_sign * A_SPINE * _math.cos(_ph)
+    _c = _front_sign * A_SPINE * _math.sin(_ph)
+    TRIP_SIN = {"FrontLink_Joint": [_s], "BackLink_Joint": [-_s]}
+    TRIP_COS = {"FrontLink_Joint": [_c], "BackLink_Joint": [-_c]}
+    TRIP_OFF = {"BackLink_Joint": 0.0, "FrontLink_Joint": 0.0}
 
 try:
     from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
@@ -328,17 +414,50 @@ def build_env():
         sw = getattr(getattr(cfg, "actions", None), "spine_wave", None)
         if sw is None:
             raise SystemExit("--spine_gain given but cfg.actions.spine_wave does not exist")
-        old_a = dict(sw.amplitude)
-        sw.amplitude = {k: v * args.spine_gain for k, v in sw.amplitude.items()}
-        old_o = dict(sw.offset)
-        if args.spine_offset_gain != 1.0:
-            sw.offset = {k: v * args.spine_offset_gain for k, v in sw.offset.items()}
+        # SpineSineActionCfg represents the wave as a truncated Fourier series: sin_coef /
+        # cos_coef are dict[str, list[float]] (one coefficient list per spine joint).
+        # Scaling every coefficient scales the wave amplitude linearly; the constant term
+        # (offset, mean posture) is scaled separately via --spine_offset_gain. (Older
+        # revisions carried a single amplitude/phase dict; guarded here so this ablation
+        # still no-ops cleanly rather than crashing if the attrs are absent/renamed.)
+        scaled: dict[str, tuple[dict, dict]] = {}
+        for attr in ("sin_coef", "cos_coef"):
+            table = getattr(sw, attr, None)
+            if isinstance(table, dict):
+                old = {k: list(v) for k, v in table.items()}
+                setattr(sw, attr, {k: [c * args.spine_gain for c in v] for k, v in table.items()})
+                scaled[attr] = (old, getattr(sw, attr))
+        if not scaled:
+            raise SystemExit("--spine_gain given but cfg.actions.spine_wave has no sin_coef/cos_coef dict to scale")
+        off = getattr(sw, "offset", None)
+        if args.spine_offset_gain != 1.0 and isinstance(off, dict):
+            old_o = dict(off)
+            sw.offset = {k: v * args.spine_offset_gain for k, v in off.items()}
             AUDIT.append(f"actions.spine_wave.offset: {old_o} -> x{args.spine_offset_gain}")
-        AUDIT.append(f"actions.spine_wave.amplitude: {old_a} -> x{args.spine_gain} = {sw.amplitude}")
+        for attr, (old, new) in scaled.items():
+            AUDIT.append(f"actions.spine_wave.{attr}: {old} -> x{args.spine_gain} = {new}")
 
     e = gym.make(args.task, cfg=cfg)
     e = DiscreteBitsActionWrapper(e, n_bits=6)
     return e
+
+
+def _spine_term(base_env):
+    """Return the live ``SpineSineAction`` term from a built env, or None if absent.
+
+    Robust to the action-manager API: tries ``ActionManager.get_term`` first, then the
+    ``_terms`` / ``terms`` mapping. The term attr name in ``HexapodBinaryActionsCfg`` is
+    ``spine_wave``.
+    """
+    am = base_env.action_manager
+    for getter in ("get_term",):
+        if hasattr(am, getter):
+            try:
+                return getattr(am, getter)("spine_wave")
+            except Exception:
+                pass
+    terms = getattr(am, "_terms", None) or getattr(am, "terms", None) or {}
+    return terms.get("spine_wave")
 
 
 env = build_env()
@@ -668,7 +787,42 @@ if not args.no_baselines:
     trip = args.tripod_npz or os.path.join(os.path.dirname(os.path.abspath(__file__)), "tripod_bit_demos.npz")
     if os.path.isfile(trip):
         f, m = make_bits_policy(trip)
-        do(f, "BASE_tripod_csv_bits", m)
+        # The tripod anchor is scored on its OWN spine wave: the anti-phase tripod
+        # body-bending wave (Wave 2, BackLink = -FrontLink), NOT the analytic RL env
+        # traveling wave (Wave 1) that every learned policy and the other baselines run on.
+        # Swap Wave 2 in for this one run via SpineSineAction.set_waveform, then restore
+        # Wave 1 in a finally so a failure in the tripod run still leaves the correct env
+        # wave for the rest of the sweep.
+        #
+        # --spine_gain != 1.0 already rescaled the Wave-1 cfg coefficients BEFORE the env
+        # was built; calling set_waveform here would overwrite that ablation with the
+        # (unscaled) tripod coefficients. Simpler correct choice: when the ablation is
+        # active, SKIP the tripod-wave swap and leave the tripod baseline on the ablated
+        # Wave 1, matching the other policies scored in that same run.
+        term = _spine_term(base)
+        swap_spine = term is not None and args.spine_gain == 1.0
+        if swap_spine:
+            term.set_waveform(TRIP_SIN, TRIP_COS, TRIP_OFF)
+            _wave_desc = (
+                "anti-phase tripod body wave (Wave 2: FrontLink +-A_SPINE*sin(w*t - pi/4), BackLink negated)"
+                if args.tripod_spine_phase_deg is None
+                else f"anti-phase A_SPINE*sin(w*t + {args.tripod_spine_phase_deg:g} deg) [phase override]"
+            )
+            AUDIT.append(
+                f"spine_wave: tripod baseline uses {_wave_desc}; learned policies use the analytic env wave (Wave 1)"
+            )
+            print("[protocol]   " + AUDIT[-1], flush=True)
+        elif term is not None and args.spine_gain != 1.0:
+            AUDIT.append(
+                "spine_wave: tripod baseline kept on the --spine_gain-ablated env wave "
+                "(Wave 1); tripod Wave 2 swap skipped so the ablation is not overwritten"
+            )
+            print("[protocol]   " + AUDIT[-1], flush=True)
+        try:
+            do(f, "BASE_tripod_csv_bits", m)
+        finally:
+            if swap_spine:
+                term.set_waveform(SPINE_SIN_COEF, SPINE_COS_COEF, SPINE_OFFSET)
     else:
         print(f"[protocol] tripod baseline skipped, not found: {trip}", flush=True)
 

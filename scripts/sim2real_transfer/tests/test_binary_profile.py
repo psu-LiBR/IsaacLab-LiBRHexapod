@@ -26,9 +26,12 @@ def _cfg():
         lift_pos=LIFT,
         leg_joint_order=list(_LEG_ORDER),
         spine=BinarySpineCfg(
-            amplitude={"BackLink": -0.85, "FrontLink": -0.84},
-            phase={"BackLink": -0.73, "FrontLink": 0.46},
-            offset={"BackLink": 0.012, "FrontLink": -0.006},
+            # Wave 1: analytic traveling wave, shared amplitude/offset/period,
+            # BackLink phase = FrontLink phase + pi/2. Amplitude is negative -- the
+            # HexapI global spine-joint-sign flip (env sin_coef/cos_coef hold -A_SPINE).
+            amplitude={"BackLink": -math.radians(52.5), "FrontLink": -math.radians(52.5)},
+            phase={"BackLink": math.pi / 2, "FrontLink": 0.0},
+            offset={"BackLink": 0.0, "FrontLink": 0.0},
             period=1.0,
         ),
     )

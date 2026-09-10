@@ -3,14 +3,27 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Binary contact-bit profile: policy-action decode + host-side spine sinusoid.
+"""Binary contact-bit profile: policy-action decode + host-side spine wave.
 
 The binary-contact env (``Isaac-Goal-Flat-Hexapod-Binary-v0``) hands the policy six leg
 contact bits. Each bit snaps its leg joint to one of two fixed angles
 (``STANCE_POS`` / ``LIFT_POS`` in ``hexapod_binary_env_cfg.py``); the two spine joints
-are driven by an open-loop sinusoid the policy never sees
-(``SpineSineAction``: ``q(t) = offset + amplitude * sin(2*pi*t / period + phase)`` with
-``t`` the elapsed episode time).
+are driven by a fixed analytic traveling body wave the policy never sees
+(``SpineSineAction``, playing the "CANONICAL SPINE-WAVE DEFINITION" / Wave 1 block in
+``hexapod_binary_env_cfg.py``). Wave 1 is a single harmonic, period ``GAIT_PERIOD_S`` =
+1.0 s, magnitude ``A_SPINE`` = ``deg2rad(70) * 12/16`` = ``deg2rad(52.5)`` =
+0.9162978573 rad (exact open-loop gait-generator value) carried with the HexapI global
+spine-joint-sign flip (``-A_SPINE``), and shared offset 0.0 rad on both spine joints; only
+the phase differs -- ``FrontLink_Joint`` is a pure sine ``-A_SPINE*sin(w*t)`` and
+``BackLink_Joint`` is the same shape shifted +pi/2 (``-A_SPINE*sin(w*t + pi/2)`` ==
+``-A_SPINE*cos(w*t)``), a quarter-cycle wave travelling down the body. It is NOT fitted to
+any CSV (the earlier fit to ``tripod_B11BL0_sim.csv`` is gone). The deployment YAML's
+``binary.spine.amplitude`` must therefore be negative on both joints.
+
+Because Wave 1 is single-harmonic the per-joint ``amplitude`` / ``phase`` / ``offset``
+representation below maps to it directly -- no Fourier refactor needed:
+``q(t) = offset + amplitude * sin(2*pi*t / period + phase)`` with ``t`` the elapsed
+episode time, ``FrontLink`` phase 0.0 and ``BackLink`` phase pi/2.
 
 On hardware the exported ONNX graph emits the six-dim ``+-1`` bit vector directly (argmax
 over the 64 gait patterns, decoded to bits -- see
@@ -34,7 +47,12 @@ import numpy as np
 
 @dataclass(frozen=True)
 class BinarySpineCfg:
-    """Per-joint sinusoid parameters for the two scripted spine joints.
+    """Per-joint parameters for the fixed analytic traveling spine wave.
+
+    Mirrors Wave 1 ("CANONICAL SPINE-WAVE DEFINITION") in ``hexapod_binary_env_cfg.py``:
+    a single-harmonic wave, ``q(t) = offset + amplitude * sin(2*pi*t / period + phase)``,
+    with shared amplitude/offset/period and only the phase differing between joints
+    (``BackLink`` = ``FrontLink`` + pi/2). Not fitted to a CSV.
 
     ``amplitude`` / ``phase`` / ``offset`` are ``{joint_name: value}`` maps (radians);
     ``joint_name`` uses the sim-DOF names (``BackLink`` / ``FrontLink``, no ``_Joint``
