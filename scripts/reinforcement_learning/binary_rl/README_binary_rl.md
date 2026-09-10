@@ -114,3 +114,9 @@ a policy that falls at 0.16 s and slides can still register 0.5012 BL/cycle.
 - QR-DQN checkpoints must be passed through `fold_qrdqn_meanQ.py` before the shared
   evaluator can load them.
 - Checkpoints, evaluation JSON and videos are not committed here.
+
+## Meeting archives
+
+The [September 9, 2026 meeting archive](../../../docs/reports/2026-09-09/README.md)
+links the historical reports, chart data, speech notes, scripts, and videos as
+release attachments. Read its audit notes before using historical conclusions.
