@@ -52,6 +52,7 @@ add_common_cli(parser)
 add_mask_cli(parser)
 # PPO hyperparameters (aligned to HexapodGoalPPORunnerCfg unless noted)
 parser.add_argument("--rollouts", type=int, default=96)
+parser.add_argument("--no_value_preprocessor", action="store_true", help="Disable value scaling for reward experiments")
 parser.add_argument("--learning_epochs", type=int, default=5)
 parser.add_argument("--mini_batches", type=int, default=4)
 parser.add_argument("--discount", type=float, default=0.9995)
@@ -153,7 +154,7 @@ agent_cfg = PPO_CFG(
     observation_preprocessor_kwargs={"size": env.observation_space, "device": device},
     state_preprocessor=RunningStandardScaler,
     state_preprocessor_kwargs={"size": env.state_space or env.observation_space, "device": device},
-    value_preprocessor=RunningStandardScaler,
+    value_preprocessor=None if args.no_value_preprocessor else RunningStandardScaler,
     value_preprocessor_kwargs={"size": 1, "device": device},
 )
 experiment_name = args.experiment_name or (f"ppo_masked_{args.task}" if args.mask else f"ppo_{args.task}")
