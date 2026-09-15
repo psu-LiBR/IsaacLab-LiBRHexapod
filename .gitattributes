@@ -17,3 +17,5 @@ source/isaaclab_tasks/test/golden_images/**/*.png filter=lfs diff=lfs merge=lfs 
 *.sh text eol=lf
 
 friday-report-20260915/videos/*.mp4 -filter -diff -merge
+
+reward-tuning-v1-preliminary-6algorithms-4rewards/videos/*.mp4 -filter -diff -merge
