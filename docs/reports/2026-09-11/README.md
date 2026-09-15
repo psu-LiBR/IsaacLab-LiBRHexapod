@@ -20,7 +20,7 @@ The maintained algorithm set is DQN, DDQN, PPO, masked PPO, SAC-D, and continuou
 - Updated extended-quadruped dynamics and analytic RL spine wave (Wave 1).
 - Six binary leg-contact decisions encoded as one `Discrete(64)` action.
 - Training static and dynamic friction randomized at startup in `[0.18, 0.25]`.
-- The recorded primary evaluation used static/dynamic friction `0.215`; this is the value in the source manifest and is retained as historical metadata.
+- The recorded primary evaluation used static/dynamic friction `0.21`, matching the `m021*` evaluation files and the Friday report. The source manifest still contains an earlier `0.215` launch metadata value; it is historical and must not be presented as the final evaluation condition.
 - 64 parallel environments, 300 steps, `dt=0.02 s`, no resets during measurement, six-second rollout.
 - Body-length basis recorded by the evaluator: `0.315 m`.
 - Training budget: 192,000 vector steps per run; checkpoint interval: 2,000 steps.
@@ -35,7 +35,7 @@ The maintained algorithm set is DQN, DDQN, PPO, masked PPO, SAC-D, and continuou
 
 Read `scripts/reinforcement_learning/binary_rl/README_binary_rl.md` first. It defines the action encoding, observations, spine waves, training commands, evaluation flags, checkpoint handling, and ONNX export path. Use the exact source commits and manifest entries above; do not infer a checkpoint from a video filename.
 
-The local experiment archive contains checkpoints, evaluation JSON/NPZ files, TensorBoard exports, report figures, and regular rendered videos. Because these artifacts are large, they are kept as release/download artifacts rather than committed into the source tree. Their local root is `A线_Jackson六足RL/04_环境与训练/新版训练_20260911/`.
+The local experiment archive contains checkpoints, evaluation JSON/NPZ files, TensorBoard exports, report figures, and regular rendered videos. Because these artifacts are large, they are kept as release/download artifacts rather than committed into the source tree. Their local root is `A线_Jackson六足RL/04_环境与训练/新版训练_20260911/`. Files or metadata carrying `0.215` are legacy/supplemental and must be labeled separately.
 
 ## Interpretation boundary
 
