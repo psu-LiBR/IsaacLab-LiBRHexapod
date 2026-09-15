@@ -171,12 +171,15 @@ All reported numbers come from `eval_protocol.py`, run identically for every met
 > friction-sweep / equal-budget tables in `RESULTS_binary_rl.md` **still must be
 > re-measured**.
 >
-> An end-to-end audit of the BL/cycle **metric** (prompted by a 0.95 BL/cycle gait that
-> looked ~0.5 on video, then by a tripod anchor that dropped to ~0.05) found **no
-> arithmetic bug**: `step_dt` is genuinely 0.02 s (`sim.dt` 0.005 × `decimation` 4), the
-> window is exactly 6.0 cycles, `BODY_LENGTH_M` is 0.315, and `x_displacement_m` is the
-> per-env mean *net* forward displacement (cross-checked against the `progress` reward
-> term). Two real (non-metric) bugs **were** found in the tripod baseline and fixed
+> An end-to-end audit of the raw BL/cycle **arithmetic** (prompted by a 0.95 BL/cycle
+> gait that looked ~0.5 on video, then by a tripod anchor that dropped to ~0.05) found
+> no arithmetic error in `step_dt`, the saved net displacement, or the 0.315 m basis:
+> `step_dt` is genuinely 0.02 s (`sim.dt` 0.005 × `decimation` 4), the window is exactly
+> 6.0 s, `BODY_LENGTH_M` is 0.315, and `x_displacement_m` is the per-env mean *net*
+> forward displacement (cross-checked against the `progress` reward term). The extra
+> statement that this is exactly **6 formal learned gait cycles** remains a protocol
+> hypothesis because the learned-policy cycle definition still needs confirmation.
+> Two real (non-metric) bugs **were** found in the tripod baseline and fixed
 > 2026-09-10: (1) `play_discrete_closeup.py --gait_npz tripod` was playing the RL
 > traveling wave (Wave 1) on the tripod leg schedule — it now swaps in Wave 2 like
 > `eval_protocol.py`; (2) Wave 2 is now an **anti-phase** analytic wave

@@ -61,11 +61,11 @@ with the two constants (both overridable on the command line):
       length of the updated HexapI USD, 0.315 m (per Jackson, 2026-09).  This is the
       quantity the BL/cycle metric should divide by (x_displacement_m / BODY_LENGTH_M /
       n_cycles).
-  GAIT_PERIOD_S  = 1.0    one gait cycle, s.  Not a choice: the env hard-codes it as
-      ``GAIT_PERIOD_S`` in hexapod_binary_env_cfg.py, the scripted spine sinusoid runs at
-      exactly ``sin(2*pi*t / 1.0 s)``, and the reference tripod CSV is 50 rows x 0.02 s
-      (51st row duplicates the 1st) = one cycle.  step_dt is 0.02 s, so the default
-      300-step window is exactly 6.00 s = 6.00 cycles and the conversion is x / 1.89.
+  GAIT_PERIOD_S  = 1.0    current fixed-spine-period hypothesis, s.  The env hard-codes
+      the scripted spine sinusoid at ``sin(2*pi*t / 1.0 s)`` and the reference tripod CSV
+      is 50 rows x 0.02 s (51st row duplicates the 1st).  This is direct evidence for a
+      1-second spine clock, but the formal learned-policy gait-cycle definition still
+      requires confirmation.  The CLI value is therefore explicit and overridable.
 
 Caveat, on purpose in this docstring so it travels with the number: the paper values
 (tripod/b11bl0 0.48, extquad 0.41, lleg30 0.61, lleg35 0.56 BL/cycle) are *real hardware*
@@ -87,9 +87,13 @@ design -- see the note above the tripod baseline run below.
 With the anti-phase Wave 2 the tripod anchor comes out around 0.44 BL/cycle forward
 (+0.83 m over the 6-cycle window, straightness ~0.98), in line with the ~0.4 of the
 hardware.  The earlier ~0.05-0.09 BL/cycle recorded here was the *in-phase* Wave 2 bug --
-the two byte-identical CSV spine columns barely bent the body.  ``step_dt`` (0.02 s),
-``n_cycles`` (6.0) and ``BODY_LENGTH_M`` (0.315) are all correct, and a ``--spine_gain 0``
-run shows the leg bits alone net ~0 so almost all of the anchor's travel is the body wave.
+the two byte-identical CSV spine columns barely bent the body.  The raw timing and
+arithmetic are verified for this protocol: ``step_dt`` is 0.02 s, the window is 6.0 s,
+and ``BODY_LENGTH_M`` is 0.315.  The value ``n_cycles=6`` still depends on treating the
+fixed 1.0 s spine clock as the formal gait-cycle definition; that learned-policy
+convention remains an explicit hypothesis until Jackson confirms it.  A
+``--spine_gain 0`` run shows the leg bits alone net ~0 so almost all of the anchor's
+travel is the body wave.
 
 Two more things this number is NOT, kept here so they travel with it:
 * It is measured over a NO-RESET window (every termination is neutralised -- see the
