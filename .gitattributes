@@ -15,3 +15,5 @@ source/isaaclab_tasks/test/golden_images/**/*.png filter=lfs diff=lfs merge=lfs 
 
 *.bat text eol=crlf
 *.sh text eol=lf
+
+friday-report-20260915/videos/*.mp4 -filter -diff -merge
