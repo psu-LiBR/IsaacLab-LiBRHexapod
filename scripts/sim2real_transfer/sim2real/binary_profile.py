@@ -17,8 +17,15 @@ spine-joint-sign flip (``-A_SPINE``), and shared offset 0.0 rad on both spine jo
 the phase differs -- ``FrontLink_Joint`` is a pure sine ``-A_SPINE*sin(w*t)`` and
 ``BackLink_Joint`` is the same shape shifted +pi/2 (``-A_SPINE*sin(w*t + pi/2)`` ==
 ``-A_SPINE*cos(w*t)``), a quarter-cycle wave travelling down the body. It is NOT fitted to
-any CSV (the earlier fit to ``tripod_B11BL0_sim.csv`` is gone). The deployment YAML's
-``binary.spine.amplitude`` must therefore be negative on both joints.
+any CSV (the earlier fit to ``tripod_B11BL0_sim.csv`` is gone).
+
+This is the *sim-side* sign convention -- it does not automatically carry over to the
+deployment YAML. This robot's physical spine motors are mounted upside-down relative to
+the sim convention, so ``binary.spine.amplitude`` in ``deployment.binary.yaml`` needs a
+second, real-mount-only sign flip on top of the above (i.e. **positive** ``+A_SPINE`` on
+both joints, confirmed on hardware 2026-09-15) -- not simply mirroring sim's ``-A_SPINE``.
+The phase relationship (BackLink leads FrontLink by +pi/2) was separately confirmed
+correct as-is and needs no adjustment.
 
 Because Wave 1 is single-harmonic the per-joint ``amplitude`` / ``phase`` / ``offset``
 representation below maps to it directly -- no Fourier refactor needed:

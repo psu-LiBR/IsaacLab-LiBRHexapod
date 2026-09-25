@@ -104,6 +104,30 @@ with ``--gait_csv_pos`` (that path forces the continuous velocity task, which ha
 Runs on the Play variant of the task and records an MP4 through the regular render
 pipeline (real robot mesh + ground plane), camera tracking the robot root.
 
+Sim-to-real diagnostic export (opt-in: ``--checkpoint`` + ``--export_gait_csv PATH``)
+--------------------------------------------------------------------------------------
+Writes a real-robot-units CSV of exactly what the loaded checkpoint commands for one
+gait cycle (50 steps at 50 Hz control / ``GAIT_PERIOD_S`` = 1.0 s), by default the first
+50 steps after ``env.reset()`` -- the same rollout that produces this script's video.
+Each row is converted through the identical ``scripts/sim2real_transfer`` path a real
+deployment uses (``sim2real.binary_profile.BinaryActionAdapter.targets_sim`` ->
+``sim2real.joint_mapping.JointMapping.clip_to_soft_limits`` / ``sim_rad_to_real_rad``),
+so the CSV can be replayed open-loop on the physical servos to check whether the sim
+video's motion reproduces on hardware -- isolating a policy/conversion bug from a
+downstream closed-loop-control/sensor/localization bug. Only meaningful with
+``--checkpoint``; rejected together with ``--gait_npz``/``--gait_csv``/``--gait_csv_pos``
+(those are already literal, human-readable CSVs/NPZs). ``--deployment_config`` selects
+the sim2real YAML used for the conversion (default:
+``scripts/sim2real_transfer/config/deployment.binary.example.yaml``).
+``--gait_csv_start_step`` (default 0) moves the 50-step recording window later in the
+rollout, e.g. ``--gait_csv_start_step 50`` records the SECOND gait cycle instead of the
+first -- useful since ``reset_base`` does not randomize spawn height, so every episode
+free-falls ~0.145 m onto its legs before settling, and cycle 1 may still carry that
+landing transient. The CSV's ``t_s`` column is always absolute elapsed time since reset
+(``step_index * step_dt``), never renormalized to the window start. A permanent safety
+check (see the per-step loop) warns if env 0 resets/terminates before the recording
+window closes, since that would mean the window is not one continuous rollout.
+
 Run (from IsaacLab root, .venv active):
   isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
       --gait_npz tripod --video_length 600
@@ -111,6 +135,9 @@ Run (from IsaacLab root, .venv active):
       --checkpoint runs_binary/<exp>/checkpoints/best_agent.pt --video_length 600
   isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
       --gait_csv_pos "hexapod-assets/Sim Gaits/forward3_lleg35_amp65_sim.csv" --video_length 600
+  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
+      --checkpoint runs_binary/<exp>/checkpoints/best_agent.pt ^
+      --export_gait_csv runs_binary/<exp>/onnx_bundle/BEST_gait.csv
 """
 
 import argparse
@@ -179,6 +206,31 @@ parser.add_argument(
 )
 parser.add_argument("--v_min", type=float, default=-10.0, help="C51 checkpoints only: support lower bound")
 parser.add_argument("--v_max", type=float, default=10.0, help="C51 checkpoints only: support upper bound")
+parser.add_argument(
+    "--export_gait_csv",
+    default="",
+    help="opt-in sim-to-real diagnostic: write a real-robot-units CSV of the loaded "
+    "--checkpoint's own commanded gait for the first 50 steps after reset (one gait "
+    "cycle). Only valid with --checkpoint; rejected with --gait_npz/--gait_csv/"
+    "--gait_csv_pos (those are already literal CSVs/NPZs). See the module docstring.",
+)
+parser.add_argument(
+    "--deployment_config",
+    default="",
+    help="sim2real deployment YAML used to convert --export_gait_csv rows to real-robot "
+    "units (default: scripts/sim2real_transfer/config/deployment.binary.example.yaml, "
+    "resolved relative to the repo root). Ignored unless --export_gait_csv is given.",
+)
+parser.add_argument(
+    "--gait_csv_start_step",
+    type=int,
+    default=0,
+    help="opt-in with --export_gait_csv: env-step index (0-based) at which to start "
+    "recording, instead of the default 0 (immediately after reset). E.g. 50 records the "
+    "SECOND gait cycle (steps 50-99) rather than the first. The CSV's t_s column stays "
+    "absolute elapsed time since reset (step_index * step_dt) -- it is NOT renormalized to "
+    "start at 0. Only valid together with --export_gait_csv.",
+)
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 
@@ -192,6 +244,23 @@ if args.receding_horizon and args.gait_csv_pos:
         "continuous velocity task, which has no pose_command)"
     )
 
+if args.export_gait_csv:
+    if not args.checkpoint:
+        parser.error(
+            "--export_gait_csv requires --checkpoint (it exports that checkpoint's own "
+            "greedy-policy commands, not an open-loop gait replay)"
+        )
+    if args.gait_npz or args.gait_csv or args.gait_csv_pos:
+        parser.error(
+            "--export_gait_csv cannot be combined with --gait_npz/--gait_csv/--gait_csv_pos "
+            "-- those flags already replay a literal CSV/NPZ gait you can read directly"
+        )
+
+if args.gait_csv_start_step != 0 and not args.export_gait_csv:
+    parser.error("--gait_csv_start_step is only meaningful together with --export_gait_csv")
+if args.gait_csv_start_step < 0:
+    parser.error("--gait_csv_start_step must be >= 0")
+
 # --gait_csv_pos needs a continuous-JointPositionAction env (the binary env's action space
 # is 6 leg bits + a zero-width spine term). Default to the same env playReal.py uses unless
 # the caller pinned --task explicitly.
@@ -203,7 +272,9 @@ args.enable_cameras = True
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
 
+import csv
 import os
+import sys
 
 import gymnasium as gym
 import numpy as np
@@ -219,6 +290,7 @@ except ImportError:
 from discrete_action_wrapper import DiscreteBitsActionWrapper
 
 from isaaclab_tasks.contrib.velocity.config.hexapod.hexapod_binary_env_cfg import (
+    GAIT_PERIOD_S,
     TRIPOD_SPINE_COS_COEF,
     TRIPOD_SPINE_OFFSET,
     TRIPOD_SPINE_SIN_COEF,
@@ -440,6 +512,49 @@ if args.checkpoint:
             q = (torch.softmax(q.view(-1, 64, n_atoms), dim=-1) * support).sum(-1)
         return torch.argmax(q, dim=1)
 
+    # --- opt-in: build the sim2real conversion path for --export_gait_csv ---------------
+    # See the module docstring. Imported lazily (only when requested) since sim2real is a
+    # separate plain-Python package with its own dependency footprint.
+    _export_adapter = None
+    _export_mapping = None
+    if args.export_gait_csv:
+        _sim2real_dir = os.path.abspath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "scripts", "sim2real_transfer")
+        )
+        if _sim2real_dir not in sys.path:
+            sys.path.insert(0, _sim2real_dir)
+        from sim2real.binary_profile import BinaryActionAdapter
+        from sim2real.deployment_config import load_deployment_config
+        from sim2real.joint_mapping import JointMapping
+
+        _repo_root = os.path.abspath(os.path.join(_sim2real_dir, "..", ".."))
+        _deploy_cfg_path = args.deployment_config or os.path.join(
+            _repo_root, "scripts", "sim2real_transfer", "config", "deployment.binary.example.yaml"
+        )
+        _deploy_cfg = load_deployment_config(_deploy_cfg_path)
+        if _deploy_cfg.binary is None:
+            raise SystemExit(
+                f"--export_gait_csv: {_deploy_cfg_path} has no 'binary' section -- pass a "
+                "binary-profile deployment config (see deployment.binary.example.yaml)"
+            )
+        # Safety check: the exported CSV's raw leg-bit columns are recorded straight from
+        # DiscreteBitsActionWrapper.decode() (bit i -> hardware bit i+1, fixed order), so the
+        # deployment config's leg_joint_order MUST agree with that order, or the CSV's leg-bit
+        # columns and the angles converted from them would silently be mislabeled.
+        _expected_leg_order = ["FrontRight", "FrontLeft", "MiddleRight", "MiddleLeft", "BackRight", "BackLeft"]
+        if list(_deploy_cfg.binary.leg_joint_order) != _expected_leg_order:
+            raise SystemExit(
+                f"--export_gait_csv: {_deploy_cfg_path} binary.leg_joint_order "
+                f"{_deploy_cfg.binary.leg_joint_order} != the DiscreteBitsActionWrapper bit order "
+                f"{_expected_leg_order} -- the CSV leg-bit columns would be silently mislabeled"
+            )
+        _export_adapter = BinaryActionAdapter(_deploy_cfg.binary, _deploy_cfg.joints.sim_order)
+        _export_mapping = JointMapping(_deploy_cfg.joints)
+        _export_front_real_idx = _deploy_cfg.joints.real_order.index("FrontLink")
+        _export_back_real_idx = _deploy_cfg.joints.real_order.index("BackLink")
+        _export_leg_real_idx = {name: _deploy_cfg.joints.real_order.index(name) for name in _expected_leg_order}
+        print(f"[play_discrete_closeup] --export_gait_csv: loaded deployment config {_deploy_cfg_path}")
+
 elif args.gait_csv_pos:
     # ----- open-loop raw-CSV joint-position replay (walking), no network -----
     # See the module docstring for the conversion; constants mirror hexapod_binary_env_cfg.py.
@@ -608,6 +723,34 @@ def _follow_cam():
         set_kit_renderer_camera_view(eye=eye_w, target=tgt_w, camera_prim_path="/OmniverseKit_Persp")
 
 
+# --- opt-in: --export_gait_csv bookkeeping (see module docstring) ----------------------
+_export_rows: list[dict] | None = None
+_export_start_step = _export_end_step = _export_safety_end_step = None
+_export_env0_reset_steps: list[int] = []
+if args.export_gait_csv:
+    _export_step_dt = float(base.step_dt)
+    _export_num_steps = round(GAIT_PERIOD_S / _export_step_dt)
+    if abs(_export_num_steps * _export_step_dt - GAIT_PERIOD_S) > 1e-6:
+        print(
+            f"[play_discrete_closeup] WARNING: --export_gait_csv: env step_dt={_export_step_dt:.6f}s does "
+            f"not evenly divide GAIT_PERIOD_S={GAIT_PERIOD_S}s ({_export_num_steps} steps covers "
+            f"{_export_num_steps * _export_step_dt:.4f}s)"
+        )
+    _export_start_step = args.gait_csv_start_step
+    _export_end_step = _export_start_step + _export_num_steps  # exclusive
+    # Safety window covers both "the first 100 steps" (the usual landing-transient concern)
+    # AND the actual export window itself, whichever is larger -- so a --gait_csv_start_step
+    # past 100 is still fully covered.
+    _export_safety_end_step = max(100, _export_end_step)
+    _export_rows = []
+    _cycle_note = "one gait cycle from reset" if _export_start_step == 0 else "a LATER cycle, not the first"
+    print(
+        f"[play_discrete_closeup] --export_gait_csv: recording {_export_num_steps} steps "
+        f"(steps {_export_start_step}-{_export_end_step - 1}, "
+        f"t={_export_start_step * _export_step_dt:.2f}-{(_export_end_step - 1) * _export_step_dt:.2f}s, "
+        f"{_cycle_note}) from env 0"
+    )
+
 obs, _ = env.reset()
 total_rew = torch.zeros(env.num_envs, device=device)
 action_counts = torch.zeros(64, dtype=torch.long)
@@ -619,7 +762,34 @@ for t in range(args.steps):
         a = policy_fn(obs)
     if not args.gait_csv_pos:  # discrete int actions only
         action_counts += torch.bincount(a.cpu(), minlength=64)
+    if _export_rows is not None and _export_start_step <= t < _export_end_step:
+        # env-0 bits, exactly as commanded this step -- same policy_fn call as the video.
+        bits_pm1 = env.decode(a)[0].detach().cpu().numpy()  # [6] +-1, DiscreteBitsActionWrapper order
+        t_seconds = t * _export_step_dt  # absolute elapsed time since reset, not window-relative
+        sim_target = _export_adapter.targets_sim(bits_pm1, t_seconds)
+        real_rad = _export_mapping.sim_rad_to_real_rad(_export_mapping.clip_to_soft_limits(sim_target))
+        raw_bits01 = (bits_pm1 > 0.0).astype(int)
+        row = {"step": t, "t_s": t_seconds}
+        for _name, _bit in zip(_expected_leg_order, raw_bits01):
+            row[f"{_name}_bit"] = int(_bit)
+        row["FrontLink_real_rad"] = float(real_rad[_export_front_real_idx])
+        row["BackLink_real_rad"] = float(real_rad[_export_back_real_idx])
+        for _name in _expected_leg_order:
+            row[f"{_name}_real_rad"] = float(real_rad[_export_leg_real_idx[_name]])
+        _export_rows.append(row)
     obs, rew, terminated, truncated, _ = env.step(a)
+    # --- permanent safety check (only active with --export_gait_csv): a reset/termination
+    # of env 0 inside the safety window means the requested export window is not part of one
+    # continuous rollout, and the resulting CSV would be misleading. Cheap (two bool reads/
+    # step), so this stays on for every future --export_gait_csv run, not just this one.
+    if _export_safety_end_step is not None and t < _export_safety_end_step:
+        if bool(terminated[0]) or bool(truncated[0]):
+            _export_env0_reset_steps.append(t)
+            print(
+                f"[play_discrete_closeup] WARNING: env 0 terminated/truncated at step {t} "
+                f"(within safety window steps 0-{_export_safety_end_step - 1}) -- the requested "
+                "export window is NOT part of one continuous rollout; the CSV may be misleading"
+            )
     if args.receding_horizon:
         _advance_receding_goal()
         # rebuild base-frame command + obs from the new world target (dt=0.0: nothing
@@ -637,6 +807,16 @@ print(
     f"[play_discrete] {args.steps} steps x {env.num_envs} envs | mean total reward {total_rew.mean().item():+.3f} "
     f"| terminated {terminated_n} truncated {truncated_n}"
 )
+if _export_safety_end_step is not None:
+    if _export_env0_reset_steps:
+        print(
+            f"[play_discrete_closeup] WARNING: env 0 reset/terminated within steps "
+            f"0-{_export_safety_end_step - 1} at step(s) {_export_env0_reset_steps}"
+        )
+    else:
+        print(
+            f"[play_discrete_closeup] env 0: no reset/termination detected within steps 0-{_export_safety_end_step - 1}"
+        )
 if not args.gait_csv_pos:
     top = torch.topk(action_counts, 8)
     print(
@@ -644,6 +824,20 @@ if not args.gait_csv_pos:
         {f"{int(i):06b}": int(c) for i, c in zip(top.indices, top.values)},
     )
 print(f"[play_discrete] video dir: {out_dir}")
+
+if _export_rows is not None:
+    _export_dir = os.path.dirname(os.path.abspath(args.export_gait_csv))
+    if _export_dir:
+        os.makedirs(_export_dir, exist_ok=True)
+    _fieldnames = list(_export_rows[0].keys()) if _export_rows else []
+    with open(args.export_gait_csv, "w", newline="") as _f:
+        _writer = csv.DictWriter(_f, fieldnames=_fieldnames)
+        _writer.writeheader()
+        _writer.writerows(_export_rows)
+    print(
+        f"[play_discrete_closeup] --export_gait_csv: wrote {len(_export_rows)} rows -> "
+        f"{os.path.abspath(args.export_gait_csv)}"
+    )
 
 env.close()
 simulation_app.close()

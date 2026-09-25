@@ -461,6 +461,7 @@ def record_videos(args: argparse.Namespace, rows: list[dict], best: dict | None,
             continue
         tag = f"{r['algo']}_{r['iter']}"
         stage_dir = vids / tag
+        gait_csv_path = stage_dir / f"{tag}_gait.csv"
         cmd = [
             *launcher_prefix(),
             str(HERE / "play_discrete_closeup.py"),
@@ -479,6 +480,8 @@ def record_videos(args: argparse.Namespace, rows: list[dict], best: dict | None,
             "--out_dir",
             str(stage_dir),
         ]
+        if args.export_gait_csv:
+            cmd += ["--export_gait_csv", str(gait_csv_path)]
         rc = run_streamed(cmd, vids / f"{tag}.log")
         mp4s = sorted(stage_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime) if stage_dir.exists() else []
         if not mp4s:
@@ -489,6 +492,14 @@ def record_videos(args: argparse.Namespace, rows: list[dict], best: dict | None,
         shutil.copy2(mp4s[-1], dest)
         made.append(dest)
         print(f"[pipeline] video: {dest}")
+        if args.export_gait_csv:
+            if gait_csv_path.exists():
+                gait_dest = bundle / f"{prefix}{tag}_gait.csv"
+                shutil.copy2(gait_csv_path, gait_dest)
+                made.append(gait_dest)
+                print(f"[pipeline] gait csv: {gait_dest}")
+            else:
+                print(f"[pipeline] gait csv: missing for {r['policy']} (rc={rc}); see {vids / (tag + '.log')}")
     return made
 
 
@@ -696,6 +707,14 @@ def main() -> None:
     )
     p.add_argument("--video-length", type=int, default=600, help="video length in env steps (600 = 12 s at 50 Hz)")
     p.add_argument("--video-num-envs", type=int, default=16)
+    p.add_argument(
+        "--export-gait-csv",
+        action="store_true",
+        help="alongside each rendered video, also write play_discrete_closeup.py's "
+        "--export_gait_csv sim-to-real diagnostic CSV (that checkpoint's own commanded gait "
+        "for one cycle, in real-robot units) next to the MP4 in the bundle. No-op if "
+        "--video is off.",
+    )
     p.add_argument("--skip-train", action="store_true")
     p.add_argument("--skip-eval", action="store_true")
     p.add_argument("--skip-export", action="store_true")

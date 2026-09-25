@@ -27,7 +27,9 @@ controlled by the policy. There are **two distinct spine waves**, deliberately n
   the HexapI global spine-joint-sign flip, so the `sin_coef`/`cos_coef` hold `−A_SPINE`
   (corrected 2026-09-10 — a positive coefficient walked every re-evaluated policy backward
   from the goal). Shared offset 0.0, only the phase differs by a quarter cycle — a wave
-  travelling down the body. The BackLink-leads-FrontLink phase direction is still unverified.
+  travelling down the body. The BackLink-leads-FrontLink phase direction was confirmed correct on
+  real hardware 2026-09-15 (physical spine motion matched against the training video/eval with
+  this phase relationship unchanged) — no flip needed.
 - **Wave 2 — the tripod-baseline wave**: an **anti-phase** body wave, regenerated
   analytically from the user's MATLAB gait generator. `FrontLink_Joint` and `BackLink_Joint`
   are π out of phase, so `BackLink = −FrontLink` — a traveling / S-bend wave, not a rigid
@@ -297,6 +299,8 @@ isaaclab.bat -p scripts/reinforcement_learning/binary_rl/export_binary_onnx.py ^
   --checkpoint runs_binary/ppo_masked_s42/checkpoints/agent_100000.pt ^
   --out policies/ppo_masked_s42.onnx
 ```
+
+Diagnostic shortcut: `play_discrete_closeup.py --checkpoint <ckpt> --export_gait_csv <out.csv>` writes a real-robot-units CSV of that checkpoint's own commanded gait for one cycle (50 steps), converted through the same `sim2real` path as the ONNX deployment, so it can be replayed open-loop on the physical servos to isolate a policy/conversion bug from a downstream control/sensor bug.
 
 On the deployment host (`scripts/sim2real_transfer/`, plain Python, no Isaac Sim):
 

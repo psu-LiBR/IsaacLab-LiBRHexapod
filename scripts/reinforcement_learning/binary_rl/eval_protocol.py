@@ -42,8 +42,19 @@ Reported per policy
     frac_5plus_stance     fraction of steps with >=5 feet down  <-- standing detector
     max_step_jump_m       teleport sentinel; must stay small
     disp_std_m            spread across envs
-    x_disp_BL_per_cycle   x_displacement_m expressed in the group's standard unit,
-                          body lengths per gait cycle (see "BL/cycle" below)
+    x_disp_BL_per_cycle   x_displacement_m expressed in the group's standard unit, body
+                          lengths per gait cycle, where "cycle" means the EXACT scripted-
+                          spine period GAIT_PERIOD_S (see "BL/cycle" below); never null
+    x_disp_BL_per_s       body lengths per second -- period-independent fallback, added
+                          2026-09-14, always computable (see "BL/cycle" below)
+    leg_toggle_hz_realized  DIAGNOSTIC ONLY, NOT used for x_disp_BL_per_cycle: measured
+                          lift->stance rising-edge rate (Hz), averaged over every (env,
+                          leg) pair in the window. Compare against the spine's fixed
+                          1.0 Hz clock to gauge leg-bit chattering / gait pathology; added
+                          2026-09-14 as a raw count, reworked into this Hz diagnostic
+                          2026-09-15 after briefly (and wrongly) serving as the
+                          x_disp_BL_per_cycle denominator -- see "Realized vs. assumed
+                          cycle count" below
 
 BL/cycle -- the group's standard unit (added 2026-08-31)
 -------------------------------------------------------
@@ -52,20 +63,34 @@ cycle*, not metres per window.  This column is a pure unit change of
 ``x_displacement_m``; it is derived, it adds no new measurement, and it does not
 enter any judgement in this script.
 
-    x_disp_BL_per_cycle = x_displacement_m / BODY_LENGTH_M / n_cycles
-    n_cycles            = steps * step_dt / GAIT_PERIOD_S
+    x_disp_BL_per_cycle = x_displacement_m / BODY_LENGTH_M / n_spine_cycles
+    n_spine_cycles      = steps * step_dt / GAIT_PERIOD_S -- the EXACT number of scripted-
+                          spine cycles elapsed in the window.  Not an assumption:
+                          GAIT_PERIOD_S is a hard-coded, non-learnable constant the
+                          scripted spine (SpineSineAction, a zero-width action term the
+                          6-bit leg policy cannot influence) runs on regardless of what
+                          any policy does, so this count is exact for every policy in the
+                          sweep, learned or scripted alike.
+
+(a measured-leg-toggle-rate denominator was tried in its place on 2026-09-14 and reverted
+2026-09-15 as wrong; see "Realized vs. assumed cycle count" below for why.  The measured
+rate is still reported, as a diagnostic only, as ``leg_toggle_hz_realized``.)
 
 with the two constants (both overridable on the command line):
 
   BODY_LENGTH_M  = 0.315  the robot's body length, m.  Source: the front-to-rear leg
       length of the updated HexapI USD, 0.315 m (per Jackson, 2026-09).  This is the
       quantity the BL/cycle metric should divide by (x_displacement_m / BODY_LENGTH_M /
-      n_cycles).
-  GAIT_PERIOD_S  = 1.0    one gait cycle, s.  Not a choice: the env hard-codes it as
-      ``GAIT_PERIOD_S`` in hexapod_binary_env_cfg.py, the scripted spine sinusoid runs at
-      exactly ``sin(2*pi*t / 1.0 s)``, and the reference tripod CSV is 50 rows x 0.02 s
-      (51st row duplicates the 1st) = one cycle.  step_dt is 0.02 s, so the default
-      300-step window is exactly 6.00 s = 6.00 cycles and the conversion is x / 1.89.
+      n_spine_cycles).
+  GAIT_PERIOD_S  = 1.0    one gait cycle, s.  This is a fact about the SCRIPTED SPINE
+      only (and, by construction, about the open-loop CSV / phase-table baselines): the
+      env hard-codes it as ``GAIT_PERIOD_S`` in hexapod_binary_env_cfg.py, the scripted
+      spine sinusoid runs at exactly ``sin(2*pi*t / 1.0 s)``, and the reference tripod CSV
+      is 50 rows x 0.02 s (51st row duplicates the 1st) = one cycle.  step_dt is 0.02 s,
+      so the default 300-step window is exactly 6.00 s = 6.00 cycles and the conversion is
+      x / 1.89.  This is the sole denominator behind ``x_disp_BL_per_cycle`` -- for every
+      policy in the sweep, learned or scripted -- see "Realized vs. assumed cycle count"
+      below for why a per-policy measured leg-toggle rate is not used instead.
 
 Caveat, on purpose in this docstring so it travels with the number: the paper values
 (tripod/b11bl0 0.48, extquad 0.41, lleg30 0.61, lleg35 0.56 BL/cycle) are *real hardware*
@@ -107,6 +132,102 @@ Two more things this number is NOT, kept here so they travel with it:
   1.189 vs. the pre-2026-09 tables: a checkpoint recorded at 0.95 BL/cycle on the old
   0.265 m basis is 0.80 on the current 0.315 m basis (0.95 * 0.265 / 0.315).  The
   displacement in metres is unchanged; only the unit basis moved.
+
+Realized vs. assumed cycle count (found 2026-09-14)
+-----------------------------------------------------
+What was found: ``GAIT_PERIOD_S`` (and the ``n_cycles`` it fed) is a fact about the
+SCRIPTED SPINE only -- ``SpineSineAction`` runs it on a fixed, uncontrollable 1.0 s clock,
+and the open-loop baselines (``BASE_tripod_csv_bits`` and any ``'bits'``-type phase-table
+policy, see ``make_bits_policy()``) are periodicity-locked to 1 Hz *by construction* of
+their source table.  The six LEG bits are not: each is an independent
+``BinaryJointPositionAction`` term the policy re-decides fresh every 50 Hz control step
+(``discrete_action_wrapper.DiscreteBitsActionWrapper``), with no debounce, no
+periodicity constraint, and no coupling to the spine's clock.  Dividing a trained
+policy's displacement by an ASSUMED 1 Hz cycle count silently assumes its legs complete
+one full stance/lift cycle every second -- true for the spine and the open-loop
+baselines, never guaranteed for a policy that learned its own toggle cadence.
+
+Evidence (measured live, RTX 4060, this script with a temporary rising-edge counter that
+became the fix below): ``--num_envs 4 --steps 150`` (3.00 s window), seed 7, warmup 1.
+``BASE_tripod_csv_bits`` self-check landed at ``n_cycles_realized = 3.00`` against
+``n_cycles_assumed_1hz = 3.00`` -- an exact match, confirming the leg is genuinely 1 Hz
+periodic by construction and that the rising-edge counter itself is correct.
+``BASE_uniform_random`` realized ``36.92`` cycles over the same window (~12.3 Hz per leg,
+in line with the ~50%-per-step flip probability of a uniform 6-bit action).  A trained
+checkpoint, ``runs_binary/pipeline_20260911_090635/dqn/checkpoints/agent_100000.pt``
+(predates the 2026-09-10 spine-wave sign fix and the DCMotor actuator swap, so its
+absolute displacement/reward numbers are stale, but the leg-bit action space and the
+``GAIT_PERIOD_S`` assumption it is being used to test are unaffected by either of those
+changes), realized ``n_cycles_realized = 19.25`` over the same 3.00 s window -- roughly
+6.4 Hz, i.e. **6.4x** the assumed 1.0 Hz.  Under the pre-fix formula this checkpoint would
+report ``x_disp_BL_per_cycle`` ~= 0.714 (numerically equal to ``x_disp_BL_per_s`` here,
+since ``gait_period_s = 1.0 s`` makes ``n_cycles_assumed_1hz`` and ``window_s`` the same
+number); the realized-cycle-count formula reports ``0.111`` for the identical trajectory.
+That is a larger inflation factor than the ~2.25x back-of-envelope estimate that first
+flagged this bug, though this smoke run used a short 4-env/150-step window rather than the
+standard 64-env/300-step protocol -- re-run the standard protocol for a production number.
+Two other candidate explanations were checked in the same run and did not reproduce:
+``step_dt`` printed as ``0.02`` (50 Hz control, not the 0.005 s physics dt), and every
+policy in the run showed ``n_terminated = 0`` / ``n_truncated = 0`` with
+``max_step_jump_m <= 0.0083`` m, i.e. no mid-window ``reach_goal`` firing or reset
+teleport (goal pinned at 2.0 m, displacement well under the ~1.8 m needed to enter the
+0.2 m reach radius).
+
+What changed (2026-09-14, superseded the next day -- see below): ``x_disp_BL_per_cycle``
+was made to divide by ``n_cycles_realized`` -- the measured mean lift->stance rising-edge
+count per (env, leg) pair over the window, decoded every step via ``env.decode(a)`` and
+compared against the previous measured step (no transition counted on the very first
+measured step) -- instead of the assumed ``steps * step_dt / gait_period_s``. It was
+``None`` when ``n_cycles_realized`` was ~0 (an all-stance-63 / all-lift-0 baseline that
+never transitions); ``run_discrete_pipeline.py``'s ``rank()`` already null-checks that
+field, so this never broke ranking.
+
+Note on the checkpoint cited above as evidence: this section originally described
+``runs_binary/pipeline_20260911_090635/dqn/checkpoints/agent_100000.pt`` as predating the
+2026-09-10 spine-wave sign fix and the DCMotor actuator swap. That claim was not checked
+against the checkpoint's actual filesystem mtime at the time; ``pipeline_20260911_090635``
+is timestamped 2026-09-11, i.e. *after* both of those changes, and its checkpoint files
+were confirmed (2026-09-15) to postdate both. The 6.4x realized-vs-assumed toggle-rate
+finding itself is unaffected either way -- it is a property of the leg-bit action space,
+not of the spine wave or actuator model -- but the "stale checkpoint" framing above was
+unverified and should be read as such.
+
+Reverted 2026-09-15 -- back to the exact spine-cycle denominator
+------------------------------------------------------------------
+The realized-cycle-count idea above was tried as the ``x_disp_BL_per_cycle`` denominator
+and is wrong. Jackson (repo owner) caught it: ``GAIT_PERIOD_S`` is not an assumption to
+begin with -- it is an exact, hard-coded, non-learnable constant. The two spine joints are
+driven by ``SpineSineAction``, a zero-width action term (``action_dim == 0``) the 6-bit leg
+policy cannot influence at all; its phase is a deterministic function of
+``episode_length_buf`` that resets every episode. So
+``steps * step_dt / GAIT_PERIOD_S`` is an *exact* count of real spine-wave cycles elapsed
+in the window for every policy run by this script, not something that needs measuring.
+
+Dividing by a measured leg-toggle rate instead was wrong for two reasons: (1) it breaks
+cross-policy comparability -- two policies covering identical ground get different
+denominators depending on how fast they happen to chatter their discrete leg bits, so a
+policy that toggles faster (possibly a training pathology, not better locomotion) scores
+*lower* BL/cycle for covering the *same* distance, backwards from the intent of the
+metric; (2) it likely does not match the papers' convention -- "body lengths per cycle" in
+the group's papers/slides almost certainly means per gait-generator/CPG period (a
+controlled, designed quantity), not per raw footfall/bit-flip count. The
+``BASE_tripod_csv_bits`` "exact match" (``n_cycles_realized = 3.00`` vs.
+``n_cycles_assumed_1hz = 3.00``) cited above as validating evidence does not generalise --
+it only confirms that ONE baseline's legs happen to toggle at 1 Hz by construction of its
+source CSV; it says nothing about whether leg-toggle-counting is the right normalizer for
+a policy running at some other rate.
+
+``x_disp_BL_per_cycle`` is reverted to dividing by the exact spine-cycle count, renamed
+``n_spine_cycles`` (was ``n_cycles_assumed_1hz`` -- "assumed" was itself a misnomer, since
+the count is exact, not assumed) and reported once in the ``protocol`` block, since it is
+identical for every policy in a run. It is never ``None`` (a 1.0 s ``gait_period_s``
+denominator is never ~0 in practice, so the guard that existed for
+``n_cycles_realized`` is not reinstated here). The leg-transition rising-edge measurement
+above is kept -- it is a real, useful diagnostic about gait chattering -- but only as a
+DIAGNOSTIC, never again as the BL/cycle denominator: renamed ``leg_toggle_hz_realized`` (a
+rate, in Hz, rather than a raw per-window count so it is directly comparable to the
+spine's fixed 1.0 Hz clock) and reported alongside ``x_disp_BL_per_cycle`` for
+orientation, not folded into it.
 
 Baselines run first, every time, as the anchors of the table:
     all-stance (63), all-lift (0), uniform random, tripod-CSV bit sequence.
@@ -210,8 +331,10 @@ parser.add_argument(
     "--gait_period_s",
     type=float,
     default=1.0,
-    help="one gait cycle in s for the BL/cycle column; must match GAIT_PERIOD_S in "
-    "hexapod_binary_env_cfg.py (scripted spine sinusoid period, = tripod CSV 50 rows x 0.02 s)",
+    help="EXACT scripted-spine gait-cycle period in s, used for x_disp_BL_per_cycle's "
+    "denominator (n_spine_cycles = steps * step_dt / gait_period_s). Default matches "
+    "GAIT_PERIOD_S in hexapod_binary_env_cfg.py (scripted spine sinusoid period, = tripod "
+    "CSV 50 rows x 0.02 s)",
 )
 parser.add_argument(
     "--spine_gain",
@@ -560,10 +683,22 @@ def run(policy_fn, label, meta=None):
     term_n = trunc_n = 0
     fall_steps = torch.zeros(N, device=device)
     first_fall = torch.full((N,), float("nan"), device=device)
+    # Leg-toggle diagnostic tracking (added 2026-09-14; NOT used for x_disp_BL_per_cycle --
+    # see the "BL/cycle" docstring section below and its "Reverted 2026-09-15" note): one
+    # rising edge (lift -> stance) on a leg counts as one toggle for that leg, counted per
+    # env. No transition is counted at the very first measured step (there is no prior
+    # measured-step sample to compare against, and reaching back into the discarded
+    # --warmup steps would require an extra, RNG-perturbing policy_fn() call).
+    prev_stance = None
+    leg_transitions = torch.zeros(N, 6, device=device)
     for t in range(args.steps):
         a = policy_fn(o, args.warmup + t)
         hist += torch.bincount(a, minlength=N_ACT).float()
         stance_hist += torch.bincount(POPCNT[a].long(), minlength=7).float()
+        stance = env.decode(a) > 0  # [N, 6] bool: True = stance (foot down)
+        if prev_stance is not None:
+            leg_transitions += (stance & ~prev_stance).float()
+        prev_stance = stance
         obs, rew, terminated, truncated, _ = env.step(a)
         o = obs["policy"]
         cur = root_rel()
@@ -589,16 +724,39 @@ def run(policy_fn, label, meta=None):
     ent = float(-(p * p.log()).sum())
     sh = stance_hist / stance_hist.sum()
     top = torch.topk(hist, 4)
+    x_disp_m = float(net_v[:, 0].mean())
+    window_s = args.steps * base.step_dt
+    # n_spine_cycles: the EXACT scripted-spine cycle count elapsed in the window. Not an
+    # assumption -- GAIT_PERIOD_S is a hard-coded, non-learnable constant the zero-width
+    # SpineSineAction term runs on regardless of what the 6-bit leg policy does -- see the
+    # "BL/cycle" docstring section. This is the x_disp_BL_per_cycle denominator, identical
+    # for every policy in the sweep (reported once, in the protocol block, not per result).
+    n_spine_cycles = args.steps * base.step_dt / args.gait_period_s
+    bl_per_cycle = round(x_disp_m / args.body_length_m / n_spine_cycles, 4)
+    # DIAGNOSTIC ONLY, NOT used for x_disp_BL_per_cycle (see "Realized vs. assumed cycle
+    # count" -> "Reverted 2026-09-15" in the docstring): how fast this policy's own leg
+    # bits actually toggle between stance/lift, as a rate (Hz) so it is directly comparable
+    # to the spine's fixed 1.0 Hz clock. Mean lift->stance rising-edge count, averaged over
+    # every (env, leg) pair in the window, divided by the window duration.
+    leg_toggle_hz_realized = float(leg_transitions.mean()) / window_s
     res = {
         "policy": label,
         "reward_per_step": round(tot_r / args.steps, 6),
         "net_displacement_m": round(float(net.mean()), 4),
-        "x_displacement_m": round(float(net_v[:, 0].mean()), 4),
-        # Derived column, added 2026-08-31: same measurement, group-standard unit.
-        # Nothing below reads it; it changes no existing column and no judgement.
-        "x_disp_BL_per_cycle": round(
-            float(net_v[:, 0].mean()) / args.body_length_m / (args.steps * base.step_dt / args.gait_period_s), 4
-        ),
+        "x_displacement_m": round(x_disp_m, 4),
+        # x_disp_BL_per_cycle (added 2026-08-31): same x-displacement measurement,
+        # expressed in the group's standard unit (body lengths per gait cycle) -- see the
+        # "BL/cycle" docstring section for the full history, including the 2026-09-14
+        # realized-cycle-count detour and its 2026-09-15 revert. Divides by the EXACT
+        # scripted-spine cycle count (n_spine_cycles, in the protocol block); never null.
+        "x_disp_BL_per_cycle": bl_per_cycle,
+        # Period-independent fallback (added 2026-09-14): body lengths per second. Makes no
+        # assumption about cycle period at all, so it is always computable (no guard).
+        "x_disp_BL_per_s": round(x_disp_m / args.body_length_m / window_s, 4),
+        # DIAGNOSTIC ONLY -- NOT the x_disp_BL_per_cycle denominator (see above and the
+        # docstring's "Reverted 2026-09-15" section). How fast this policy's own leg bits
+        # toggle, in Hz; compare against the spine's fixed 1.0 Hz clock to gauge chattering.
+        "leg_toggle_hz_realized": round(leg_toggle_hz_realized, 4),
         "path_length_m": round(float(path.mean()), 4),
         "straightness": round(float(net.mean() / max(float(path.mean()), 1e-9)), 3),
         "action_entropy_nats": round(ent, 3),
@@ -751,11 +909,15 @@ def do(fn, label, meta=None):
                         "fall_threshold_N": args.fall_threshold,
                         "step_dt": base.step_dt,
                         "no_reset": True,
-                        # BL/cycle conversion constants, recorded so any
-                        # result file states its own unit basis.
+                        # BL/cycle conversion constants, recorded so any result file states
+                        # its own unit basis. gait_period_s is exact -- the scripted
+                        # spine's hard-coded period, not an assumption (see the "BL/cycle"
+                        # docstring section). n_spine_cycles is identical for every policy
+                        # in the sweep (a function of steps/step_dt/gait_period_s only), so
+                        # it is recorded once here rather than per result.
                         "body_length_m": args.body_length_m,
                         "gait_period_s": args.gait_period_s,
-                        "n_cycles": round(args.steps * base.step_dt / args.gait_period_s, 4),
+                        "n_spine_cycles": round(args.steps * base.step_dt / args.gait_period_s, 4),
                         "audit": AUDIT,
                     },
                     "results": RESULTS,

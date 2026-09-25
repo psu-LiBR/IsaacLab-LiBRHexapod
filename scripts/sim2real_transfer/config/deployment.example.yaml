@@ -155,3 +155,11 @@ commands:
     y: 0.0
     z: 0.0
     heading: 0.0
+
+# Optional. Omit entirely to keep the default 0.15 m/s (a rough sim-derived guess).
+# Only used by the `goal`/`binary` profiles, and only for `fixed`-mode navigation
+# accuracy -- `receding` mode only depends on the localizer's heading, not its
+# position estimate, so this value doesn't matter there. Set it from a known-distance
+# walk test (walk T seconds, measure actual displacement d, use d/T) once you have one.
+localization:
+  forward_speed_estimate: 0.15
