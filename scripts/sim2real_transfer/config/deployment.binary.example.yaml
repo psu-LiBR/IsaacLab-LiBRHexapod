@@ -50,23 +50,22 @@
 #     (BackLink `unchanged`, FrontLink `negate`) and the SAME body zero_tick /
 #     soft limits as the velocity/goal config.
 #
-# HARDWARE BRING-UP -- two open questions remain for the analytic spine wave, both
-# only answerable on the real robot (or in Isaac Sim):
-#   (a) PHASE DIRECTION. BackLink currently LEADS FrontLink by +pi/2. Whether the
-#       lead/lag direction gives a forward-travelling body wave is a one-line flip
-#       (swap the BackLink / FrontLink `phase` values, i.e. BackLink -> 0.0 and
-#       FrontLink -> 1.5707963267948966).
+# HARDWARE BRING-UP -- both open questions for the analytic spine wave were resolved
+# on real hardware 2026-09-15:
+#   (a) PHASE DIRECTION. BackLink LEADS FrontLink by +pi/2. Confirmed correct as-is --
+#       the physical spine motion was matched against the training video/eval with
+#       this phase relationship unchanged; no flip needed.
 #   (b) BEND DIRECTION. The sim env applies the HexapI global spine-joint-sign flip
 #       (amplitude -A_SPINE; corrected 2026-09-10 -- a positive amplitude walked every
-#       re-evaluated policy backward). This YAML mirrors that (negative amplitude on
-#       both joints). Whether it also bends the body the intended way on the real
-#       robot (given the BackLink `unchanged` / FrontLink `negate` correction groups)
-#       is still unverified on hardware.
-# Check both with tools/check_body_alignment.py before torque-on, and again at
-# stage 4 (`--no-torque`): level should read projected_gravity ~[0,0,-1]; a single
-# stance bit should drop that leg ~0.72 rad; the body wave should undulate in
-# phase with the leg tripod, not against it. Adjust `binary.spine` phase only; do
-# NOT touch the leg calibration.
+#       re-evaluated policy backward). This robot's physical spine motors are mounted
+#       upside-down relative to that sim convention, so mirroring the sim's -A_SPINE
+#       directly here bent the body the wrong way -- confirmed by hardware testing and
+#       fixed by NEGATING it again (i.e. +A_SPINE, positive amplitude on both joints,
+#       below), which is not a contradiction of the sim-side fix: it's a second,
+#       real-mount-only sign flip layered on top of it, not a reversal of it.
+# `tools/check_body_alignment.py` and stage 4 (`--no-torque`) remain useful general
+# sanity checks (level should read projected_gravity ~[0,0,-1]; a single stance bit
+# should drop that leg ~0.72 rad) but are no longer needed to resolve (a)/(b) above.
 
 serial:
   port: /dev/ttyUSB0
@@ -209,20 +208,30 @@ commands:
     z: 0.0
     heading: 0.0
 
+# Optional. Omit entirely to keep the default 0.15 m/s (a rough sim-derived guess).
+# Only used for `fixed`-mode navigation accuracy -- `receding` mode only depends on
+# the localizer's heading, not its position estimate, so this value doesn't matter
+# there. Set it from a known-distance walk test (walk T seconds, measure actual
+# displacement d, use d/T) once you have one.
+localization:
+  forward_speed_estimate: 0.15
+
 # Binary-profile-only. `stance_pos` / `lift_pos` mirror hexapod_binary_env_cfg.py
 # (STANCE_POS / LIFT_POS). `leg_joint_order` is the policy action-index order and
 # must match HexapodBinaryActionsCfg's term declaration order.
 #
-# The `spine` block mirrors Wave 1 ("CANONICAL SPINE-WAVE DEFINITION" in
-# hexapod_binary_env_cfg.py) verbatim: a FIXED ANALYTIC traveling body wave, NOT a
-# CSV fit. Single harmonic, host formula
+# The `spine` block plays the SAME single-harmonic wave shape as Wave 1
+# ("CANONICAL SPINE-WAVE DEFINITION" in hexapod_binary_env_cfg.py) -- NOT a CSV fit --
+# but with the amplitude sign flipped from sim's -A_SPINE to +A_SPINE, per the header
+# "SPINE" note: this robot's physical spine motors are mounted upside-down relative to
+# the sim convention, so a second, real-mount-only sign flip is needed on top of the
+# sim-side -A_SPINE fix (confirmed on hardware 2026-09-15). Host formula
 #   q(t) = offset + amplitude * sin(2*pi*t / period + phase)
-# with period 1.0 s, amplitude -0.9162978573 rad (magnitude deg2rad(70) * 12/16 =
-# deg2rad(52.5), negative = the HexapI global spine-joint-sign flip) and shared
-# offset 0.0 rad on both joints. FrontLink is a pure sine (phase 0.0); BackLink is
-# the same sine shifted +pi/2 (phase 1.5707963267948966 == a cosine). See the header
-# "SPINE" note for the two remaining hardware bring-up questions (phase direction,
-# bend direction).
+# with period 1.0 s, amplitude +0.9162978573 rad (magnitude deg2rad(70) * 12/16 =
+# deg2rad(52.5)) and shared offset 0.0 rad on both joints. FrontLink is a pure sine
+# (phase 0.0); BackLink is the same sine shifted +pi/2 (phase 1.5707963267948966 ==
+# a cosine, i.e. BackLink leads FrontLink -- also confirmed correct as-is on hardware,
+# see the header "SPINE" note).
 binary:
   stance_pos: 0.460194236365692
   lift_pos: 1.180398216278
@@ -230,8 +239,8 @@ binary:
   spine:
     period: 1.0
     amplitude:
-      BackLink: -0.9162978573
-      FrontLink: -0.9162978573
+      BackLink: 0.9162978573
+      FrontLink: 0.9162978573
     phase:
       BackLink: 1.5707963267948966
       FrontLink: 0.0

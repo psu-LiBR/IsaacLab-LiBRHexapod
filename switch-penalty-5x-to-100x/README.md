@@ -65,7 +65,7 @@ Within each algorithm: fewer maximum switches, then less lateral drift, then gre
 - **SAC-D 1-step:** compare displacement against lateral drift; the lower-drift addition sacrifices displacement.
 - **SAC-D 5-step:** three low-displacement controls, not preferred walking policies. Zero command changes does not imply physical stillness or stability.
 
-Evaluation: 64 environments, seed 7, friction 0.21, body length 0.21 m, nominal cycle 1 second, control 50 Hz. A six-second replay spans six nominal cycles; switch statistics use five complete phase-aligned cycles per environment. Forward body lengths per cycle use the full six-second duration, **not division by five**. The video shows one environment; metrics aggregate the batch. No universal yaw, lateral-drift or dwell threshold has been agreed. Simulation screening is not hardware qualification.
+Evaluation: 64 environments, seed 7, friction 0.21, body length 0.315 m, nominal cycle 1 second, control 50 Hz. A six-second replay spans six nominal cycles; switch statistics use five complete phase-aligned cycles per environment. Forward body lengths per cycle use the full six-second duration, **not division by five**. The video shows one environment; metrics aggregate the batch. No universal yaw, lateral-drift or dwell threshold has been agreed. Simulation screening is not hardware qualification.
 
 ## Load a policy
 
@@ -92,7 +92,7 @@ This uses simulated sensors and an in-memory motor bus; it does not move hardwar
 
 **Use this folder's deployment configuration.** All packaged training audits use the observation joint order FrontLink, BackLink, MiddleLeft, MiddleRight, FrontLeft, FrontRight, BackLeft, BackRight. The older generic binary example differs. Motor IDs, encoder offsets, sensor orientation and physical limits remain inherited hardware settings; confirm them against the current robot before following the [existing hardware bring-up guide](../scripts/sim2real_transfer/README.md).
 
-ONNX interface: **float32[1,32] observations → float32[1,6] actions**. Observation order: gyro (3), projected gravity (3), goal command (4), relative joint position (8), joint velocity (8), previous binary actions (6). Output order: front right, front left, middle right, middle left, rear right, rear left. +1 is stance; −1 is swing. PPO normalization and Masked PPO's legal-action restriction are already folded into ONNX; do not apply them twice. Spine motion uses the existing host-side analytic wave, not the six policy outputs. The supplied configuration retains the audited 1-second wave and 50 Hz rate.
+ONNX interface: **float32[1,32] observations → float32[1,6] actions**. Observation order: gyro (3), projected gravity (3), goal command (4), relative joint position (8), joint velocity (8), previous binary actions (6). Output order: front right, front left, middle right, middle left, rear right, rear left. +1 is stance; −1 is swing. PPO normalization and Masked PPO's legal-action restriction are already folded into ONNX; do not apply them twice. Spine motion uses the existing host-side analytic wave, not the six policy outputs. The supplied configuration retains the audited 1-second wave and 50 Hz rate. Simulation uses a negative spine amplitude; the hardware configuration preserves the target branch's positive-amplitude correction for the physical motor mount. Do not copy the simulation sign directly onto the robot.
 
 ## Re-export and validation
 

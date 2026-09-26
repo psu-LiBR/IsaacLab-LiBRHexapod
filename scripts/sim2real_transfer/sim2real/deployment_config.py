@@ -11,7 +11,7 @@ never touches YAML directly.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import yaml
 
@@ -68,6 +68,17 @@ class CommandsCfg:
 
 
 @dataclass(frozen=True)
+class LocalizationCfg:
+    # m/s, rough constant used by DeadReckoningLocalizer's position dead-reckoning
+    # (see localization.py). Sim-derived (~0.14-0.16 m/s), not measured on hardware
+    # yet -- override with a value from a known-distance walk test once you have one.
+    # Only affects the `goal`/`binary` profiles, and within those only `fixed`-mode
+    # navigation accuracy: `receding`-mode navigation only depends on the localizer's
+    # heading, not its position estimate (see command_source.RecedingGoalCommand).
+    forward_speed_estimate: float = 0.15
+
+
+@dataclass(frozen=True)
 class DeploymentConfig:
     serial: SerialCfg
     joints: JointsCfg
@@ -76,6 +87,9 @@ class DeploymentConfig:
     commands: CommandsCfg
     # Only required for `--profile binary`; absent for velocity/goal deployments.
     binary: BinaryActionCfg | None = None
+    # Optional -- keeps existing deployment.yaml files, which predate this field,
+    # parsing unchanged with the same 0.15 m/s default DeadReckoningLocalizer used before.
+    localization: LocalizationCfg = field(default_factory=LocalizationCfg)
 
 
 def _require(d: dict, key: str, path: str):
@@ -136,6 +150,12 @@ def load_deployment_config(path: str) -> DeploymentConfig:
         goal=dict(_require(commands_raw, "goal", "commands")),
     )
 
+    localization = LocalizationCfg()
+    if "localization" in raw:
+        loc_raw = raw["localization"]
+        if "forward_speed_estimate" in loc_raw:
+            localization = LocalizationCfg(forward_speed_estimate=float(loc_raw["forward_speed_estimate"]))
+
     binary = None
     if "binary" in raw:
         binary_raw = raw["binary"]
@@ -152,4 +172,12 @@ def load_deployment_config(path: str) -> DeploymentConfig:
             ),
         )
 
-    return DeploymentConfig(serial=serial, joints=joints, imu=imu, control=control, commands=commands, binary=binary)
+    return DeploymentConfig(
+        serial=serial,
+        joints=joints,
+        imu=imu,
+        control=control,
+        commands=commands,
+        binary=binary,
+        localization=localization,
+    )

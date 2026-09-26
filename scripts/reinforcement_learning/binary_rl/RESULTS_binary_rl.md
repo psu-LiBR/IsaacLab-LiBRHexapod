@@ -37,6 +37,13 @@ All numbers below were produced with `eval_protocol.py` on this branch.
 >    geartrain friction). Every fixed checkpoint in the friction-sweep / equal-budget /
 >    SAC-D tables was scored under the old model. See
 >    `source/isaaclab_assets/changelog.d/hexapod-dcmotor-actuator.rst`.
+> 5. **BL/cycle formula fix (2026-09-14).** `x_disp_BL_per_cycle` divided by an ASSUMED
+>    fixed-1 Hz cycle count (`steps * step_dt / GAIT_PERIOD_S`) — correct for the scripted
+>    spine and the open-loop CSV/table baselines, but never guaranteed for a learned
+>    policy's independently-decided leg bits. It now divides by a MEASURED realized
+>    cycle count instead; a live check found a trained checkpoint toggling legs at ~6.4
+>    Hz, not the assumed 1 Hz. Every learned-policy BL/cycle number below is affected by
+>    this on top of reasons 1–4 — see `eval_protocol.py`'s docstring for the measurement.
 >
 > Re-run the full sweep on the 0.315 m (`÷1.89`) basis and record fresh tables; do not
 > apply a scale factor to the numbers here.

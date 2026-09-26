@@ -84,6 +84,7 @@ def run(
         watchdog.feed()
 
         run_start = time.perf_counter()
+        prev_iter_start = run_start
         while duration_s is None or (time.perf_counter() - run_start) < duration_s:
             iter_start = time.perf_counter()
 
@@ -100,7 +101,14 @@ def run(
 
             if profile_name in _GOAL_LIKE_PROFILES:
                 goal = command_source.get_command()
-                localizer.update(period, gyro[2])
+                # Use real measured elapsed time since the previous iteration, not the
+                # configured `period` -- same rationale as the spine-phase fix below: the
+                # real loop's actual rate can fall meaningfully short of rate_hz (measured
+                # ~34-43 Hz vs. the configured/trained 50 Hz under ROS2 callback
+                # contention), so `period` systematically under-represents true elapsed
+                # time and the gyro-z integration in DeadReckoningLocalizer.update() would
+                # under-integrate true heading drift every step.
+                localizer.update(iter_start - prev_iter_start, gyro[2])
                 command = localizer.get_pose_command(goal[:3], goal[3])
             else:
                 command = command_source.get_command()
@@ -122,12 +130,16 @@ def run(
             if profile_name == "binary":
                 # raw_action is 6 leg contact bits in {-1, +1}; legs snap to stance/lift and
                 # the two spine joints follow the fixed analytic traveling wave (Wave 1) at
-                # elapsed time = step * period
+                # elapsed time = iter_start - run_start (actual measured wall-clock time, not
+                # step * period -- the control loop's real rate can fall meaningfully short of
+                # rate_hz, e.g. under ROS2 callback contention, in which case step * period drifts
+                # the spine's real-world period away from GAIT_PERIOD_S and desyncs the joint_pos_rel/
+                # joint_vel_rel observations the policy was trained against)
                 # (mirrors SpineSineAction's `t = episode_length_buf * step_dt`, which is 0 on the
                 # first post-reset step). action_scale_multiplier < 1 damps the whole target toward
                 # q_default for bring-up (bits are absolute, so the velocity branch's scale knob
                 # does not apply directly).
-                full_target = binary_adapter.targets_sim(raw_action, step * period)
+                full_target = binary_adapter.targets_sim(raw_action, iter_start - run_start)
                 target_sim = q_default_sim + action_scale_multiplier * (full_target - q_default_sim)
             else:
                 target_sim = q_default_sim + cfg.control.action_scale * action_scale_multiplier * raw_action
@@ -163,6 +175,7 @@ def run(
                 time.sleep(remaining)
             else:
                 print(f"[control_loop] step {step}: loop overrun by {-remaining * 1000:.2f} ms")
+            prev_iter_start = iter_start
             step += 1
     finally:
         soft_stop_ramp(bus, joint_mapping, q_default_sim, cfg.control.soft_stop_seconds, rate_hz)

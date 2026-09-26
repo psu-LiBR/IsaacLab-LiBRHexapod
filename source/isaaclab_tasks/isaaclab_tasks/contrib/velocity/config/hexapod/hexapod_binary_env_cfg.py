@@ -104,12 +104,13 @@ GAIT_PERIOD_S = 1.0
 #
 # The -A_SPINE sign is the HexapI global spine-joint-sign flip -- see flag (b).
 #
-# UNVERIFIED -- FLAG FOR THE USER / an Isaac Sim check:
+# RESOLVED -- CONFIRMED ON REAL HARDWARE (2026-09-15):
 #   (a) Direction of the 90 deg shift: the user specified "sin + 90 deg", so BackLink
-#       gets +pi/2 (implemented as a cosine).  Whether BackLink should LEAD or LAG
-#       FrontLink for a forward-traveling wave is a one-line flip (swap which joint gets
-#       sin vs cos).  Kept as-is per the user; the next thing to try if a retrained
-#       policy still will not walk forward after the (b) sign fix.
+#       gets +pi/2 (implemented as a cosine), i.e. BackLink LEADS FrontLink. Confirmed
+#       correct -- do not flip: the physical spine motion was matched against the
+#       training video/eval with this phase relationship unchanged (only the deployment
+#       config's amplitude sign, flag (b) below, needed a real-hardware-only correction
+#       for the sim2real mount orientation -- see deployment.binary.example.yaml's header).
 #   (b) HexapI spine joint-sign convention for WAVE 1: CORRECTED 2026-09-10 from +A_SPINE
 #       to -A_SPINE.  Three independent lines of evidence: the pre-Fourier committed wave
 #       carried the flip as a negative fitted amplitude (SPINE_AMPLITUDE ~ -0.845 rad,

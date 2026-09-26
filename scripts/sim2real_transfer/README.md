@@ -84,8 +84,10 @@ profile (`velocity`, `goal`, or `binary`).
   placeholder -- it is derived from the calibrated velocity/goal
   `deployment.yaml` (legs `negate` = the HexapI leg-sign flip on the calibrated
   old-USD `unchanged` map; spine emitted through the calibrated body
-  correction). The example file's header shows the full derivation and the two
-  remaining spine bring-up questions (wave phase direction, body-bend direction).
+  correction). The example file's header shows the full derivation; both spine
+  bring-up questions (wave phase direction, body-bend direction) were resolved on
+  real hardware 2026-09-15 -- phase direction confirmed correct as-is, body-bend
+  direction required negating `binary.spine.amplitude` for the real mount.
 
 ## Continuous forward walking (goal / binary)
 
