@@ -16,9 +16,9 @@ All numbers below were produced with `eval_protocol.py` on this branch.
 >    high. An end-to-end audit of the raw arithmetic found no error in `step_dt`, the saved
 >    net displacement, or the 0.315 m basis (`step_dt` is genuinely 0.02 s, the window is
 >    exactly 6.0 s, and `x_displacement_m` is the per-env mean net forward displacement,
->    cross-checked against the `progress` reward term). Treating that window as exactly six
->    formal learned gait cycles remains a protocol hypothesis until the learned-policy
->    cycle definition is confirmed. The old-vs-video gap is the rebasing plus the no-reset
+>    cross-checked against the `progress` reward term). The six cycles are the fixed one-second
+>    scripted spine cycles, not a separately measured repetition rate of the learned
+>    leg commands. The old-vs-video gap is the rebasing plus the no-reset
 >    continuous eval window plus possible video-fps slow-motion.
 > 2. **Tripod baseline CSV.** Every `tripod` / `tripod contact replay` number was measured
 >    against `tripod_B11BL0_sim.csv` (leg swing/stance switch at steps 7/31). The tripod

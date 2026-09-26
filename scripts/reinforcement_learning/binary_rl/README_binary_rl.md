@@ -178,9 +178,9 @@ All reported numbers come from `eval_protocol.py`, run identically for every met
 > no arithmetic error in `step_dt`, the saved net displacement, or the 0.315 m basis:
 > `step_dt` is genuinely 0.02 s (`sim.dt` 0.005 × `decimation` 4), the window is exactly
 > 6.0 s, `BODY_LENGTH_M` is 0.315, and `x_displacement_m` is the per-env mean *net*
-> forward displacement (cross-checked against the `progress` reward term). The extra
-> statement that this is exactly **6 formal learned gait cycles** remains a protocol
-> hypothesis because the learned-policy cycle definition still needs confirmation.
+> forward displacement (cross-checked against the `progress` reward term). Here a cycle means the fixed one-second scripted spine cycle, not a
+> separately measured leg-motion repetition. Six seconds are exactly six such
+> nominal cycles; this does not imply every leg switches at the same frequency.
 > Two real (non-metric) bugs **were** found in the tripod baseline and fixed
 > 2026-09-10: (1) `play_discrete_closeup.py --gait_npz tripod` was playing the RL
 > traveling wave (Wave 1) on the tripod leg schedule — it now swaps in Wave 2 like

@@ -42,5 +42,15 @@
     61,
     62,
     63
-  ]
+  ],
+  "binary_control_dry_run": {
+    "duration_s": 5,
+    "logged_steps": 250,
+    "returncode": 0,
+    "all_values_finite": true,
+    "binary_outputs_valid": true,
+    "sensors": "fake IMU",
+    "motor_bus": "in-memory",
+    "hardware_moved": false
+  }
 }

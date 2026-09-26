@@ -106,3 +106,5 @@ python scripts/reinforcement_learning/binary_rl/export_binary_onnx.py \
 ~~~
 
 Embedded masks are preserved even when a checkpoint has been moved; conflicting metadata fails rather than silently changing the policy. Localization, physical calibration and actual locomotion still require robot-side testing.
+
+The final merged binary deployment pipeline passed **104 tests**. Each of the 25 ONNX policies also completed a five-second CPU dry run with fake IMU and an in-memory motor bus: 250 logged control steps each, finite values and valid six-bit outputs. No hardware was moved.

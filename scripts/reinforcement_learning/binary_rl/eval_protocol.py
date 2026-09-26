@@ -92,7 +92,6 @@ with the two constants (both overridable on the command line):
       policy in the sweep, learned or scripted -- see "Realized vs. assumed cycle count"
       below for why a per-policy measured leg-toggle rate is not used instead.
 
-
 Caveat, on purpose in this docstring so it travels with the number: the paper values
 (tripod/b11bl0 0.48, extquad 0.41, lleg30 0.61, lleg35 0.56 BL/cycle) are *real hardware*
 replaying joint-angle trajectories, whereas this script measures *simulation* with a
@@ -115,9 +114,8 @@ With the anti-phase Wave 2 the tripod anchor comes out around 0.44 BL/cycle forw
 hardware.  The earlier ~0.05-0.09 BL/cycle recorded here was the *in-phase* Wave 2 bug --
 the two byte-identical CSV spine columns barely bent the body.  The raw timing and
 arithmetic are verified for this protocol: ``step_dt`` is 0.02 s, the window is 6.0 s,
-and ``BODY_LENGTH_M`` is 0.315.  The value ``n_cycles=6`` still depends on treating the
-fixed 1.0 s spine clock as the formal gait-cycle definition; that learned-policy
-convention remains an explicit hypothesis until Jackson confirms it.  A
+and ``BODY_LENGTH_M`` is 0.315.  The value ``n_cycles=6`` uses the fixed 1.0 s
+scripted spine clock, not a separately measured leg-command repetition rate.  A
 ``--spine_gain 0`` run shows the leg bits alone net ~0 so almost all of the anchor's
 travel is the body wave.
 
