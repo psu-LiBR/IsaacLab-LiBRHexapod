@@ -1,0 +1,31 @@
+{
+  "model_sha256": "6ebc823a6ece4b84ce07a73c7f8ff43d59d565714b44c146fe2b9458e7549f3e",
+  "onnx_sha256": "14c0dfa8dc9ea9e005a0ed5d7bfac4d9818ed8e464068b649df2323cc358830c",
+  "reference_loader_sha256": "5bad46789b62dbd20dd762aea2b93b70cf6dd1d5748e4f694ca3830c90e744aa",
+  "samples": 2049,
+  "inputs": "zero, standard normal, uniform [-20, 20]; not recorded robot observations",
+  "reference_action_mismatches": 0,
+  "onnx_action_mismatches": 0,
+  "torch_version": "2.11.0+cu128",
+  "onnxruntime_version": "1.30.0",
+  "input_shape": [
+    1,
+    32
+  ],
+  "output_shape": [
+    1,
+    6
+  ],
+  "observation_normalization": false,
+  "legal_actions": null,
+  "binary_control_dry_run": {
+    "duration_s": 5,
+    "logged_steps": 250,
+    "returncode": 0,
+    "all_values_finite": true,
+    "binary_outputs_valid": true,
+    "sensors": "fake IMU",
+    "motor_bus": "in-memory",
+    "hardware_moved": false
+  }
+}

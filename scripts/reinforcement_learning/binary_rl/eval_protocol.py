@@ -112,9 +112,12 @@ design -- see the note above the tripod baseline run below.
 With the anti-phase Wave 2 the tripod anchor comes out around 0.44 BL/cycle forward
 (+0.83 m over the 6-cycle window, straightness ~0.98), in line with the ~0.4 of the
 hardware.  The earlier ~0.05-0.09 BL/cycle recorded here was the *in-phase* Wave 2 bug --
-the two byte-identical CSV spine columns barely bent the body.  ``step_dt`` (0.02 s),
-``n_cycles`` (6.0) and ``BODY_LENGTH_M`` (0.315) are all correct, and a ``--spine_gain 0``
-run shows the leg bits alone net ~0 so almost all of the anchor's travel is the body wave.
+the two byte-identical CSV spine columns barely bent the body.  The raw timing and
+arithmetic are verified for this protocol: ``step_dt`` is 0.02 s, the window is 6.0 s,
+and ``BODY_LENGTH_M`` is 0.315.  The value ``n_cycles=6`` uses the fixed 1.0 s
+scripted spine clock, not a separately measured leg-command repetition rate.  A
+``--spine_gain 0`` run shows the leg bits alone net ~0 so almost all of the anchor's
+travel is the body wave.
 
 Two more things this number is NOT, kept here so they travel with it:
 * It is measured over a NO-RESET window (every termination is neutralised -- see the

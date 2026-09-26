@@ -1,0 +1,896 @@
+{
+  "selection": "Per-leg maximum <=4; valid evaluation; zero falls and torso contact. Within each algorithm, ordered by switches, lateral drift, then forward displacement. Low-displacement controls are explicitly labeled. No universal straightness threshold has been agreed.",
+  "candidates": [
+    {
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "experiment": "original-only",
+      "directory": "candidates/dqn-family/dqn/original-only/original-10x__added-off__forward-0.9486-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.948580265045166,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.14246167242527008,
+      "maximum_yaw_deg": 27.74956512451172,
+      "minimum_dwell_s": 0.04,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "6e216d69a116f00e812639f84a5e54182516a88ca317a72e164531b9a941d2c1",
+        "replay.mp4": "87b0e72cbabb9ae6ace1633c263f65481be37a08b49b84f1b5d845e04293665b",
+        "policy.onnx": "4d9de723c9fa272c67f9df35c5b99e3c64e26d45e64883c8ff843c4365e128c2"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/original-plus-added-switch/original-10x__added-10x__forward-1.0102-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 1.0101584196090698,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.28554046154022217,
+      "maximum_yaw_deg": 29.78635597229004,
+      "minimum_dwell_s": 0.14,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "92c247ea9201158a73df8eeab3b62446fdde51461ad763aa2fa02c3f8097a40f",
+        "replay.mp4": "29b0a823b5a9a3b7315c0f4d972cfd786f025c72d5340ced7817b2ea829711ed",
+        "policy.onnx": "f802f08cd1b7cd108e8b684cd68c5fca14bbfcdca23519f5573733a982b47c08"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "experiment": "original-only",
+      "directory": "candidates/dqn-family/dqn/original-only/original-30x__added-off__forward-1.0092-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 1.0091782808303833,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.3483882248401642,
+      "maximum_yaw_deg": 30.07465362548828,
+      "minimum_dwell_s": 0.14,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "96b06540edb25448533f5e64e314ec210f50e3669943d8a6e36907aca20b6c91",
+        "replay.mp4": "8745e86829e5502a4d00676f16080b16a9f88d71215ec57f7f3184899d427738",
+        "policy.onnx": "c1a6d1df7dbb3abe8a497b9b4770e5633c40fad10ef67487aa2356e3b2d095ee"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/original-plus-added-switch/original-10x__added-10x__forward-1.0116-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 1.01163649559021,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        3,
+        2
+      ],
+      "max_switches": 3,
+      "maximum_lateral_drift_body_lengths": 0.33655619621276855,
+      "maximum_yaw_deg": 29.779150009155273,
+      "minimum_dwell_s": 0.14,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "96dc32c234b25939129066e0dd99c6adfc231d877423124ff6bc826c2fc262b8",
+        "replay.mp4": "67e64a4b7caa70ac6204338e745fc1187ccf475318e60abdd8b8ac82266c70de",
+        "policy.onnx": "a2e7e0699c8217f359dc57605fdb5290a2b211d30898042f1ab6a4dbbfc5feeb"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/original-plus-added-switch/original-5x__added-5x__forward-0.9983-body-lengths",
+      "multiplier": 5,
+      "original_switch_weight": -0.025,
+      "added_switch_cost": 0.002,
+      "forward_body_lengths_per_cycle": 0.9983417391777039,
+      "per_leg_max_switches": [
+        3,
+        2,
+        2,
+        2,
+        4,
+        2
+      ],
+      "max_switches": 4,
+      "maximum_lateral_drift_body_lengths": 0.1365155428647995,
+      "maximum_yaw_deg": 29.880949020385742,
+      "minimum_dwell_s": 0.06,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "3f459bda23d025928fb8b1a4ab60becc1128dd1460d2d705f5bb22cc411dd773",
+        "replay.mp4": "beda18b0696fe4d6620e3917ed3eac68e8f24fe43c8b202ef225e9a1dd3ac399",
+        "policy.onnx": "513f11a2d144d384f8fba49d56cdd835da4a63ce6521e693c1c12233339f5d58"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "experiment": "original-only",
+      "directory": "candidates/dqn-family/ddqn/original-only/original-30x__added-off__forward-0.9970-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.9970462322235107,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.18950486183166504,
+      "maximum_yaw_deg": 26.919031143188477,
+      "minimum_dwell_s": 0.14,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "36041e30a71ab561125ef1797490b1baa60c70af58f3e678bea90be9b8e51475",
+        "replay.mp4": "b2f61e14c706dc8953d7e82e5f4fd77a0f5dd83d922cd9218e65bce7af38f446",
+        "policy.onnx": "e6d8b27686509de755bfebeeed7b4795441ac3d8ff7398513098c0052e0c57c0"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "experiment": "original-only",
+      "directory": "candidates/dqn-family/ddqn/original-only/original-100x__added-off__forward-0.8861-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.8860697150230408,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.2522105872631073,
+      "maximum_yaw_deg": 26.507022857666016,
+      "minimum_dwell_s": 0.18,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "6ebc823a6ece4b84ce07a73c7f8ff43d59d565714b44c146fe2b9458e7549f3e",
+        "replay.mp4": "fc6cbce85b743da36214f81bcbc6c8fd6cb8fb6679fd41053429762eacd1a436",
+        "policy.onnx": "14c0dfa8dc9ea9e005a0ed5d7bfac4d9818ed8e464068b649df2323cc358830c"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/original-plus-added-switch/original-30x__added-30x__forward-1.0025-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.012,
+      "forward_body_lengths_per_cycle": 1.0024821758270264,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.29585015773773193,
+      "maximum_yaw_deg": 30.434185028076172,
+      "minimum_dwell_s": 0.14,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "c9b802982800c650ffa59e6fe4d716818617dec52d82f8c816bc6c8a307c8b5e",
+        "replay.mp4": "5ceadd841756081276fe02f39e80863515a2386ad53ebdbee0ceaf70c95df3c7",
+        "policy.onnx": "56a9868eab236c6be7385b2bb655983dfc7e236ec0225d351cc4d6429f0d3f5c"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/original-plus-added-switch/original-10x__added-10x__forward-0.9937-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 0.9937374591827393,
+      "per_leg_max_switches": [
+        2,
+        4,
+        1,
+        2,
+        3,
+        2
+      ],
+      "max_switches": 4,
+      "maximum_lateral_drift_body_lengths": 0.18050609529018402,
+      "maximum_yaw_deg": 28.82126235961914,
+      "minimum_dwell_s": 0.08,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "62fcc12a227454d1064de59733653d89a6501d31465e8a841c15024bf479d51c",
+        "replay.mp4": "0ec35eabec53c831a2d98ad9b05694dd4e5a01b8dd0c3cbb2894418b7aa907ee",
+        "policy.onnx": "c179d42c9db833e021600fef0051472f93a3a1bd57f245cbbc4741cfc8243058"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/original-plus-added-switch/original-5x__added-5x__forward-0.9253-body-lengths",
+      "multiplier": 5,
+      "original_switch_weight": -0.025,
+      "added_switch_cost": 0.002,
+      "forward_body_lengths_per_cycle": 0.9252963066101074,
+      "per_leg_max_switches": [
+        2,
+        4,
+        2,
+        2,
+        4,
+        4
+      ],
+      "max_switches": 4,
+      "maximum_lateral_drift_body_lengths": 0.2604635953903198,
+      "maximum_yaw_deg": 28.93763542175293,
+      "minimum_dwell_s": 0.02,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "7c22dcb1d5f437f02ecee7a3e9c6fa2b3671517a8f3e351baac7d222524c6756",
+        "replay.mp4": "f53ff7b691fdce901c191cd8e05c3f8dc610d39a21038e14bd1351ecde01d5e5",
+        "policy.onnx": "6a7f1a382e1bb080a3163c48b1a93f706e73029f1a8209d609b785e6598d8a96"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "ppo",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/ppo-family/ppo/original-plus-added-switch/original-100x__added-100x__forward-0.7428-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.04,
+      "forward_body_lengths_per_cycle": 0.7428354620933533,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.35609129071235657,
+      "maximum_yaw_deg": 42.20976638793945,
+      "minimum_dwell_s": 0.08,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Large heading deviation",
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "9500dc5f2362a55160a86334cbe6e1beeed55413befdb6069becf398d770150c",
+        "replay.mp4": "576b77cceec8eaee4d354d88b4082fee66645519e9edecc9b0cbe003072ae394",
+        "policy.onnx": "88c6a678b12bff73ff7d3b7f2635fe4ca45f4eb96ebc437ba8738427998c653d"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "ppo",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.7452-body-lengths",
+      "multiplier": 5,
+      "original_switch_weight": -0.025,
+      "added_switch_cost": 0.002,
+      "forward_body_lengths_per_cycle": 0.7451761364936829,
+      "per_leg_max_switches": [
+        2,
+        2,
+        3,
+        2,
+        2,
+        3
+      ],
+      "max_switches": 3,
+      "maximum_lateral_drift_body_lengths": 0.2135208249092102,
+      "maximum_yaw_deg": 32.734283447265625,
+      "minimum_dwell_s": 0.06,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "041ca723644d1a9f451694975a5450f9b68be809c81a91ad5de120a7a9a6c553",
+        "replay.mp4": "09972c6c136819c662b27bc20b101be6a4324dcc6926f08e74b020cc5634cfa9",
+        "policy.onnx": "1593048be27b079d384db0ce3b3bbe8f80a52e284e5357fadbf56169db24077e"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "ppo",
+      "experiment": "original-only",
+      "directory": "candidates/ppo-family/ppo/original-only/original-5x__added-off__forward-0.6776-body-lengths",
+      "multiplier": 5,
+      "original_switch_weight": -0.025,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.6775875091552734,
+      "per_leg_max_switches": [
+        2,
+        2,
+        4,
+        4,
+        4,
+        4
+      ],
+      "max_switches": 4,
+      "maximum_lateral_drift_body_lengths": 0.20277968049049377,
+      "maximum_yaw_deg": 27.525733947753906,
+      "minimum_dwell_s": 0.02,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "3b8e056b67de6a2107d81d3037750db34852c080937999cc682b3daf1ea9c3e3",
+        "replay.mp4": "ae9d5d9305c420f4dda87d1de4f28e5d0f57c634be2069af561b06a4e024621a",
+        "policy.onnx": "01a42331bbde09af15274291371b79b919291014431a86da74bcc0015adb9a0c"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "ppo",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/ppo-family/ppo/original-plus-added-switch/original-10x__added-10x__forward-0.7519-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 0.7518666386604309,
+      "per_leg_max_switches": [
+        3,
+        4,
+        0,
+        4,
+        2,
+        2
+      ],
+      "max_switches": 4,
+      "maximum_lateral_drift_body_lengths": 0.2577100694179535,
+      "maximum_yaw_deg": 29.74260139465332,
+      "minimum_dwell_s": 0.08,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "55e811d6204b78d6ce560285169e638a96373fdff0b4d7a53dd866c504b021d9",
+        "replay.mp4": "9d8f7436d47b8ee4f99bcf91d63f19afdcfe48e80fcae5d41605fa12e5ef1767",
+        "policy.onnx": "7b065e759b1bbfa386f84e90c282c9edb9ec989d1496e5d8508f489b38280a57"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "Masked PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "masked-ppo",
+      "experiment": "original-only",
+      "directory": "candidates/ppo-family/masked-ppo/original-only/original-30x__added-off__forward-0.6728-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.6728296279907227,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        3,
+        2,
+        0
+      ],
+      "max_switches": 3,
+      "maximum_lateral_drift_body_lengths": 0.2729742228984833,
+      "maximum_yaw_deg": 28.970306396484375,
+      "minimum_dwell_s": 0.06,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "a8dd24b0c180417bc1a2aaf16e04f31d3b1c2d94779a17e0891400dfa8d71161",
+        "replay.mp4": "4c34d2585fdf62926030b600d375108971391bf98db1c4f12903d0af66e2c9a8",
+        "policy.onnx": "de4d1201d4ae90e0bad75b35c3bad1b95ba2aad50c251f701fcbe26928b5b3ba"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "Masked PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "masked-ppo",
+      "experiment": "original-only",
+      "directory": "candidates/ppo-family/masked-ppo/original-only/original-5x__added-off__forward-0.6495-body-lengths",
+      "multiplier": 5,
+      "original_switch_weight": -0.025,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.6494620442390442,
+      "per_leg_max_switches": [
+        4,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "max_switches": 4,
+      "maximum_lateral_drift_body_lengths": 0.19395004212856293,
+      "maximum_yaw_deg": 29.504995346069336,
+      "minimum_dwell_s": 0.02,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "8b678ef26bf704488f46c45df4a7086903b42326fc516a48b83ccd27899230ac",
+        "replay.mp4": "166f8ad40be5f8fecef95dbd18edd96aefc20acdf398616f63e0a8cb4569ece5",
+        "policy.onnx": "83a14957d007cbe02aecb06c14d17d6d04f7372f39ce524f31a9e99359c0efd0"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "Masked PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "masked-ppo",
+      "experiment": "original-only",
+      "directory": "candidates/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6816-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.6816278100013733,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        4,
+        3,
+        0
+      ],
+      "max_switches": 4,
+      "maximum_lateral_drift_body_lengths": 0.24343998730182648,
+      "maximum_yaw_deg": 26.908674240112305,
+      "minimum_dwell_s": 0.02,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "670317368919eb3bf0f3f7ccd0412fd9011d3085286db8d1a10eaef43e74c830",
+        "replay.mp4": "2f91f467f703373591b6f35d05f3bb66cf8ded6433968b21ed66055a00aed52f",
+        "policy.onnx": "e8a3e45a4866a4344944516af211112a37ff454ee62e63b28ecf999a9b451583"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "Masked PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "masked-ppo",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/ppo-family/masked-ppo/original-plus-added-switch/original-30x__added-30x__forward-0.6774-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.012,
+      "forward_body_lengths_per_cycle": 0.6773647665977478,
+      "per_leg_max_switches": [
+        4,
+        2,
+        2,
+        3,
+        2,
+        2
+      ],
+      "max_switches": 4,
+      "maximum_lateral_drift_body_lengths": 0.37395188212394714,
+      "maximum_yaw_deg": 36.875648498535156,
+      "minimum_dwell_s": 0.08,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Large heading deviation",
+        "Brief command dwell intervals",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "1b9bef7980bcad65499ed2edb68e8b09a14c992bae8039b6c0aeeadeef32956a",
+        "replay.mp4": "dde07f8e34f9730cb3d1d3f2ea619e05e5da0bd9b19fc6f7734d454420dedb9b",
+        "policy.onnx": "994c177792265ee88ac35b34b4add8d8b8a55227cac680838611f6ed8c4b1664"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "SAC-D 1-step",
+      "family": "sac-family",
+      "algorithm_directory": "sac-discrete-one-step",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/sac-family/sac-discrete-one-step/original-plus-added-switch/original-10x__added-10x__forward-0.5672-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 0.5672498941421509,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        2,
+        0,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.2919008731842041,
+      "maximum_yaw_deg": 26.036869049072266,
+      "minimum_dwell_s": 0.08,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Brief command dwell intervals",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "171b1a0eaa2b9ef91be85904c031580235ab0e8e86eeceff9ca919315ffadabc",
+        "replay.mp4": "67b6eb5587c1ef36184427643f320e8d640c1f3c0cd65f812c35656943b90522",
+        "policy.onnx": "65d2f33a502556569f0fdace4d12d538f8ed1eeea7b01168865f6fd4b979d01c"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "SAC-D 1-step",
+      "family": "sac-family",
+      "algorithm_directory": "sac-discrete-one-step",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/sac-family/sac-discrete-one-step/original-plus-added-switch/original-10x__added-10x__forward-0.6101-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 0.6100890636444092,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        2,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.637710690498352,
+      "maximum_yaw_deg": 34.47462844848633,
+      "minimum_dwell_s": 0.42,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "High lateral drift",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "b838514ea736d5c0cb9023aa8ee69af4f7fe77a7181ade63581103e2b2b3b0e1",
+        "replay.mp4": "0f2224d32a655e9bc006c3ca588df00529952edce24e653da42c095d46b0f178",
+        "policy.onnx": "5b6370cf4363d929311d67a5a36920725d6c13dd983f0fbb400753905fe8b63c"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "SAC-D 1-step",
+      "family": "sac-family",
+      "algorithm_directory": "sac-discrete-one-step",
+      "experiment": "original-only",
+      "directory": "candidates/sac-family/sac-discrete-one-step/original-only/original-10x__added-off__forward-0.7744-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.7743656635284424,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        2,
+        0
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.8229434490203857,
+      "maximum_yaw_deg": 28.143293380737305,
+      "minimum_dwell_s": 0.26,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "High lateral drift",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "47daf58b2c2fdb4ab1f77295be060632d81baae53da15c7af8d3df209c2a45c5",
+        "replay.mp4": "f48bbd0ef12aee892d3a2f3549b369b063f909aa24bc1e6cb68cca9a9338434a",
+        "policy.onnx": "235a93924bd642715fe534167637751c1882f587fbac63401fce4ddaeaca6465"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "SAC-D 1-step",
+      "family": "sac-family",
+      "algorithm_directory": "sac-discrete-one-step",
+      "experiment": "original-only",
+      "directory": "candidates/sac-family/sac-discrete-one-step/original-only/original-5x__added-off__forward-0.6356-body-lengths",
+      "multiplier": 5,
+      "original_switch_weight": -0.025,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.6355873346328735,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_lateral_drift_body_lengths": 0.8307827115058899,
+      "maximum_yaw_deg": 34.42356491088867,
+      "minimum_dwell_s": 0.26,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "High lateral drift",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "8f09a6059e3b380d57b20dcfe8398faf5e72f0789ba2695855b4cbc13e9c27cb",
+        "replay.mp4": "a8dccb2dd7af17e9dbee10ffa55618277d3768209924a74b3782be83c18eeca0",
+        "policy.onnx": "59b31de1c4b3adeede180dd7f7cfb21fd016387c58c146bd1fe7fcfb7d0965b8"
+      },
+      "negative_control": false
+    },
+    {
+      "algorithm": "SAC-D 5-step",
+      "family": "sac-family",
+      "algorithm_directory": "sac-discrete-five-step",
+      "experiment": "original-only",
+      "directory": "candidates/sac-family/sac-discrete-five-step/original-only/original-100x__added-off__forward-0.0524-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.05240575969219208,
+      "per_leg_max_switches": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "max_switches": 0,
+      "maximum_lateral_drift_body_lengths": 0.33590829372406006,
+      "maximum_yaw_deg": 65.38013458251953,
+      "minimum_dwell_s": null,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Large heading deviation",
+        "Low-displacement control; not a preferred walking policy",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "d60e90a224cf1a999007ee62069a2454aa7734b79b3570fa2d8d85db8ac07494",
+        "replay.mp4": "3ce1ff001cfb94d8c72f8fb2e5b21e0f863db582df0f9dbe2242d45e72b2a775",
+        "policy.onnx": "d8b98a1e8ca2d1f64c932b71d5cdfb916b406b0acf040aa0b2528700b62f448b"
+      },
+      "negative_control": true
+    },
+    {
+      "algorithm": "SAC-D 5-step",
+      "family": "sac-family",
+      "algorithm_directory": "sac-discrete-five-step",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/sac-family/sac-discrete-five-step/original-plus-added-switch/original-30x__added-30x__forward-0.1083-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.012,
+      "forward_body_lengths_per_cycle": 0.10828611254692078,
+      "per_leg_max_switches": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "max_switches": 0,
+      "maximum_lateral_drift_body_lengths": 0.5428982377052307,
+      "maximum_yaw_deg": 155.53634643554688,
+      "minimum_dwell_s": null,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "High lateral drift",
+        "Large heading deviation",
+        "Low-displacement control; not a preferred walking policy",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "b306d4f5c9b3dbd341604bfcd76c7a7a896014a90999b41bd03b201ecf27c5ca",
+        "replay.mp4": "0df276064bf128e62e91525f259ba0d5167ed768f1d61a6629e8ef89b6890820",
+        "policy.onnx": "8b97ed5447c99374f17809a074ae4a4fb4e390c053dc432261bad0d916054140"
+      },
+      "negative_control": true
+    },
+    {
+      "algorithm": "SAC-D 5-step",
+      "family": "sac-family",
+      "algorithm_directory": "sac-discrete-five-step",
+      "experiment": "original-only",
+      "directory": "candidates/sac-family/sac-discrete-five-step/original-only/original-30x__added-off__forward-0.0400-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.03999939188361168,
+      "per_leg_max_switches": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "max_switches": 0,
+      "maximum_lateral_drift_body_lengths": 0.6734215021133423,
+      "maximum_yaw_deg": 179.96865844726562,
+      "minimum_dwell_s": null,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "High lateral drift",
+        "Large heading deviation",
+        "Low-displacement control; not a preferred walking policy",
+        "Some legs keep a constant high-level command",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "policy.pt": "5ae2dae6ca0a913428fc6155207425bae62c563a3636976677163c1437225563",
+        "replay.mp4": "6edb5d6afad1dfa2316f40954a6c02ca5514704a7e44b542280182ecc654080c",
+        "policy.onnx": "56f1ef64ea21b75c7d3879a2adec35acc229291c9e21a38069ff47acc6bbf5a0"
+      },
+      "negative_control": true
+    }
+  ]
+}

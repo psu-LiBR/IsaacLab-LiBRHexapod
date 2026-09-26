@@ -35,8 +35,6 @@ import os
 import sys
 import time
 
-import numpy as np
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sim2real.deployment_config import DeploymentConfig, load_deployment_config  # noqa: E402
@@ -48,7 +46,10 @@ from sim2real.safety import ramp_to_target  # noqa: E402
 def _open_bus(cfg: DeploymentConfig) -> RealDynamixelBus:
     motor_ids = [cfg.joints.motor_ids[name] for name in cfg.joints.real_order]
     bus = RealDynamixelBus(
-        motor_ids=motor_ids, port=cfg.serial.port, baud_rate=cfg.serial.baud_rate, protocol_version=cfg.serial.protocol_version
+        motor_ids=motor_ids,
+        port=cfg.serial.port,
+        baud_rate=cfg.serial.baud_rate,
+        protocol_version=cfg.serial.protocol_version,
     )
     bus.torque_enable(False)  # stays off until the operator explicitly confirms below
     print(f"Connected to {cfg.serial.port} @ {cfg.serial.baud_rate} baud, {len(motor_ids)} motors.\n")
@@ -102,15 +103,21 @@ def main() -> None:
             print(f"\n--- {leg} ---")
             idx = leg_idx[leg]
             for cycle in range(1, args.cycles + 1):
-                for phase_name, target_rad in (("STANCE (bit +1)", cfg.binary.stance_pos), ("LIFT (bit -1)", cfg.binary.lift_pos)):
+                for phase_name, target_rad in (
+                    ("STANCE (bit +1)", cfg.binary.stance_pos),
+                    ("LIFT (bit -1)", cfg.binary.lift_pos),
+                ):
                     target_sim = q_default_sim.copy()
                     target_sim[idx] = target_rad
                     ramp_to_target(bus, mapping, target_sim, args.ramp_seconds, args.rate_hz)
                     time.sleep(args.hold_seconds)
-                    label = input(
-                        f"  [{leg} cycle {cycle}/{args.cycles}] commanded {phase_name} ({target_rad:+.4f} rad) -- "
-                        "what did the foot physically do? (e.g. 'touched ground' / 'lifted up'): "
-                    ).strip() or "(no label given)"
+                    label = (
+                        input(
+                            f"  [{leg} cycle {cycle}/{args.cycles}] commanded {phase_name} ({target_rad:+.4f} rad) -- "
+                            "what did the foot physically do? (e.g. 'touched ground' / 'lifted up'): "
+                        ).strip()
+                        or "(no label given)"
+                    )
                     labels[leg].append((phase_name, label))
 
             print(f"  Returning {leg} to standing pose...")

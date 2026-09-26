@@ -195,7 +195,7 @@ def buf_store(o, s, a, no, ns, ret, disc, boot):
 
 
 n = args.n_step
-S = {k: deque(maxlen=n) for k in ("o", "s", "a", "rew", "term", "trunc", "no", "ns", "fo", "fs")}
+S = {k: deque(maxlen=n) for k in ("o", "s", "a", "rew", "term", "trunc", "no", "ns", "flat_observation", "fs")}
 
 
 def _critic_obs(obs_dict):
@@ -213,7 +213,7 @@ def flush_front():
     tt = (trunc_win[last, ei].bool() & ~term_win[last, ei].bool()).unsqueeze(-1)
     no_end = torch.stack(list(S["no"]))[last, ei]
     ns_end = torch.stack(list(S["ns"]))[last, ei]
-    no = torch.where(tt, torch.stack(list(S["fo"]))[last, ei], no_end)
+    no = torch.where(tt, torch.stack(list(S["flat_observation"]))[last, ei], no_end)
     ns = torch.where(tt, torch.stack(list(S["fs"]))[last, ei], ns_end)
     buf_store(S["o"][0], S["s"][0], S["a"][0], no, ns, ret, disc, boot)
 
@@ -253,15 +253,15 @@ for step in range(args.timesteps):
     nobs, rew, terminated, truncated, infos = env.step(act)
     no_t, ns_t = nobs["policy"], _critic_obs(nobs)
     done = (terminated | truncated).bool()
-    fo = infos.get("final_obs")
-    if fo is not None and done.any():
-        fo_t = torch.where(done.unsqueeze(-1), fo["policy"], no_t)
-        fs_t = torch.where(done.unsqueeze(-1), _critic_obs(fo), ns_t)
+    flat_observation = infos.get("final_obs")
+    if flat_observation is not None and done.any():
+        fo_t = torch.where(done.unsqueeze(-1), flat_observation["policy"], no_t)
+        fs_t = torch.where(done.unsqueeze(-1), _critic_obs(flat_observation), ns_t)
     else:
         fo_t, fs_t = no_t, ns_t
 
     for k, v in zip(
-        ("o", "s", "a", "rew", "term", "trunc", "no", "ns", "fo", "fs"),
+        ("o", "s", "a", "rew", "term", "trunc", "no", "ns", "flat_observation", "fs"),
         (o_t, s_t, act, rew, terminated.float(), truncated.float(), no_t, ns_t, fo_t, fs_t),
     ):
         S[k].append(v)

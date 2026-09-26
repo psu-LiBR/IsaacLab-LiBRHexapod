@@ -1,0 +1,82 @@
+{
+  "algorithm": "DDQN",
+  "experiment": "original-plus-added-switch",
+  "original_switch": {
+    "term": "switch",
+    "multiplier_reference": -0.005,
+    "multiplier": 5,
+    "weight": -0.025,
+    "reset_handling": "zero on first episode step"
+  },
+  "added_command_switch": {
+    "enabled": true,
+    "reference_cost_per_leg_flip": 0.0004,
+    "multiplier": 5,
+    "cost_per_leg_flip": 0.002,
+    "reward_weight": -0.002,
+    "integration": "per-leg command flips / dt, multiplied by dt by reward manager",
+    "reset_handling": "zero on first episode step"
+  },
+  "resolved_reward_weights": {
+    "progress": 5.0,
+    "reach": 2.0,
+    "fall": -6.0,
+    "time": -0.01,
+    "contacts": -1.0,
+    "limits": -1.0,
+    "slide": -0.01,
+    "tilt": -1.0,
+    "vertical": -0.1,
+    "lateral": -0.05,
+    "roll_pitch": -0.005,
+    "yaw": -0.0001,
+    "torque": -3e-05,
+    "acc": -2.5e-09,
+    "switch": -0.025,
+    "command_switch": -0.002
+  },
+  "training_seed": 46,
+  "training_friction": [
+    0.18,
+    0.25
+  ],
+  "evaluation_friction": 0.21,
+  "control_dt_s": 0.02,
+  "spine_wave": {
+    "period_s": 1.0,
+    "sin_coef": {
+      "FrontLink_Joint": [
+        -0.9162978573
+      ],
+      "BackLink_Joint": [
+        0.0
+      ]
+    },
+    "cos_coef": {
+      "FrontLink_Joint": [
+        0.0
+      ],
+      "BackLink_Joint": [
+        -0.9162978573
+      ]
+    },
+    "offset": {
+      "FrontLink_Joint": 0.0,
+      "BackLink_Joint": 0.0
+    }
+  },
+  "policy_observation_shape": [
+    32
+  ],
+  "joint_names": [
+    "FrontLink_Joint",
+    "BackLink_Joint",
+    "MiddleLeft_Joint",
+    "MiddleRight_Joint",
+    "FrontLeft_Joint",
+    "FrontRight_Joint",
+    "BackLeft_Joint",
+    "BackRight_Joint"
+  ],
+  "inference_metadata": "run_meta.json"
+}
