@@ -19,3 +19,7 @@ source/isaaclab_tasks/test/golden_images/**/*.png filter=lfs diff=lfs merge=lfs 
 friday-report-20260915/videos/*.mp4 -filter -diff -merge
 
 preliminary-6algorithms-4rewards/videos/*.mp4 filter=lfs diff=lfs merge=lfs -text
+
+# Small standalone handoff assets must also be explicit for bulk LFS validation.
+switch-penalty-5x-to-100x/**/*.mp4 -filter -diff -merge
+switch-penalty-5x-to-100x/**/*.pt -filter -diff -merge
