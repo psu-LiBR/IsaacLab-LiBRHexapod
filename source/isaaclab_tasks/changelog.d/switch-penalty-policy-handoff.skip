@@ -1,0 +1,4 @@
+Test-only package change: add regression coverage for preserving embedded binary
+policy action masks and rejecting missing or conflicting mask metadata during
+ONNX export. The exporter and policy handoff artifacts live outside this package;
+no isaaclab_tasks runtime API or package version change is required.
