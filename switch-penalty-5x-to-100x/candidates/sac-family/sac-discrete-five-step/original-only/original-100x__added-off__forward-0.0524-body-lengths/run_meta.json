@@ -1,0 +1,8 @@
+{
+  "algo": "sac_d",
+  "obs_dim": 32,
+  "n_actions": 64,
+  "seed": 46,
+  "num_envs": 4096,
+  "n_step": 5
+}

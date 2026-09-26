@@ -1,0 +1,21 @@
+{
+  "model_sha256": "92c247ea9201158a73df8eeab3b62446fdde51461ad763aa2fa02c3f8097a40f",
+  "onnx_sha256": "f802f08cd1b7cd108e8b684cd68c5fca14bbfcdca23519f5573733a982b47c08",
+  "reference_loader_sha256": "5bad46789b62dbd20dd762aea2b93b70cf6dd1d5748e4f694ca3830c90e744aa",
+  "samples": 2049,
+  "inputs": "zero, standard normal, uniform [-20, 20]; not recorded robot observations",
+  "reference_action_mismatches": 0,
+  "onnx_action_mismatches": 0,
+  "torch_version": "2.11.0+cu128",
+  "onnxruntime_version": "1.30.0",
+  "input_shape": [
+    1,
+    32
+  ],
+  "output_shape": [
+    1,
+    6
+  ],
+  "observation_normalization": false,
+  "legal_actions": null
+}

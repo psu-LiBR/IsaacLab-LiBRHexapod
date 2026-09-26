@@ -1,0 +1,82 @@
+{
+  "algorithm": "SAC-D 1-step",
+  "experiment": "original-plus-added-switch",
+  "original_switch": {
+    "term": "action_rate_l2",
+    "multiplier_reference": -0.005,
+    "multiplier": 10,
+    "weight": -0.05,
+    "reset_handling": "native implementation"
+  },
+  "added_command_switch": {
+    "enabled": true,
+    "reference_cost_per_leg_flip": 0.0004,
+    "multiplier": 10,
+    "cost_per_leg_flip": 0.004,
+    "reward_weight": -0.004,
+    "integration": "per-leg command flips / dt, multiplied by dt by reward manager",
+    "reset_handling": "zero on first episode step"
+  },
+  "resolved_reward_weights": {
+    "lin_vel_z_l2": -0.0001,
+    "ang_vel_xy_l2": -1e-06,
+    "dof_torques_l2": -0.0003,
+    "dof_acc_l2": -3e-08,
+    "action_rate_l2": -0.05,
+    "feet_air_time": 0.0,
+    "undesired_contacts": -0.5,
+    "flat_orientation_l2": 0.0,
+    "dof_pos_limits": -1.0,
+    "ang_vel_z_l2": -0.0001,
+    "lin_vel_y_l2": -0.0005,
+    "progress": 1.5,
+    "reach_bonus": 2.0,
+    "fall_penalty": -1.0,
+    "time_penalty": -0.003,
+    "command_switch": -0.004
+  },
+  "training_seed": 46,
+  "training_friction": [
+    0.18,
+    0.25
+  ],
+  "evaluation_friction": 0.21,
+  "control_dt_s": 0.02,
+  "spine_wave": {
+    "period_s": 1.0,
+    "sin_coef": {
+      "FrontLink_Joint": [
+        -0.9162978573
+      ],
+      "BackLink_Joint": [
+        0.0
+      ]
+    },
+    "cos_coef": {
+      "FrontLink_Joint": [
+        0.0
+      ],
+      "BackLink_Joint": [
+        -0.9162978573
+      ]
+    },
+    "offset": {
+      "FrontLink_Joint": 0.0,
+      "BackLink_Joint": 0.0
+    }
+  },
+  "policy_observation_shape": [
+    32
+  ],
+  "joint_names": [
+    "FrontLink_Joint",
+    "BackLink_Joint",
+    "MiddleLeft_Joint",
+    "MiddleRight_Joint",
+    "FrontLeft_Joint",
+    "FrontRight_Joint",
+    "BackLeft_Joint",
+    "BackRight_Joint"
+  ],
+  "inference_metadata": "run_meta.json"
+}
