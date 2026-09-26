@@ -1,4 +1,4 @@
-# Reward Tuning V2 — 2026-09-24
+# Binary RL — Switch Penalty 5×–100×
 
 This directory contains 18 simulation candidates: three per algorithm, selected from the two 09-24 waves under the strict per-leg, per-complete-cycle switch limit of **<=4**.
 
@@ -8,6 +8,21 @@ This directory contains 18 simulation candidates: three per algorithm, selected 
 - **Wave 2 — original term + Jackson term:** the same original scaled weight plus the new coefficient.
 
 The exact values are printed on every card and in `candidate_manifest.json`: original switch weight, multiplier, new lambda, algorithm, run ID, checkpoint step, video, and model hashes.
+
+## Coefficient reference
+
+The four tested multipliers are **5×, 10×, 30× and 100×**.
+
+| Multiplier | Original switch weight (reference −0.005) | Wave 1 new λ | Wave 2 new λ (reference 0.0004) |
+|---|---:|---:|---:|
+| 5× | −0.025 | 0 | 0.002 |
+| 10× | −0.05 | 0 | 0.004 |
+| 30× | −0.15 | 0 | 0.012 |
+| 100× | −0.5 | 0 | 0.04 |
+
+These references define this sweep's multipliers, not every family's historical default. The experimental batch date is preserved in the provenance data.
+
+[Open the English report](https://psu-libr.github.io/IsaacLab-LiBRHexapod/binary-rl-switch-penalty-5x-to-100x/).
 
 ## Use
 
