@@ -45,15 +45,31 @@ The evaluated pool contains **690 unique checkpoints** from six algorithms, two 
 
 Both groups require valid continuous measurements, zero resets, and a **maximum over individual legs and complete cycles of 2, 3 or 4 command changes**. The target group is **0.6 ≤ BL/cycle ≤ 0.8**; the comparison group is **BL/cycle > 0.8**. Exactly 0.8 belongs to the target group.
 
-| Algorithm | 0.6–0.8: eligible | No recorded falls/contact | Published | >0.8: eligible | Published |
-|---|---:|---:|---:|---:|---:|
-| DQN | 9 | 9 | 5 | 66 | 5 |
-| DDQN | 15 | 14 | 5 | 46 | 5 |
-| PPO | 19 | 19 | 5 | 0 | 0 |
-| Masked PPO | 19 | 19 | 5 | 0 | 0 |
-| SAC-D 1-step | 3 | 3 | 3 | 0 | 0 |
-| SAC-D 5-step | 0 | 0 | 0 | 0 | 0 |
-| **Total** | **65** | **64** | **23** | **112** | **10** |
+### Target displacement: 0.60 ≤ BL/cycle ≤ 0.80
+
+| Algorithm | Checkpoints meeting the numerical criteria | Representative policy bundles included |
+|---|---:|---:|
+| DQN | 9 | 5 |
+| DDQN | 15 | 5 |
+| PPO | 19 | 5 |
+| Masked PPO | 19 | 5 |
+| SAC-D 1-step | 3 | 3 |
+| SAC-D 5-step | 0 | 0 |
+| **Total** | **65** | **23** |
+
+### Higher-displacement comparison: BL/cycle > 0.80
+
+| Algorithm | Checkpoints meeting the numerical criteria | Representative policy bundles included |
+|---|---:|---:|
+| DQN | 66 | 5 |
+| DDQN | 46 | 5 |
+| PPO | 0 | 0 |
+| Masked PPO | 0 | 0 |
+| SAC-D 1-step | 0 | 0 |
+| SAC-D 5-step | 0 | 0 |
+| **Total** | **112** | **10** |
+
+**How to read these tables:** the middle column counts every unique evaluated checkpoint that meets the displacement and maximum-switch criteria. The right column counts the representative models actually included here with checkpoint, ONNX, configuration and reproduction command. It is a subset of the middle column, not a separate result category.
 
 These are **65 + 112 numerical matches**, from which **23 + 10 representatives** are packaged. They are not the only available results. One target-band DDQN checkpoint (0.6194 BL/cycle) records torso contact in every environment and is excluded from the policy delivery; it remains explicitly marked in the numerical inventory and additional video collection. All 112 higher-displacement numerical matches have zero recorded falls and torso contact.
 
@@ -65,14 +81,7 @@ Within each algorithm, start with the **0.6–0.8** group. Rows are in **ascendi
 
 All selected evaluations have valid continuous measurements, no observed falls or torso contact, and a **maximum of 2, 3 or 4 command changes over all individual legs and complete cycles**. This does not mean every leg switches at least twice. Selection spreads displacement, command-switch counts, reward conditions and dwell times, with straightness used as a preference. There is no hidden yaw/drift threshold. Some nearby displacement values are retained only for materially different dwell or straightness; see each candidate's rationale. Videos remain outside this repository.
 
-| Algorithm | 0.6–0.8 | >0.8 | Availability and tradeoff |
-|---|---:|---:|---|
-| DQN | 5 | 5 | No suitable 0.60–0.66 point in evaluated pool; starts at 0.6839 |
-| DDQN | 5 | 5 | 0.6194 omitted because every evaluated environment had torso contact |
-| PPO | 5 | 0 | No >0.8 checkpoint satisfies maximum switching ≤4 |
-| Masked PPO | 5 | 0 | Eligible values stop at 0.6816; no 0.7 band or >0.8 point to supply |
-| SAC-D 1-step | 3 | 0 | All three numerical matches retained; substantial lateral drift is explicit |
-| SAC-D 5-step | 0 | 0 | 22 evaluated points in 0.6–0.8 have 14–38 maximum switches; none meet ≤4 |
+**Availability limits:** DQN has only two numerical matches below 0.70: 0.6716 and 0.6839. The former has 84.7° maximum yaw and 1.031 BL maximum drift. DDQN has only two below 0.70: 0.6194 (torso contact in every environment) and 0.6582. Masked PPO has 19 numerical matches, all between 0.6018 and 0.6816, with none at or above 0.70. SAC-D 1-step has only three matches; SAC-D 5-step has none. Missing displacement intervals cannot be supplied by repeating a model or relabeling an out-of-band result.
 
 ## Table definitions
 
