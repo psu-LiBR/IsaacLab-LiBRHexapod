@@ -2,7 +2,7 @@
 
 **47 representative simulation policies: 33 in 0.60–0.80 BL/cycle and 14 above 0.80.** Each candidate pairs its original checkpoint, ONNX, complete reward weights, inference metadata, measurements and validation. No retraining is required to evaluate these checkpoints. Hardware performance remains to be measured.
 
-[Comparison page](https://psu-libr.github.io/IsaacLab-LiBRHexapod/switch-penalty-5x-to-100x/) · [Machine-readable index](candidate_manifest.json) · [Reproduction guide](REPRODUCE_DQN_DDQN.md) · [Robot runtime](../scripts/sim2real_transfer/README.md)
+[Comparison page](https://psu-libr.github.io/IsaacLab-LiBRHexapod/switch-penalty-5x-to-100x/) · [Machine-readable index](candidate_manifest.json) · [Reproduction guide](REPRODUCE_DQN_DDQN.md) · [Robot runtime](../scripts/sim2real_transfer/README.md) · [Video catalog](VIDEO_CATALOG.md)
 
 ## Structure
 
@@ -37,7 +37,7 @@ switch-penalty-5x-to-100x/
 
 The candidate hierarchy is shared by all three families. Empty algorithm/group combinations are reported in the tables; no duplicate model is inserted to fill a quota.
 
-**Reproduction chain:** table row → candidate ID → paired checkpoint/configuration and hashes → evaluation command → measured JSON and runtime audit. **Video correspondence:** candidate ID + checkpoint SHA-256 → the same hierarchy under `RL_Binary/github-policy-videos/` → matching MP4 and video SHA-256.
+**Reproduction chain:** table row → candidate ID → paired checkpoint/configuration and hashes → evaluation command → measured JSON and runtime audit. **Video correspondence:** candidate ID + checkpoint SHA-256 → the displacement-first hierarchy under `RL_Binary/github-policy-videos/` → matching MP4 and video SHA-256.
 
 ## Candidate population
 

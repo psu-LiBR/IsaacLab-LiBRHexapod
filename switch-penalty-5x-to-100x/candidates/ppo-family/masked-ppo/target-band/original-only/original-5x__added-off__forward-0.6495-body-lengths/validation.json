@@ -71,7 +71,8 @@
     "returncode": 0,
     "fake_imu": true,
     "in_memory_bus": true,
-    "all_values_finite": true
+    "all_values_finite": true,
+    "binary_outputs_valid": true
   },
   "evaluation_source_sha256": {
     "evaluate_switch_candidate.py": "f777862a08e8fdda14d3818cf1daf58d70f0b7c9dc822331bb37804dc164ec6e",

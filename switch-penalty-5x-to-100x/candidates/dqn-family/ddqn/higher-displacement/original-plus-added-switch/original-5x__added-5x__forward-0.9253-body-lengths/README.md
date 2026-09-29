@@ -25,3 +25,7 @@ python scripts/sim2real_transfer/run_policy.py \
 ```
 
 Install the robot runtime's documented dependencies first. See the parent delivery guide for observation ordering and calibration. This dry run checks software execution only; it does not predict robot displacement.
+
+## Simulation Video
+
+[Play the matching OneDrive video](https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fgithub-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.9253-body-lengths%2Fddqn-higher-0.9253.mp4). Normal 1× playback; environment 0. The checkpoint SHA-256 matches this policy. [Full video catalog](../../../../../../VIDEO_CATALOG.md).
