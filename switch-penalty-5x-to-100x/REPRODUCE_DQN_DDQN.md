@@ -47,7 +47,7 @@ distinguishes a checkpoint/load issue from a task/reset/physics mismatch.
 
 Training randomizes friction over `[0.18, 0.25]`.  The candidate metadata labels
 the published evaluation condition as `0.21`; the current quantitative evaluator
-pins the task's active material range and prints the resulting value in its audit.
-Use the printed audit as the authoritative value for a rerun, and do not silently
-substitute the Play task's friction setting.  The package will be reconciled against
-the original measurement record before claiming bit-for-bit numerical agreement.
+pins that range's midpoint, `0.215`, and prints it in its audit.  Use the printed
+audit as the authoritative value for a rerun, and do not silently substitute the
+Play task's `0.21` setting.  The package will be reconciled against the original
+measurement record before claiming bit-for-bit numerical agreement.
