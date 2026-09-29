@@ -2,7 +2,7 @@
 
 **25 simulation policies with paired checkpoints, ONNX exports, reward configurations and measurements. Replay videos are deliberately not versioned in this repository.**
 
-[English comparison](https://psu-libr.github.io/IsaacLab-LiBRHexapod/switch-penalty-5x-to-100x/) · [Candidate index](candidate_manifest.json) · [Preliminary comparison](../preliminary-6algorithms-4rewards/)
+[English comparison](https://psu-libr.github.io/IsaacLab-LiBRHexapod/switch-penalty-5x-to-100x/) · [Candidate index](candidate_manifest.json) · [Reproduce DQN/DDQN](REPRODUCE_DQN_DDQN.md) · [Preliminary comparison](../preliminary-6algorithms-4rewards/)
 
 ## Two experiments
 
