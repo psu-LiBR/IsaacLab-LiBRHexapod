@@ -278,6 +278,14 @@ parser.add_argument(
     help="pinned goal distance (m); far enough that reach_goal cannot fire in the window",
 )
 parser.add_argument(
+    "--friction",
+    type=float,
+    default=None,
+    help="optional explicit static/dynamic friction for a quantitative rollout. "
+    "When omitted, retain the legacy deterministic midpoint of the task range; "
+    "pass 0.21 to reproduce the published switch-penalty package condition.",
+)
+parser.add_argument(
     "--policy",
     nargs=3,
     action="append",
@@ -452,10 +460,15 @@ def pin_events(cfg) -> None:
         elif name == "physics_material":
             for k in ("static_friction_range", "dynamic_friction_range", "restitution_range"):
                 if k in p:
-                    m = _mid(p[k])
                     old = p[k]
+                    m = (
+                        args.friction
+                        if args.friction is not None and k in ("static_friction_range", "dynamic_friction_range")
+                        else _mid(p[k])
+                    )
                     p[k] = (m, m)
-                    AUDIT.append(f"events.{name}.{k}: {old} -> {p[k]}")
+                    source = "explicit --friction" if args.friction is not None and "friction" in k else "range midpoint"
+                    AUDIT.append(f"events.{name}.{k}: {old} -> {p[k]} ({source})")
             if "num_buckets" in p:
                 AUDIT.append(f"events.{name}.num_buckets: {p['num_buckets']} -> 1")
                 p["num_buckets"] = 1
@@ -908,6 +921,7 @@ def do(fn, label, meta=None):
                         "steps": args.steps,
                         "seed": args.seed,
                         "goal_distance": args.goal_distance,
+                        "requested_friction": args.friction,
                         "warmup_steps_discarded": args.warmup,
                         "fall_threshold_N": args.fall_threshold,
                         "step_dt": base.step_dt,

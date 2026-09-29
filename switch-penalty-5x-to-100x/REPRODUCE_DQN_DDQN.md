@@ -15,7 +15,7 @@ CANDIDATE="switch-penalty-5x-to-100x/candidates/dqn-family/dqn/original-plus-add
 ./isaaclab.sh -p scripts/reinforcement_learning/binary_rl/eval_protocol.py \
   --task Isaac-Goal-Flat-Hexapod-Binary-v0 \
   --num_envs 64 --steps 300 --seed 7 --warmup 1 \
-  --goal_distance 2.0 --body_length_m 0.315 --gait_period_s 1.0 \
+  --goal_distance 2.0 --friction 0.21 --body_length_m 0.315 --gait_period_s 1.0 \
   --no_baselines \
   --policy net dqn_added_10x "$CANDIDATE/policy.pt" \
   --out dqn_added_10x_eval.json
@@ -45,9 +45,10 @@ distinguishes a checkpoint/load issue from a task/reset/physics mismatch.
 
 ## Known condition boundary
 
-Training randomizes friction over `[0.18, 0.25]`.  The candidate metadata labels
-the published evaluation condition as `0.21`; the current quantitative evaluator
-pins that range's midpoint, `0.215`, and prints it in its audit.  Use the printed
-audit as the authoritative value for a rerun, and do not silently substitute the
-Play task's `0.21` setting.  The package will be reconciled against the original
-measurement record before claiming bit-for-bit numerical agreement.
+Training randomizes friction over `[0.18, 0.25]`.  The public candidate metadata,
+metrics, HTML, and playback videos record the published condition as `0.21`; the
+command above explicitly forces that value for both static and dynamic friction.
+Without `--friction`, the legacy evaluator default is the training-range midpoint,
+`0.215`, so omitting the flag is not a reproduction of the published package.
+The JSON records the requested value and its audit records the applied material
+values.  Keep both with any comparison result.
