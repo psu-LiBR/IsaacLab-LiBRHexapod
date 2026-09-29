@@ -4,7 +4,7 @@
 
 DQN, 100×, original + added command-switch cost. **0.7656 BL/cycle**, maximum **2** changes per leg per complete cycle. Yaw 35.1°; lateral drift 0.544 BL. Dwell min/P05/median: 0.34/0.36/0.44 seconds.
 
-Candidate specifically inspected by the user; two maximum switches and 0.34 s minimum dwell. Compared with nearby 0.7580, it holds commands longer but drifts more.
+Long-dwell representative with two maximum switches and 0.34 s minimum dwell. Compared with nearby 0.7580, it holds commands longer but drifts more.
 
 Observed falls / torso-contact environment fractions: 0.0/0.0. Lateral drift exceeds 0.5 BL; Yaw exceeds 35 degrees; Hardware performance not verified.
 

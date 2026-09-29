@@ -1,0 +1,90 @@
+{
+  "scope": "Two-wave switch-penalty study; six algorithms; four multipliers; 690 unique evaluated checkpoint hashes; repeat evaluations deduplicated with identical metrics. Historical studies and the separate native-action-rate control are excluded.",
+  "criteria": "Valid continuous measurement, no resets, maximum over individual legs and complete cycles in {2,3,4}; target band [0.6,0.8], higher displacement >0.8.",
+  "algorithms": [
+    {
+      "algorithm": "DQN",
+      "evaluated_checkpoints": 114,
+      "target-band": {
+        "numerically_eligible": 9,
+        "zero_recorded_falls_and_torso_contact": 9,
+        "published": 5
+      },
+      "higher-displacement": {
+        "numerically_eligible": 66,
+        "zero_recorded_falls_and_torso_contact": 66,
+        "published": 5
+      }
+    },
+    {
+      "algorithm": "DDQN",
+      "evaluated_checkpoints": 113,
+      "target-band": {
+        "numerically_eligible": 15,
+        "zero_recorded_falls_and_torso_contact": 14,
+        "published": 5
+      },
+      "higher-displacement": {
+        "numerically_eligible": 46,
+        "zero_recorded_falls_and_torso_contact": 46,
+        "published": 5
+      }
+    },
+    {
+      "algorithm": "PPO",
+      "evaluated_checkpoints": 114,
+      "target-band": {
+        "numerically_eligible": 19,
+        "zero_recorded_falls_and_torso_contact": 19,
+        "published": 5
+      },
+      "higher-displacement": {
+        "numerically_eligible": 0,
+        "zero_recorded_falls_and_torso_contact": 0,
+        "published": 0
+      }
+    },
+    {
+      "algorithm": "Masked PPO",
+      "evaluated_checkpoints": 102,
+      "target-band": {
+        "numerically_eligible": 19,
+        "zero_recorded_falls_and_torso_contact": 19,
+        "published": 5
+      },
+      "higher-displacement": {
+        "numerically_eligible": 0,
+        "zero_recorded_falls_and_torso_contact": 0,
+        "published": 0
+      }
+    },
+    {
+      "algorithm": "SAC-D 1-step",
+      "evaluated_checkpoints": 118,
+      "target-band": {
+        "numerically_eligible": 3,
+        "zero_recorded_falls_and_torso_contact": 3,
+        "published": 3
+      },
+      "higher-displacement": {
+        "numerically_eligible": 0,
+        "zero_recorded_falls_and_torso_contact": 0,
+        "published": 0
+      }
+    },
+    {
+      "algorithm": "SAC-D 5-step",
+      "evaluated_checkpoints": 129,
+      "target-band": {
+        "numerically_eligible": 0,
+        "zero_recorded_falls_and_torso_contact": 0,
+        "published": 0
+      },
+      "higher-displacement": {
+        "numerically_eligible": 0,
+        "zero_recorded_falls_and_torso_contact": 0,
+        "published": 0
+      }
+    }
+  ]
+}

@@ -55,10 +55,10 @@ Retain the command, output JSON, audit and log before adjusting anything. Check,
 4. Normalization and the masked action set were loaded. A policy that loads successfully with a different observation order or action restriction is not the same inference pipeline.
 5. Compare the recorded action/trajectory and the candidate's metrics before considering retraining.
 
-The earlier handoff did not make the exact quantitative protocol sufficiently clear. This delivery uses a dedicated entry point with the full measurement configuration and a sibling-metadata fix in the general evaluator. These are verified corrections; they do not establish which particular mismatch caused Jackson's earlier 0 BL result without his original command and log.
+The dedicated entry point applies the complete quantitative protocol. Packaged checkpoint metadata is loaded from the candidate directory. A zero or divergent result requires comparison of the actual command, runtime audit, action trace and software versions; loading a checkpoint alone does not establish protocol equivalence.
 
 ## ONNX and physical testing
 
 Each candidate's README includes a CPU deployment dry-run command using its ONNX and this batch's deployment.example.yaml. Normalization, clipping, mask, argmax and six-bit decoding are inside ONNX. The hardware host supplies the observations and analytic spine wave. The five-second fake-IMU/in-memory-bus check does not move motors and cannot verify real localization, calibration, contact forces or locomotion.
 
-The table's >0.8 group is retained for comparative assessment, not promoted as the preferred slow gait. Jackson chooses which candidates to test physically. Videos are shared separately through an agreed channel; none are committed in this update.
+The table's >0.8 group is retained for comparative assessment, not promoted as the preferred slow gait. Physical testing requires a separate assessment of the recorded limitations. Videos are shared separately through an agreed channel; none are committed in this update.

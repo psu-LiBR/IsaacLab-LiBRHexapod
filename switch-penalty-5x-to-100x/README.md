@@ -4,9 +4,64 @@
 
 [Comparison page](https://psu-libr.github.io/IsaacLab-LiBRHexapod/switch-penalty-5x-to-100x/) · [Machine-readable index](candidate_manifest.json) · [Reproduction guide](REPRODUCE_DQN_DDQN.md) · [Robot runtime](../scripts/sim2real_transfer/README.md)
 
+## Structure
+
+```text
+switch-penalty-5x-to-100x/
+├── README.md                       # Overview, definitions and candidate tables
+├── index.html                      # Interactive comparison page
+├── candidate_pool_summary.json     # Evaluated, eligible and published counts
+├── eligible_candidate_pool.csv     # All 177 numerical matches, including unselected
+├── SELECTION.md                    # Coverage, tradeoffs and selection limitations
+├── REWARD_DEFINITION.md             # Penalty provenance, formulas and coefficients
+├── REPRODUCE_DQN_DDQN.md            # Reproduction guide for all six algorithms
+├── VIDEO_CATALOG.md                # External video collections and identity mapping
+├── candidate_manifest.json         # Published policy IDs, metrics and file hashes
+├── validation_summary.json         # Recorded validation results
+├── deployment.example.yaml         # CPU runtime interface and hardware configuration
+└── candidates/
+    ├── dqn-family/                 # dqn / ddqn
+    ├── ppo-family/                 # ppo / masked-ppo
+    └── sac-family/                 # sac-discrete-one-step / sac-discrete-five-step
+        └── <algorithm>/<displacement-group>/<reward-condition>/<candidate>/
+            ├── README.md          # Metrics, limitations and exact commands
+            ├── policy.pt          # Original checkpoint
+            ├── policy.onnx        # Exported inference graph
+            ├── run_meta.json      # Normalization, architecture and action metadata
+            ├── config.json        # Complete resolved reward/training configuration
+            ├── evaluation.json    # Fixed simulation protocol
+            ├── metrics.json       # Full-precision measurements
+            ├── validation.json    # Simulation/export/CPU validation evidence
+            └── index.html         # Candidate detail page
+```
+
+The candidate hierarchy is shared by all three families. Empty algorithm/group combinations are reported in the tables; no duplicate model is inserted to fill a quota.
+
+**Reproduction chain:** table row → candidate ID → paired checkpoint/configuration and hashes → evaluation command → measured JSON and runtime audit. **Video correspondence:** candidate ID + checkpoint SHA-256 → the same hierarchy under `RL_Binary/github-policy-videos/` → matching MP4 and video SHA-256.
+
+## Candidate population
+
+The evaluated pool contains **690 unique checkpoints** from six algorithms, two penalty conditions and four multipliers. Repeated evaluations are deduplicated by checkpoint SHA-256; duplicate records have identical screening measurements. Historical reward studies and the separate native-action-rate control are outside this population.
+
+Both groups require valid continuous measurements, zero resets, and a **maximum over individual legs and complete cycles of 2, 3 or 4 command changes**. The target group is **0.6 ≤ BL/cycle ≤ 0.8**; the comparison group is **BL/cycle > 0.8**. Exactly 0.8 belongs to the target group.
+
+| Algorithm | 0.6–0.8: eligible | No recorded falls/contact | Published | >0.8: eligible | Published |
+|---|---:|---:|---:|---:|---:|
+| DQN | 9 | 9 | 5 | 66 | 5 |
+| DDQN | 15 | 14 | 5 | 46 | 5 |
+| PPO | 19 | 19 | 5 | 0 | 0 |
+| Masked PPO | 19 | 19 | 5 | 0 | 0 |
+| SAC-D 1-step | 3 | 3 | 3 | 0 | 0 |
+| SAC-D 5-step | 0 | 0 | 0 | 0 | 0 |
+| **Total** | **65** | **64** | **23** | **112** | **10** |
+
+These are **65 + 112 numerical matches**, from which **23 + 10 representatives** are packaged. They are not the only available results. One target-band DDQN checkpoint (0.6194 BL/cycle) records torso contact in every environment and is excluded from the policy delivery; it remains explicitly marked in the numerical inventory and additional video collection. All 112 higher-displacement numerical matches have zero recorded falls and torso contact.
+
+See [selection rationale](SELECTION.md), [all numerical matches](eligible_candidate_pool.csv), [reward definition](REWARD_DEFINITION.md), and [video catalog](VIDEO_CATALOG.md). Unselected candidates are not labeled failures solely because they were not packaged.
+
 ## Selection
 
-Within each algorithm, start with the **0.6–0.8** group. Rows are in **ascending displacement**, not a performance ranking. The >0.8 group retains higher-displacement comparisons for Jackson to assess separately. Exactly 0.8 belongs to the first group; below 0.6 is outside this delivery.
+Within each algorithm, start with the **0.6–0.8** group. Rows are in **ascending displacement**, not a performance ranking. The >0.8 group retains higher-displacement comparisons for separate assessment. Exactly 0.8 belongs to the first group; below 0.6 is outside this delivery.
 
 All selected evaluations have valid continuous measurements, no observed falls or torso contact, and a **maximum of 2, 3 or 4 command changes over all individual legs and complete cycles**. This does not mean every leg switches at least twice. Selection spreads displacement, command-switch counts, reward conditions and dwell times, with straightness used as a preference. There is no hidden yaw/drift threshold. Some nearby displacement values are retained only for materially different dwell or straightness; see each candidate's rationale. Videos remain outside this repository.
 
@@ -171,8 +226,8 @@ The graph folds in observation normalization, clipping, action masking, argmax a
 
 The hardware spine amplitude retains the target branch's positive motor-mount correction; simulation uses the negative amplitude. Existing calibration is preserved. Hardware localization and real sensor signals are not validated by a fake-IMU dry run. The deployment example's fixed goal is 5 m; the quantitative simulation deliberately uses 2 m, so these are not the same navigation task.
 
-## Validation and handoff boundary
+## Validation scope
 
 The per-candidate validation receipt is authoritative; the aggregate [validation summary](validation_summary.json) records the completed checks. Original evaluation inference, packaged inference, export module and ONNX are compared on 2,049 synthetic inputs per candidate. Each ONNX also runs through the actual CPU deployment pipeline for five seconds with fake IMU and an in-memory motor bus. Fresh simulator runs use these packaged checkpoints and the code in this branch.
 
-The previous delivery emphasized large forward displacement. This selection replaces that default with a moderate-displacement comparison first, while explicitly preserving representative >0.8 cases. Earlier commits preserve the previous set; unselected candidates are not silently relabeled as failures. No claim is made that Jackson's earlier 0 BL result had one confirmed cause. No videos or workflow changes are part of this update.
+The previous delivery emphasized large forward displacement. This selection replaces that default with a moderate-displacement comparison first, while explicitly preserving representative >0.8 cases. Earlier commits preserve the previous set; unselected candidates are not silently relabeled as failures. No videos or workflow changes are part of this update.

@@ -125,7 +125,7 @@
         "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
         "index.html": "c4885420bd34968c20a666e5a0f387aa266556cb7da624448a882beff2797410",
         "config.json": "de3287caab30ad21c6d38612b6fe499d52256318ff796346f04cd90604f71896",
-        "README.md": "97e741ef708ad3ecb89c11b51439714d8222dd2c971ea642eeacd965e776bf48",
+        "README.md": "56921713dc706158d6fdcc3eb0854d0da11dade0122c6a032131d6f9bb855690",
         "policy.onnx": "0077b1459c474bb0bfa61cce3132c83d0a2383c99bd7916e9da1951232630e8a",
         "validation.json": "ad894001d0f0c723d5fef1fce6b33a42eb9e1d75719c329bd10f480841472a73",
         "evaluation.json": "382d0724cff1710734fd7bc3b9de2f2922f30621b94b2299b92666da2d68e2ac",
@@ -1444,5 +1444,10 @@
         "policy.pt": "47daf58b2c2fdb4ab1f77295be060632d81baae53da15c7af8d3df209c2a45c5"
       }
     }
-  ]
+  ],
+  "population_summary": "candidate_pool_summary.json",
+  "eligible_pool": "eligible_candidate_pool.csv",
+  "selection_rationale": "SELECTION.md",
+  "reward_definition": "REWARD_DEFINITION.md",
+  "video_catalog": "VIDEO_CATALOG.md"
 }
