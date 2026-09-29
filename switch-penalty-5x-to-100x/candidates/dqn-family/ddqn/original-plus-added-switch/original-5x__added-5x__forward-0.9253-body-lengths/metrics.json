@@ -8338,7 +8338,6 @@
   },
   "artifact_sha256": {
     "policy.pt": "7c22dcb1d5f437f02ecee7a3e9c6fa2b3671517a8f3e351baac7d222524c6756",
-    "replay.mp4": "f53ff7b691fdce901c191cd8e05c3f8dc610d39a21038e14bd1351ecde01d5e5",
     "policy.onnx": "6a7f1a382e1bb080a3163c48b1a93f706e73029f1a8209d609b785e6598d8a96"
   }
 }

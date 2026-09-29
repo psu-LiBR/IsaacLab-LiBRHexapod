@@ -1,6 +1,6 @@
 # Switch penalty · 5×–100×
 
-**25 simulation policies with paired checkpoints, ONNX exports, replays, reward configurations and measurements.**
+**25 simulation policies with paired checkpoints, ONNX exports, reward configurations and measurements. Replay videos are deliberately not versioned in this repository.**
 
 [English comparison](https://psu-libr.github.io/IsaacLab-LiBRHexapod/switch-penalty-5x-to-100x/) · [Candidate index](candidate_manifest.json) · [Preliminary comparison](../preliminary-6algorithms-4rewards/)
 
@@ -25,7 +25,7 @@ These are this sweep's multiplier references, not every historical reward defaul
 ~~~text
 switch-penalty-5x-to-100x/
 ├── README.md                      # Start here
-├── index.html                     # English comparison, click-to-load videos
+├── index.html                     # English comparison and measurements
 ├── candidate_manifest.json        # Candidate paths, metrics and hashes
 ├── deployment.example.yaml        # This batch's observation joint order
 └── candidates/
@@ -45,14 +45,13 @@ Algorithms separate original-only/ and original-plus-added-switch/ where availab
 ~~~text
 policy.pt        # Original checkpoint
 policy.onnx      # Deterministic binary inference
-replay.mp4       # This checkpoint's simulation replay
 config.json      # Exact reward weights and simulation configuration
 run_meta.json    # Inference architecture and legal-action metadata
 metrics.json     # Measurements, per-leg counts and command preview
 validation.json  # Hashes and action-equivalence results
 ~~~
 
-The two multipliers name separate penalty terms; added-off means no added term. Forward displacement distinguishes checkpoints without internal training IDs. Hashes bind the model, export and video.
+The two multipliers name separate penalty terms; added-off means no added term. Forward displacement distinguishes checkpoints without internal training IDs. Hashes bind the model and export; replay videos stay outside GitHub.
 
 ## Selection and interpretation
 
@@ -74,7 +73,6 @@ Use the existing binary deployment pipeline; no new robot controller is required
 ~~~bash
 git clone --branch robin/binary-rl-extended-quadruped https://github.com/psu-LiBR/IsaacLab-LiBRHexapod.git
 cd IsaacLab-LiBRHexapod
-git lfs pull
 python -m pip install -r scripts/sim2real_transfer/requirements.txt
 ~~~
 

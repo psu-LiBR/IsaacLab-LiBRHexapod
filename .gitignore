@@ -38,6 +38,13 @@ docker/.container.cfg
 docker/artifacts/
 *.tmp
 
+# Jackson request (2026-09-29): result replays are not versioned in this repository.
+# Keep locally generated video out of normal Git staging, including paths outside a videos/ directory.
+*.mp4
+*.mov
+*.avi
+*.webm
+
 # Doc Outputs
 **/docs/_build/*
 **/generated/*
