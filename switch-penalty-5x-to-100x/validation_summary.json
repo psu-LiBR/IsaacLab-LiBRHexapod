@@ -1,14 +1,14 @@
 {
-  "candidate_count": 33,
-  "target_band_count": 23,
-  "higher_displacement_count": 10,
+  "candidate_count": 47,
+  "target_band_count": 33,
+  "higher_displacement_count": 14,
   "synthetic_inputs_per_candidate": 2049,
   "action_mismatches": 0,
-  "cpu_dry_runs": 33,
+  "cpu_dry_runs": 47,
   "control_steps_per_dry_run": 250,
   "all_cpu_values_finite": true,
   "all_outputs_binary": true,
-  "fresh_simulations": 33,
+  "fresh_simulations": 47,
   "all_simulation_metrics_exact": true,
   "maximum_bl_absolute_error": 0,
   "core_cpu_tests_passed": 104,
@@ -17,12 +17,20 @@
   "workflow_modified": false,
   "candidates": [
     {
+      "id": "dqn-moderate-0.6716",
+      "validation": "candidates/dqn-family/dqn/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.6716-body-lengths/validation.json"
+    },
+    {
       "id": "dqn-moderate-0.6839",
       "validation": "candidates/dqn-family/dqn/target-band/original-only/original-10x__added-off__forward-0.6839-body-lengths/validation.json"
     },
     {
       "id": "dqn-moderate-0.7580",
       "validation": "candidates/dqn-family/dqn/target-band/original-only/original-30x__added-off__forward-0.7580-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-moderate-0.7650",
+      "validation": "candidates/dqn-family/dqn/target-band/original-only/original-10x__added-off__forward-0.7650-body-lengths/validation.json"
     },
     {
       "id": "dqn-moderate-0.7656",
@@ -45,8 +53,16 @@
       "validation": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-100x__added-100x__forward-0.8617-body-lengths/validation.json"
     },
     {
+      "id": "dqn-higher-0.9092",
+      "validation": "candidates/dqn-family/dqn/higher-displacement/original-only/original-10x__added-off__forward-0.9092-body-lengths/validation.json"
+    },
+    {
       "id": "dqn-higher-0.9486",
       "validation": "candidates/dqn-family/dqn/higher-displacement/original-only/original-10x__added-off__forward-0.9486-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-higher-0.9761",
+      "validation": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-10x__added-10x__forward-0.9761-body-lengths/validation.json"
     },
     {
       "id": "dqn-higher-0.9983",
@@ -69,6 +85,10 @@
       "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.7520-body-lengths/validation.json"
     },
     {
+      "id": "ddqn-moderate-0.7746",
+      "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.7746-body-lengths/validation.json"
+    },
+    {
       "id": "ddqn-moderate-0.7786",
       "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.7786-body-lengths/validation.json"
     },
@@ -77,8 +97,16 @@
       "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.7884-body-lengths/validation.json"
     },
     {
+      "id": "ddqn-moderate-0.7998",
+      "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.7998-body-lengths/validation.json"
+    },
+    {
       "id": "ddqn-higher-0.8310",
       "validation": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-100x__added-100x__forward-0.8310-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-higher-0.8649",
+      "validation": "candidates/dqn-family/ddqn/higher-displacement/original-only/original-100x__added-off__forward-0.8649-body-lengths/validation.json"
     },
     {
       "id": "ddqn-higher-0.8861",
@@ -87,6 +115,10 @@
     {
       "id": "ddqn-higher-0.9253",
       "validation": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-5x__added-5x__forward-0.9253-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-higher-0.9796",
+      "validation": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-10x__added-10x__forward-0.9796-body-lengths/validation.json"
     },
     {
       "id": "ddqn-higher-0.9937",
@@ -101,12 +133,24 @@
       "validation": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.6173-body-lengths/validation.json"
     },
     {
+      "id": "ppo-moderate-0.6234",
+      "validation": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.6234-body-lengths/validation.json"
+    },
+    {
+      "id": "ppo-moderate-0.6459",
+      "validation": "candidates/ppo-family/ppo/target-band/original-only/original-5x__added-off__forward-0.6459-body-lengths/validation.json"
+    },
+    {
       "id": "ppo-moderate-0.6550",
       "validation": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-5x__added-5x__forward-0.6550-body-lengths/validation.json"
     },
     {
       "id": "ppo-moderate-0.6778",
       "validation": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.6778-body-lengths/validation.json"
+    },
+    {
+      "id": "ppo-moderate-0.6935",
+      "validation": "candidates/ppo-family/ppo/target-band/original-only/original-30x__added-off__forward-0.6935-body-lengths/validation.json"
     },
     {
       "id": "ppo-moderate-0.7115",
@@ -121,8 +165,20 @@
       "validation": "candidates/ppo-family/masked-ppo/target-band/original-plus-added-switch/original-5x__added-5x__forward-0.6018-body-lengths/validation.json"
     },
     {
+      "id": "masked-ppo-moderate-0.6062",
+      "validation": "candidates/ppo-family/masked-ppo/target-band/original-plus-added-switch/original-5x__added-5x__forward-0.6062-body-lengths/validation.json"
+    },
+    {
+      "id": "masked-ppo-moderate-0.6081",
+      "validation": "candidates/ppo-family/masked-ppo/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.6081-body-lengths/validation.json"
+    },
+    {
       "id": "masked-ppo-moderate-0.6327",
       "validation": "candidates/ppo-family/masked-ppo/target-band/original-only/original-10x__added-off__forward-0.6327-body-lengths/validation.json"
+    },
+    {
+      "id": "masked-ppo-moderate-0.6495",
+      "validation": "candidates/ppo-family/masked-ppo/target-band/original-only/original-5x__added-off__forward-0.6495-body-lengths/validation.json"
     },
     {
       "id": "masked-ppo-moderate-0.6497",
