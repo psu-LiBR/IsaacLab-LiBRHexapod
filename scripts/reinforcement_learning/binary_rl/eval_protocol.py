@@ -467,7 +467,9 @@ def pin_events(cfg) -> None:
                         else _mid(p[k])
                     )
                     p[k] = (m, m)
-                    source = "explicit --friction" if args.friction is not None and "friction" in k else "range midpoint"
+                    source = (
+                        "explicit --friction" if args.friction is not None and "friction" in k else "range midpoint"
+                    )
                     AUDIT.append(f"events.{name}.{k}: {old} -> {p[k]} ({source})")
             if "num_buckets" in p:
                 AUDIT.append(f"events.{name}.num_buckets: {p['num_buckets']} -> 1")
@@ -862,7 +864,9 @@ def make_net_policy(path):
     # the checkpoint's parent dir). Honour it here so the greedy argmax can never pick an
     # action the policy was never allowed to explore.
     legal = None
-    meta_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(path))), "run_meta.json")
+    meta_path = os.path.join(os.path.dirname(os.path.abspath(path)), "run_meta.json")
+    if not os.path.isfile(meta_path):
+        meta_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(path))), "run_meta.json")
     if os.path.isfile(meta_path):
         with open(meta_path) as _mf:
             _rm = json.load(_mf)

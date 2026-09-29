@@ -2,8 +2,8 @@
 
 Results and policy handoff for the existing binary-contact controller.
 
-- **[Switch penalty · 5×–100×](switch-penalty-5x-to-100x/README.md):** 25 paired checkpoints, ONNX policies, simulation replays, reward configurations and measurements. Start here for the current robot-testing handoff.
-- **[Preliminary · 6 algorithms × 4 rewards](preliminary-6algorithms-4rewards/README.md):** the earlier comparison, with original curves and 24 replays.
+- **[Switch penalty · 5×–100×](switch-penalty-5x-to-100x/README.md):** 33 representative checkpoints and ONNX policies: 23 at 0.6–0.8 BL/cycle and 10 above 0.8, with reward configurations, measurements and exact reproduction commands. Start here for the current simulation-to-robot handoff.
+- **[Preliminary · 6 algorithms × 4 rewards](preliminary-6algorithms-4rewards/README.md):** the earlier comparison and original curves; videos are shared separately.
 - **[Binary policy implementation](scripts/reinforcement_learning/binary_rl/README_binary_rl.md)** · **[Robot runtime](scripts/sim2real_transfer/README.md)**
 
 ## Result structure

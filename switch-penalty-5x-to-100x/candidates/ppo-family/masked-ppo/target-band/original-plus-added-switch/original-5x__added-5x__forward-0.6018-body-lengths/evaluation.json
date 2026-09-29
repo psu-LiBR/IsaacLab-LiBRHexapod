@@ -1,0 +1,38 @@
+{
+  "reward": "A2",
+  "spine": "wave1",
+  "override": {
+    "torque": -0.0003
+  },
+  "switch_weight": -0.025,
+  "new_switch_cost": 0.002,
+  "native_switch": false,
+  "source_commit": "56033d64d2656cefa05a8222a058e264743e8c7f",
+  "method_id": 4,
+  "seed": 7,
+  "num_envs": 64,
+  "steps": 300,
+  "body_length_m": 0.315,
+  "gait_period_s": 1.0,
+  "evaluation_friction": 0.21,
+  "expected_reward_weights": {
+    "progress": 5.0,
+    "reach": 2.0,
+    "fall": -6.0,
+    "time": -0.01,
+    "contacts": -1.0,
+    "limits": -1.0,
+    "slide": -0.01,
+    "tilt": -1.0,
+    "vertical": -0.1,
+    "lateral": -0.05,
+    "roll_pitch": -0.005,
+    "yaw": -0.0001,
+    "torque": -0.0003,
+    "acc": -2.5e-09,
+    "switch": -0.025,
+    "command_switch": -0.002
+  },
+  "policy": "checkpoint",
+  "video": false
+}

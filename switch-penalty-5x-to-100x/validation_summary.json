@@ -1,0 +1,154 @@
+{
+  "candidate_count": 33,
+  "target_band_count": 23,
+  "higher_displacement_count": 10,
+  "synthetic_inputs_per_candidate": 2049,
+  "action_mismatches": 0,
+  "cpu_dry_runs": 33,
+  "control_steps_per_dry_run": 250,
+  "all_cpu_values_finite": true,
+  "all_outputs_binary": true,
+  "fresh_simulations": 33,
+  "all_simulation_metrics_exact": true,
+  "maximum_bl_absolute_error": 0,
+  "core_cpu_tests_passed": 104,
+  "hardware_tests_performed": false,
+  "videos_committed": false,
+  "workflow_modified": false,
+  "candidates": [
+    {
+      "id": "dqn-moderate-0.6839",
+      "validation": "candidates/dqn-family/dqn/target-band/original-only/original-10x__added-off__forward-0.6839-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-moderate-0.7580",
+      "validation": "candidates/dqn-family/dqn/target-band/original-only/original-30x__added-off__forward-0.7580-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-moderate-0.7656",
+      "validation": "candidates/dqn-family/dqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.7656-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-moderate-0.7959",
+      "validation": "candidates/dqn-family/dqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.7959-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-moderate-0.7986",
+      "validation": "candidates/dqn-family/dqn/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.7986-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-higher-0.8158",
+      "validation": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-100x__added-100x__forward-0.8158-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-higher-0.8617",
+      "validation": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-100x__added-100x__forward-0.8617-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-higher-0.9486",
+      "validation": "candidates/dqn-family/dqn/higher-displacement/original-only/original-10x__added-off__forward-0.9486-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-higher-0.9983",
+      "validation": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-5x__added-5x__forward-0.9983-body-lengths/validation.json"
+    },
+    {
+      "id": "dqn-higher-1.0116",
+      "validation": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-10x__added-10x__forward-1.0116-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-moderate-0.6582",
+      "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.6582-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-moderate-0.7440",
+      "validation": "candidates/dqn-family/ddqn/target-band/original-only/original-100x__added-off__forward-0.7440-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-moderate-0.7520",
+      "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.7520-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-moderate-0.7786",
+      "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.7786-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-moderate-0.7884",
+      "validation": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.7884-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-higher-0.8310",
+      "validation": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-100x__added-100x__forward-0.8310-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-higher-0.8861",
+      "validation": "candidates/dqn-family/ddqn/higher-displacement/original-only/original-100x__added-off__forward-0.8861-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-higher-0.9253",
+      "validation": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-5x__added-5x__forward-0.9253-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-higher-0.9937",
+      "validation": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-10x__added-10x__forward-0.9937-body-lengths/validation.json"
+    },
+    {
+      "id": "ddqn-higher-1.0025",
+      "validation": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-30x__added-30x__forward-1.0025-body-lengths/validation.json"
+    },
+    {
+      "id": "ppo-moderate-0.6173",
+      "validation": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.6173-body-lengths/validation.json"
+    },
+    {
+      "id": "ppo-moderate-0.6550",
+      "validation": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-5x__added-5x__forward-0.6550-body-lengths/validation.json"
+    },
+    {
+      "id": "ppo-moderate-0.6778",
+      "validation": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.6778-body-lengths/validation.json"
+    },
+    {
+      "id": "ppo-moderate-0.7115",
+      "validation": "candidates/ppo-family/ppo/target-band/original-only/original-10x__added-off__forward-0.7115-body-lengths/validation.json"
+    },
+    {
+      "id": "ppo-moderate-0.7519",
+      "validation": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.7519-body-lengths/validation.json"
+    },
+    {
+      "id": "masked-ppo-moderate-0.6018",
+      "validation": "candidates/ppo-family/masked-ppo/target-band/original-plus-added-switch/original-5x__added-5x__forward-0.6018-body-lengths/validation.json"
+    },
+    {
+      "id": "masked-ppo-moderate-0.6327",
+      "validation": "candidates/ppo-family/masked-ppo/target-band/original-only/original-10x__added-off__forward-0.6327-body-lengths/validation.json"
+    },
+    {
+      "id": "masked-ppo-moderate-0.6497",
+      "validation": "candidates/ppo-family/masked-ppo/target-band/original-only/original-10x__added-off__forward-0.6497-body-lengths/validation.json"
+    },
+    {
+      "id": "masked-ppo-moderate-0.6728",
+      "validation": "candidates/ppo-family/masked-ppo/target-band/original-only/original-30x__added-off__forward-0.6728-body-lengths/validation.json"
+    },
+    {
+      "id": "masked-ppo-moderate-0.6816",
+      "validation": "candidates/ppo-family/masked-ppo/target-band/original-only/original-10x__added-off__forward-0.6816-body-lengths/validation.json"
+    },
+    {
+      "id": "sac-discrete-one-step-moderate-0.6101",
+      "validation": "candidates/sac-family/sac-discrete-one-step/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.6101-body-lengths/validation.json"
+    },
+    {
+      "id": "sac-discrete-one-step-moderate-0.6356",
+      "validation": "candidates/sac-family/sac-discrete-one-step/target-band/original-only/original-5x__added-off__forward-0.6356-body-lengths/validation.json"
+    },
+    {
+      "id": "sac-discrete-one-step-moderate-0.7744",
+      "validation": "candidates/sac-family/sac-discrete-one-step/target-band/original-only/original-10x__added-off__forward-0.7744-body-lengths/validation.json"
+    }
+  ],
+  "additional_regression_tests_passed": 3,
+  "total_cpu_tests_passed": 107
+}

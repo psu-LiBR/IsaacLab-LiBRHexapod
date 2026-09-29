@@ -1,12 +1,319 @@
 {
-  "selection": "Per-leg maximum <=4; valid evaluation; zero falls and torso contact. Within each algorithm, ordered by switches, lateral drift, then forward displacement. Low-displacement controls are explicitly labeled. No universal straightness threshold has been agreed.",
+  "selection": "Representative selection, not an optimization ranking. Target band 0.6 <= BL/cycle <= 0.8; higher group BL/cycle > 0.8. Maximum over all legs and complete cycles is 2, 3 or 4. Valid measurements, zero recorded falls and torso contact. Straightness and dwell guide diversity; no fixed yaw/drift cutoff. Each algorithm and band is ordered by increasing displacement.",
   "candidates": [
     {
+      "id": "dqn-moderate-0.6839",
       "algorithm": "DQN",
       "family": "dqn-family",
       "algorithm_directory": "dqn",
+      "displacement_group": "target-band",
       "experiment": "original-only",
-      "directory": "candidates/dqn-family/dqn/original-only/original-10x__added-off__forward-0.9486-body-lengths",
+      "directory": "candidates/dqn-family/dqn/target-band/original-only/original-10x__added-off__forward-0.6839-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.6839187145233154,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        3,
+        2,
+        2
+      ],
+      "max_switches": 3,
+      "maximum_yaw_deg": 33.012508392333984,
+      "maximum_lateral_drift_body_lengths": 0.4583650529384613,
+      "minimum_dwell_s": 0.2,
+      "p05_dwell_s": 0.3,
+      "median_dwell_s": 0.5,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "1b649440effa6f926b8fc771433ac2b5cda834c13247a68afb9c4d82109a50f6",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "a618c3f36c968abd4c4aefd8c1bd40d8adeb144025834795dc883528a03245a4",
+        "config.json": "adaee809f6d41ef6e3fa6c8fc15f5d9096f61fee465ced72233cedc09f71d5d4",
+        "README.md": "faa2aea42a6e0b963e0a6cc832c45f5c398ff959e443fe8814e849f9940d70da",
+        "policy.onnx": "d1b3993b2acda30f8fb9c505d2df8777b2375463e4316745fa47912e52e9c282",
+        "validation.json": "784ec2dd0787db4f032a948c39622b5284133467b3962ae650b00bf537d88872",
+        "evaluation.json": "a868ba756e552646b515e0979961913a22ee49923757e587dc15f7b480640ab0",
+        "policy.pt": "6bdd94dbcf227cf2bb6feb3cbe4eec1c3c248a618ad93e7263160cab4d414e47"
+      }
+    },
+    {
+      "id": "dqn-moderate-0.7580",
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "displacement_group": "target-band",
+      "experiment": "original-only",
+      "directory": "candidates/dqn-family/dqn/target-band/original-only/original-30x__added-off__forward-0.7580-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.7579604983329773,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        4
+      ],
+      "max_switches": 4,
+      "maximum_yaw_deg": 29.838329315185547,
+      "maximum_lateral_drift_body_lengths": 0.42734161019325256,
+      "minimum_dwell_s": 0.1,
+      "p05_dwell_s": 0.26,
+      "median_dwell_s": 0.48,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "a71ece846e85e138cfd841827e9a7df1cf4b201acd5c3ebd4bc12304da3c5689",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "656d620623c2c9ae2cd299624bb94db7f238a4edab73f702a0504bb219a39eea",
+        "config.json": "0fb0a75e8e19803435930e09bc3e11a8ca1b2e66e4d6f122b96dc985b428574f",
+        "README.md": "b4585e976a9d65bf48bbb0386a7f89805885dde313832852411bba210c449def",
+        "policy.onnx": "631f4e0a83f8e0afc94236c17e4029886973cc1936cc31e0894892a27dc8de16",
+        "validation.json": "852a8ec0a16067fbfa6f4a40f00022585e078d5bbe44dc654082c09cbfc235a5",
+        "evaluation.json": "6822ea6143f5c212308da77013252dd20fd5efece7e8c6e40809a7a8dc3794af",
+        "policy.pt": "09578d9aa07f0e54d0b256151fe41079d16a0dcb9afe5f7c0dc4c54ab3240583"
+      }
+    },
+    {
+      "id": "dqn-moderate-0.7656",
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.7656-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.04,
+      "forward_body_lengths_per_cycle": 0.7656033039093018,
+      "per_leg_max_switches": [
+        0,
+        2,
+        0,
+        0,
+        0,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 35.13816452026367,
+      "maximum_lateral_drift_body_lengths": 0.5443880558013916,
+      "minimum_dwell_s": 0.34,
+      "p05_dwell_s": 0.36,
+      "median_dwell_s": 0.44,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Lateral drift exceeds 0.5 BL",
+        "Yaw exceeds 35 degrees",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "8b61e2de0416bb2bb1104dad8e41fa3aacce016ce5d68b0cf6070cc2d20ba905",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "c4885420bd34968c20a666e5a0f387aa266556cb7da624448a882beff2797410",
+        "config.json": "de3287caab30ad21c6d38612b6fe499d52256318ff796346f04cd90604f71896",
+        "README.md": "97e741ef708ad3ecb89c11b51439714d8222dd2c971ea642eeacd965e776bf48",
+        "policy.onnx": "0077b1459c474bb0bfa61cce3132c83d0a2383c99bd7916e9da1951232630e8a",
+        "validation.json": "ad894001d0f0c723d5fef1fce6b33a42eb9e1d75719c329bd10f480841472a73",
+        "evaluation.json": "382d0724cff1710734fd7bc3b9de2f2922f30621b94b2299b92666da2d68e2ac",
+        "policy.pt": "17eeafab352368e2996f463f5e3acc2f0b61b5266de3837a366f9a8d7d1e763a"
+      }
+    },
+    {
+      "id": "dqn-moderate-0.7959",
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.7959-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.04,
+      "forward_body_lengths_per_cycle": 0.795917272567749,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        0,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 33.548133850097656,
+      "maximum_lateral_drift_body_lengths": 0.5588266849517822,
+      "minimum_dwell_s": 0.36,
+      "p05_dwell_s": 0.36,
+      "median_dwell_s": 0.46,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Lateral drift exceeds 0.5 BL",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "a06286d34a4d854c96d675654f605311bf35c448afabe5623925048385d95ec8",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "18c13313a695ed7b331453c83aaf98c317e9492704f40965820a437354d88333",
+        "config.json": "de3287caab30ad21c6d38612b6fe499d52256318ff796346f04cd90604f71896",
+        "README.md": "7f528a75f92f38e6e0ac126b50c21381c541520c7b2390cdbd3aba8989b83e87",
+        "policy.onnx": "6a1985f48a1ffe393b2fd29df48c76d40e7908eed5fe1fdd5b235cccbec3b6ac",
+        "validation.json": "3a81701be69c999b139bcd6cf5a7ad4e9c31fc098f1778a64b97dad6a03b936c",
+        "evaluation.json": "382d0724cff1710734fd7bc3b9de2f2922f30621b94b2299b92666da2d68e2ac",
+        "policy.pt": "f2d1e30871849fe9f29012defd8be6ceb8f0d459e1417db6d60bebd2efc40f5d"
+      }
+    },
+    {
+      "id": "dqn-moderate-0.7986",
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.7986-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.012,
+      "forward_body_lengths_per_cycle": 0.7985751628875732,
+      "per_leg_max_switches": [
+        2,
+        0,
+        2,
+        0,
+        2,
+        3
+      ],
+      "max_switches": 3,
+      "maximum_yaw_deg": 37.40424346923828,
+      "maximum_lateral_drift_body_lengths": 0.32025158405303955,
+      "minimum_dwell_s": 0.14,
+      "p05_dwell_s": 0.16,
+      "median_dwell_s": 0.48,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Yaw exceeds 35 degrees",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "6a6ff79cd31db6aa35941757b4eadf691d9611a82258dbdb27e3532ee2052237",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "44724fd8edd0605087072efe1164a7646ab7c373654a45063e82ca1ec0671953",
+        "config.json": "8ce1c200d33b9c42b0c467102363d90832ffc9f9704853bca16550a4dd69be6b",
+        "README.md": "e9a5d231a1d517e69743e3fd560f2f1cb96d27582100ee379c0ab0145973875b",
+        "policy.onnx": "500e0e127fee97ead6e02d4149e133063c1c3684d3ae50809c6a37fcb9217449",
+        "validation.json": "580b3ce30b121c854e52da59b29168c7ae0832742a040ef3f4edd6a794f26adc",
+        "evaluation.json": "3bcc2b02e178a1723a2979cdd3730585fb26b1012778cec23b8ee281f02e547f",
+        "policy.pt": "8448100bfa9e0e3527f5b32ebf815cbe7847f163240164b559b3b004a360af86"
+      }
+    },
+    {
+      "id": "dqn-higher-0.8158",
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "displacement_group": "higher-displacement",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-100x__added-100x__forward-0.8158-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.04,
+      "forward_body_lengths_per_cycle": 0.8158473372459412,
+      "per_leg_max_switches": [
+        1,
+        2,
+        0,
+        0,
+        0,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 27.8741512298584,
+      "maximum_lateral_drift_body_lengths": 0.33608222007751465,
+      "minimum_dwell_s": 0.34,
+      "p05_dwell_s": 0.34,
+      "median_dwell_s": 0.44,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "591a811c17d78f2ee9904df77cf0594c247766de5489ffe8c1a9f4260445c337",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "683da4657270d57080a20e40d2b2a56f70e20c92a87b26008834cba8eb63151c",
+        "config.json": "de3287caab30ad21c6d38612b6fe499d52256318ff796346f04cd90604f71896",
+        "README.md": "0ae4c2e3f5b303ef82845ccd688d6bf94c7ebdb2143485d674e8022b2e23f26f",
+        "policy.onnx": "ec7d43462e4c0d442276434bb964476269e77cbfc97a017583faf7747fe69dfc",
+        "validation.json": "9368235a1247457a538f208e8e7fa67dc3e1bf7c537a597c6c3efc76a42fcb14",
+        "evaluation.json": "382d0724cff1710734fd7bc3b9de2f2922f30621b94b2299b92666da2d68e2ac",
+        "policy.pt": "048b94eaf29596723a20a91ae48f14ff3fd04533fd31cd476f386cc05f1e30ff"
+      }
+    },
+    {
+      "id": "dqn-higher-0.8617",
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "displacement_group": "higher-displacement",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-100x__added-100x__forward-0.8617-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.04,
+      "forward_body_lengths_per_cycle": 0.8617193102836609,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        0,
+        1
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 25.003511428833008,
+      "maximum_lateral_drift_body_lengths": 0.2651844620704651,
+      "minimum_dwell_s": 0.34,
+      "p05_dwell_s": 0.34,
+      "median_dwell_s": 0.4,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "c6a1723e7ab942801683dd8e0214ddba53251ca7e6a35847231d24c41bd747c9",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "c52f6e762a0db75a8f7d49b4ab235b5945c59ef6fc51e880ac730df0b892d5a9",
+        "config.json": "de3287caab30ad21c6d38612b6fe499d52256318ff796346f04cd90604f71896",
+        "README.md": "e442917a4740ac2c7485f7e0923aa50647e721b917e59e0dcd13e9fdf940e86a",
+        "policy.onnx": "3aed7b2ce844ba77175ca4e657f9665a83b5ffc885d96ea0a49c1b698d29089f",
+        "validation.json": "61b12bbd8815bdc7406ab190ce5bed018fc4870c8c747a142c486e8c69775989",
+        "evaluation.json": "382d0724cff1710734fd7bc3b9de2f2922f30621b94b2299b92666da2d68e2ac",
+        "policy.pt": "4ccbf677ba93e8decb8c26c952326467b55a7910414f19f7a6e956eee1b9e8b7"
+      }
+    },
+    {
+      "id": "dqn-higher-0.9486",
+      "algorithm": "DQN",
+      "family": "dqn-family",
+      "algorithm_directory": "dqn",
+      "displacement_group": "higher-displacement",
+      "experiment": "original-only",
+      "directory": "candidates/dqn-family/dqn/higher-displacement/original-only/original-10x__added-off__forward-0.9486-body-lengths",
       "multiplier": 10,
       "original_switch_weight": -0.05,
       "added_switch_cost": 0.0,
@@ -20,129 +327,37 @@
         2
       ],
       "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.14246167242527008,
       "maximum_yaw_deg": 27.74956512451172,
+      "maximum_lateral_drift_body_lengths": 0.14246167242527008,
       "minimum_dwell_s": 0.04,
+      "p05_dwell_s": 0.12,
+      "median_dwell_s": 0.28,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Brief command dwell intervals",
+        "Includes dwell shorter than 0.1 s",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "6e216d69a116f00e812639f84a5e54182516a88ca317a72e164531b9a941d2c1",
-        "policy.onnx": "4d9de723c9fa272c67f9df35c5b99e3c64e26d45e64883c8ff843c4365e128c2"
-      },
-      "negative_control": false
+        "metrics.json": "669d1600d8e39f15653a8e0a4c10f739fd02a68a1ff9c91dcee12229d548683c",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "b717b07d53fa61d8a993f0c921ee63a295c6e1177fa652051d2009bd9a7bb06d",
+        "config.json": "adaee809f6d41ef6e3fa6c8fc15f5d9096f61fee465ced72233cedc09f71d5d4",
+        "README.md": "e2225306c0f89bc3844a0c7b928cc6f1aaead91bea6d88251b8240a6e1048365",
+        "policy.onnx": "4d9de723c9fa272c67f9df35c5b99e3c64e26d45e64883c8ff843c4365e128c2",
+        "validation.json": "39fba674634b2b79e476e0cfc4e002b529d8b715a5ec0775b769928a06871583",
+        "evaluation.json": "a868ba756e552646b515e0979961913a22ee49923757e587dc15f7b480640ab0",
+        "policy.pt": "6e216d69a116f00e812639f84a5e54182516a88ca317a72e164531b9a941d2c1"
+      }
     },
     {
+      "id": "dqn-higher-0.9983",
       "algorithm": "DQN",
       "family": "dqn-family",
       "algorithm_directory": "dqn",
+      "displacement_group": "higher-displacement",
       "experiment": "original-plus-added-switch",
-      "directory": "candidates/dqn-family/dqn/original-plus-added-switch/original-10x__added-10x__forward-1.0102-body-lengths",
-      "multiplier": 10,
-      "original_switch_weight": -0.05,
-      "added_switch_cost": 0.004,
-      "forward_body_lengths_per_cycle": 1.0101584196090698,
-      "per_leg_max_switches": [
-        2,
-        2,
-        0,
-        0,
-        2,
-        2
-      ],
-      "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.28554046154022217,
-      "maximum_yaw_deg": 29.78635597229004,
-      "minimum_dwell_s": 0.14,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "Some legs keep a constant high-level command",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "92c247ea9201158a73df8eeab3b62446fdde51461ad763aa2fa02c3f8097a40f",
-        "policy.onnx": "f802f08cd1b7cd108e8b684cd68c5fca14bbfcdca23519f5573733a982b47c08"
-      },
-      "negative_control": false
-    },
-    {
-      "algorithm": "DQN",
-      "family": "dqn-family",
-      "algorithm_directory": "dqn",
-      "experiment": "original-only",
-      "directory": "candidates/dqn-family/dqn/original-only/original-30x__added-off__forward-1.0092-body-lengths",
-      "multiplier": 30,
-      "original_switch_weight": -0.15,
-      "added_switch_cost": 0.0,
-      "forward_body_lengths_per_cycle": 1.0091782808303833,
-      "per_leg_max_switches": [
-        2,
-        2,
-        0,
-        0,
-        2,
-        2
-      ],
-      "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.3483882248401642,
-      "maximum_yaw_deg": 30.07465362548828,
-      "minimum_dwell_s": 0.14,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "Some legs keep a constant high-level command",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "96b06540edb25448533f5e64e314ec210f50e3669943d8a6e36907aca20b6c91",
-        "policy.onnx": "c1a6d1df7dbb3abe8a497b9b4770e5633c40fad10ef67487aa2356e3b2d095ee"
-      },
-      "negative_control": false
-    },
-    {
-      "algorithm": "DQN",
-      "family": "dqn-family",
-      "algorithm_directory": "dqn",
-      "experiment": "original-plus-added-switch",
-      "directory": "candidates/dqn-family/dqn/original-plus-added-switch/original-10x__added-10x__forward-1.0116-body-lengths",
-      "multiplier": 10,
-      "original_switch_weight": -0.05,
-      "added_switch_cost": 0.004,
-      "forward_body_lengths_per_cycle": 1.01163649559021,
-      "per_leg_max_switches": [
-        2,
-        2,
-        0,
-        0,
-        3,
-        2
-      ],
-      "max_switches": 3,
-      "maximum_lateral_drift_body_lengths": 0.33655619621276855,
-      "maximum_yaw_deg": 29.779150009155273,
-      "minimum_dwell_s": 0.14,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "Some legs keep a constant high-level command",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "96dc32c234b25939129066e0dd99c6adfc231d877423124ff6bc826c2fc262b8",
-        "policy.onnx": "a2e7e0699c8217f359dc57605fdb5290a2b211d30898042f1ab6a4dbbfc5feeb"
-      },
-      "negative_control": false
-    },
-    {
-      "algorithm": "DQN",
-      "family": "dqn-family",
-      "algorithm_directory": "dqn",
-      "experiment": "original-plus-added-switch",
-      "directory": "candidates/dqn-family/dqn/original-plus-added-switch/original-5x__added-5x__forward-0.9983-body-lengths",
+      "directory": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-5x__added-5x__forward-0.9983-body-lengths",
       "multiplier": 5,
       "original_switch_weight": -0.025,
       "added_switch_cost": 0.002,
@@ -156,61 +371,344 @@
         2
       ],
       "max_switches": 4,
-      "maximum_lateral_drift_body_lengths": 0.1365155428647995,
       "maximum_yaw_deg": 29.880949020385742,
+      "maximum_lateral_drift_body_lengths": 0.1365155428647995,
       "minimum_dwell_s": 0.06,
+      "p05_dwell_s": 0.06,
+      "median_dwell_s": 0.26,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Brief command dwell intervals",
+        "Includes dwell shorter than 0.1 s",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "3f459bda23d025928fb8b1a4ab60becc1128dd1460d2d705f5bb22cc411dd773",
-        "policy.onnx": "513f11a2d144d384f8fba49d56cdd835da4a63ce6521e693c1c12233339f5d58"
-      },
-      "negative_control": false
+        "metrics.json": "58b41a813ce2c3f7644d6fef9926cdf717558cbbfce7571a87655233563c0f10",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "4219f0c69bac9489e034dde77efceb3cbe1856200c36433c1f688b3ca7db7f2d",
+        "config.json": "d8da42052eff42b239b8a8ca56f3e3d878199dd9fe776ae6fb2e15cc29a1a7f3",
+        "README.md": "fea6755dd7488e46d2110b620c720191a7fcad921b38b7bc31950374b5745619",
+        "policy.onnx": "513f11a2d144d384f8fba49d56cdd835da4a63ce6521e693c1c12233339f5d58",
+        "validation.json": "54af06c11f4691e5ce242ee1fe17765734e9760cd04165ee49be17d10b427051",
+        "evaluation.json": "d5fe475cba2649143fe5b406cb5348ae3d629b3ccc63003275b21f995f21397b",
+        "policy.pt": "3f459bda23d025928fb8b1a4ab60becc1128dd1460d2d705f5bb22cc411dd773"
+      }
     },
     {
-      "algorithm": "DDQN",
+      "id": "dqn-higher-1.0116",
+      "algorithm": "DQN",
       "family": "dqn-family",
-      "algorithm_directory": "ddqn",
-      "experiment": "original-only",
-      "directory": "candidates/dqn-family/ddqn/original-only/original-30x__added-off__forward-0.9970-body-lengths",
-      "multiplier": 30,
-      "original_switch_weight": -0.15,
-      "added_switch_cost": 0.0,
-      "forward_body_lengths_per_cycle": 0.9970462322235107,
+      "algorithm_directory": "dqn",
+      "displacement_group": "higher-displacement",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/dqn/higher-displacement/original-plus-added-switch/original-10x__added-10x__forward-1.0116-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 1.01163649559021,
       "per_leg_max_switches": [
         2,
         2,
         0,
         0,
+        3,
+        2
+      ],
+      "max_switches": 3,
+      "maximum_yaw_deg": 29.779150009155273,
+      "maximum_lateral_drift_body_lengths": 0.33655619621276855,
+      "minimum_dwell_s": 0.14,
+      "p05_dwell_s": 0.14,
+      "median_dwell_s": 0.26,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "2a52519b21d3b2148d14945e18ae3f1db8c39fab7b14ad2da59c8a846532562d",
+        "run_meta.json": "e1bc26c7abab9bb5a023431718eda8d4ca5e9380b8ef9c3672ddbb001ca7cc16",
+        "index.html": "a4dbfd76bce7f8df6174053b7709f450dcd3ab4acb57fd394cff9a6b2b596ac2",
+        "config.json": "c6c1babdba24c41ea7d6b6c28405836b507b813fde85f573a3b179708ae97444",
+        "README.md": "e06434adb1047dd551b3b4025fa3e4df82fcdf9702afb494ba600eb502dab45f",
+        "policy.onnx": "a2e7e0699c8217f359dc57605fdb5290a2b211d30898042f1ab6a4dbbfc5feeb",
+        "validation.json": "8d0f79cfaf9f9079edacf216684eb544036e4da5ad2cecc7e9e8193db5534fcc",
+        "evaluation.json": "0c816d08c7d8a57da64a945b879b86dde1aa8189555635b9e415b7ae0bcf921a",
+        "policy.pt": "96dc32c234b25939129066e0dd99c6adfc231d877423124ff6bc826c2fc262b8"
+      }
+    },
+    {
+      "id": "ddqn-moderate-0.6582",
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.6582-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.04,
+      "forward_body_lengths_per_cycle": 0.6582048535346985,
+      "per_leg_max_switches": [
+        0,
+        0,
+        0,
+        0,
+        2,
+        3
+      ],
+      "max_switches": 3,
+      "maximum_yaw_deg": 43.91682052612305,
+      "maximum_lateral_drift_body_lengths": 0.6197111010551453,
+      "minimum_dwell_s": 0.16,
+      "p05_dwell_s": 0.16,
+      "median_dwell_s": 0.5,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Lateral drift exceeds 0.5 BL",
+        "Yaw exceeds 35 degrees",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "cc3942ff1269415dd72a911813f14ede7eab251a34f113d5f3cb320a62f22ab7",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "f3cc20b976ec1768479e0fd592f750c03ec190e6177b8f16e60b89935ac7fc2a",
+        "config.json": "29702b1273dab269d2ef5ad0f9c786fc88512a71d09719ea2510927638e6356f",
+        "README.md": "e1702b3028e2c32c9c1fe43fe76e67ea9f616ff2c2086bc53ca0cb88c7fff6ae",
+        "policy.onnx": "bf90013ba681a9aac00879ff9f590c8dd11c7501e1afa6de7d1101e6ad689554",
+        "validation.json": "fc0ccd09419de842104be4ee02ff34ba2c082a3c238812e60f84eaf471a3f41e",
+        "evaluation.json": "b29063769f0a6f0415d0289138bb7a8c629fd478d1d458e8d8b06f1dd6305b18",
+        "policy.pt": "f97a5126d8ffcaceb9788450abdf40d157bb391c7250a775873e4ab88c67dc3d"
+      }
+    },
+    {
+      "id": "ddqn-moderate-0.7440",
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "displacement_group": "target-band",
+      "experiment": "original-only",
+      "directory": "candidates/dqn-family/ddqn/target-band/original-only/original-100x__added-off__forward-0.7440-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.7440200448036194,
+      "per_leg_max_switches": [
+        2,
+        0,
+        2,
+        0,
+        3,
+        2
+      ],
+      "max_switches": 3,
+      "maximum_yaw_deg": 37.952430725097656,
+      "maximum_lateral_drift_body_lengths": 0.38156184554100037,
+      "minimum_dwell_s": 0.14,
+      "p05_dwell_s": 0.16,
+      "median_dwell_s": 0.47,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Yaw exceeds 35 degrees",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "c2026fc88276e3c1a14aeedd18f0cd07bae38ab1229e76ef90c364fc1dcd6194",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "16303c547795cf860dca54fa7599e5c113e48de58625bfc63bc9a18d424f7322",
+        "config.json": "60bf221b4a6d4c4053ad06fce116d8a325c775b5d183f4b0438fdcb576b9ff84",
+        "README.md": "de62b0d1ed1f6755623233a33751b81b1b3c6eeb530a2d64bb6b73ff678a4f91",
+        "policy.onnx": "95539285d349a73e7a1323b2ab77a07a2612f826348b82cf5ccea8a38706f6a3",
+        "validation.json": "ff03b0dda162034cd58a633a54f7fefcc3510ce1a958dd5e26476cbd97c21820",
+        "evaluation.json": "47e5fa7f320ba231f919339c0988d1724150675c6444acbf2abd55106c96d466",
+        "policy.pt": "4a54d464bfcedb129e9a3afbb298cc89ff6df4b0f667b5a1cab266c404171eff"
+      }
+    },
+    {
+      "id": "ddqn-moderate-0.7520",
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.7520-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.012,
+      "forward_body_lengths_per_cycle": 0.752018392086029,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        1,
         2,
         2
       ],
       "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.18950486183166504,
-      "maximum_yaw_deg": 26.919031143188477,
-      "minimum_dwell_s": 0.14,
+      "maximum_yaw_deg": 44.74992752075195,
+      "maximum_lateral_drift_body_lengths": 0.4075344502925873,
+      "minimum_dwell_s": 0.16,
+      "p05_dwell_s": 0.2,
+      "median_dwell_s": 0.47,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Some legs keep a constant high-level command",
+        "Yaw exceeds 35 degrees",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "36041e30a71ab561125ef1797490b1baa60c70af58f3e678bea90be9b8e51475",
-        "policy.onnx": "e6d8b27686509de755bfebeeed7b4795441ac3d8ff7398513098c0052e0c57c0"
-      },
-      "negative_control": false
+        "metrics.json": "7111d1914c14ee5e7610f443d306dfe21d9c5ce28be830503ca9d28750e45002",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "0ad17f320b0198802470fa25db7a52e2dbaaa78fc2e15be601a9625c8f3092a9",
+        "config.json": "d4898ddb35483aee4368af9a36adfebd682c447151e537afb8e363dedd2558cb",
+        "README.md": "e295c664a08d85a7b101a602370d3984ce1dddea1c4757eb8a3663e9911bdbd1",
+        "policy.onnx": "7116cb6b418fcaaf2d57dc4c7a5c7c70fde5ad6d839541c913a8353176052f7e",
+        "validation.json": "50c26d7654d09266cc505da7d923456701bce9cad4e10e7537632e5385b19747",
+        "evaluation.json": "18193aeba50a2d64876a424540a9eca46b155b7ba841ba3c4adce017d9d388a3",
+        "policy.pt": "1851a4d5dde15f2f5b7452536914b91c90de8c72e182ec5a4f596bdb2316d38a"
+      }
     },
     {
+      "id": "ddqn-moderate-0.7786",
       "algorithm": "DDQN",
       "family": "dqn-family",
       "algorithm_directory": "ddqn",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-100x__added-100x__forward-0.7786-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.04,
+      "forward_body_lengths_per_cycle": 0.7785884737968445,
+      "per_leg_max_switches": [
+        1,
+        2,
+        0,
+        0,
+        0,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 33.548133850097656,
+      "maximum_lateral_drift_body_lengths": 0.3364008963108063,
+      "minimum_dwell_s": 0.4,
+      "p05_dwell_s": 0.4,
+      "median_dwell_s": 0.46,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "8b52800f318aaac3c087e7616e3e2968db72e6c6fa86db79d5069cf9c67cec10",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "96726acb2008746fbf9e1a96db2a1923a605043e3832c3a9da5ea0cfd40d56e4",
+        "config.json": "29702b1273dab269d2ef5ad0f9c786fc88512a71d09719ea2510927638e6356f",
+        "README.md": "6ef54a6055a6d80272c078a978e90d3228a6f21e92f05929a4b818d68e3dc7bc",
+        "policy.onnx": "3d5c6fcd4b16b5db8987a7fb8b26606737912495d25ad24b150f691be954d666",
+        "validation.json": "1cf1230bb686ac59e37f3ce15a15ce133ce7b2603b3d956b40a44e93537dd70e",
+        "evaluation.json": "b29063769f0a6f0415d0289138bb7a8c629fd478d1d458e8d8b06f1dd6305b18",
+        "policy.pt": "0fc2484eb0ca3b267f5b37353f5fa97ac2c3cb78c59b696f68e83e840d97de0d"
+      }
+    },
+    {
+      "id": "ddqn-moderate-0.7884",
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.7884-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 0.7884289622306824,
+      "per_leg_max_switches": [
+        4,
+        2,
+        2,
+        0,
+        2,
+        2
+      ],
+      "max_switches": 4,
+      "maximum_yaw_deg": 37.73752212524414,
+      "maximum_lateral_drift_body_lengths": 0.23450586199760437,
+      "minimum_dwell_s": 0.06,
+      "p05_dwell_s": 0.12,
+      "median_dwell_s": 0.24,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Yaw exceeds 35 degrees",
+        "Includes dwell shorter than 0.1 s",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "7c805468737ca2600101a86fb0aef0c91a5f030e3f01ddd5fe0db709459f556e",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "b4e891800db78bb1f60d184d3be268a942a06e673e27817b0135f4fd58acb93a",
+        "config.json": "aad006bdb2826d3eb5e178d06e76209ca0f8db43e8cb74eca01c3a57a2b389f7",
+        "README.md": "47db85dcd0f143b3474b2e5f81a4311d858e06667eb9df7e953212996c4d9cfb",
+        "policy.onnx": "58e82baf247f600d583f59cf7491ac811beec92d36c8d12d1b2dd840f7e6f917",
+        "validation.json": "84606975fb1d84bafafa76d9d6f0757798cdf8089d5cdf1af488eb1d91e181b1",
+        "evaluation.json": "d26f22a9f1008d06e1ff999af70ba7008e56f4e1b0d503d491d8c3c8d01668e7",
+        "policy.pt": "afa17d4efbdc1797a04c93a5a8bbdeb31aa405fd8c62b2ee59c8e17d46dc726b"
+      }
+    },
+    {
+      "id": "ddqn-higher-0.8310",
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "displacement_group": "higher-displacement",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-100x__added-100x__forward-0.8310-body-lengths",
+      "multiplier": 100,
+      "original_switch_weight": -0.5,
+      "added_switch_cost": 0.04,
+      "forward_body_lengths_per_cycle": 0.8309676051139832,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        0,
+        3
+      ],
+      "max_switches": 3,
+      "maximum_yaw_deg": 27.468761444091797,
+      "maximum_lateral_drift_body_lengths": 0.3499729633331299,
+      "minimum_dwell_s": 0.3,
+      "p05_dwell_s": 0.32,
+      "median_dwell_s": 0.44,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "92a4188743a2f3a49f195879b48673f21c8ea4c7238a453ccf1270c297d22855",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "eec5797236ebf76cbb03b2e0f11c622495a6ac9ad5b082ae2b4bfd54319f8817",
+        "config.json": "29702b1273dab269d2ef5ad0f9c786fc88512a71d09719ea2510927638e6356f",
+        "README.md": "c6f669e60a15aa4913066db7394c22c83f29061632e5993447f83305c64392a5",
+        "policy.onnx": "6bf6bcb53338cbfbb71c34e1b244218130d1831214b670678295bfe422c92771",
+        "validation.json": "5eadb3e4d2ddd741a5a3e790a8c1a64b2671c5db7ddaf0e9a60d6cff9bdebc1b",
+        "evaluation.json": "b29063769f0a6f0415d0289138bb7a8c629fd478d1d458e8d8b06f1dd6305b18",
+        "policy.pt": "1e835c7d6d1bbc6903d73646d212434ec5b40790e24def1a31982f3409d5ecd6"
+      }
+    },
+    {
+      "id": "ddqn-higher-0.8861",
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "displacement_group": "higher-displacement",
       "experiment": "original-only",
-      "directory": "candidates/dqn-family/ddqn/original-only/original-100x__added-off__forward-0.8861-body-lengths",
+      "directory": "candidates/dqn-family/ddqn/higher-displacement/original-only/original-100x__added-off__forward-0.8861-body-lengths",
       "multiplier": 100,
       "original_switch_weight": -0.5,
       "added_switch_cost": 0.0,
@@ -224,95 +722,36 @@
         2
       ],
       "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.2522105872631073,
       "maximum_yaw_deg": 26.507022857666016,
+      "maximum_lateral_drift_body_lengths": 0.2522105872631073,
       "minimum_dwell_s": 0.18,
+      "p05_dwell_s": 0.28,
+      "median_dwell_s": 0.38,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Some legs keep a constant high-level command",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "6ebc823a6ece4b84ce07a73c7f8ff43d59d565714b44c146fe2b9458e7549f3e",
-        "policy.onnx": "14c0dfa8dc9ea9e005a0ed5d7bfac4d9818ed8e464068b649df2323cc358830c"
-      },
-      "negative_control": false
+        "metrics.json": "e782705576ed592ca193fdef363c34bb95b8ff73c42b7ed05fcf1eb0c801ab73",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "282475ea7182edaad742c92a6d535d1e6f14a6eacfd2d31929a52b1e2fc1261b",
+        "config.json": "60bf221b4a6d4c4053ad06fce116d8a325c775b5d183f4b0438fdcb576b9ff84",
+        "README.md": "3b00829e370fa3cb54d7fe5c4eda62126c6533d35f8970547bf2aeec5bdbb724",
+        "policy.onnx": "14c0dfa8dc9ea9e005a0ed5d7bfac4d9818ed8e464068b649df2323cc358830c",
+        "validation.json": "185b6261ec20db99d089d03b75318855a81305d490a4dcef4be3df0df775dd6b",
+        "evaluation.json": "47e5fa7f320ba231f919339c0988d1724150675c6444acbf2abd55106c96d466",
+        "policy.pt": "6ebc823a6ece4b84ce07a73c7f8ff43d59d565714b44c146fe2b9458e7549f3e"
+      }
     },
     {
+      "id": "ddqn-higher-0.9253",
       "algorithm": "DDQN",
       "family": "dqn-family",
       "algorithm_directory": "ddqn",
+      "displacement_group": "higher-displacement",
       "experiment": "original-plus-added-switch",
-      "directory": "candidates/dqn-family/ddqn/original-plus-added-switch/original-30x__added-30x__forward-1.0025-body-lengths",
-      "multiplier": 30,
-      "original_switch_weight": -0.15,
-      "added_switch_cost": 0.012,
-      "forward_body_lengths_per_cycle": 1.0024821758270264,
-      "per_leg_max_switches": [
-        2,
-        2,
-        0,
-        0,
-        2,
-        2
-      ],
-      "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.29585015773773193,
-      "maximum_yaw_deg": 30.434185028076172,
-      "minimum_dwell_s": 0.14,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "Some legs keep a constant high-level command",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "c9b802982800c650ffa59e6fe4d716818617dec52d82f8c816bc6c8a307c8b5e",
-        "policy.onnx": "56a9868eab236c6be7385b2bb655983dfc7e236ec0225d351cc4d6429f0d3f5c"
-      },
-      "negative_control": false
-    },
-    {
-      "algorithm": "DDQN",
-      "family": "dqn-family",
-      "algorithm_directory": "ddqn",
-      "experiment": "original-plus-added-switch",
-      "directory": "candidates/dqn-family/ddqn/original-plus-added-switch/original-10x__added-10x__forward-0.9937-body-lengths",
-      "multiplier": 10,
-      "original_switch_weight": -0.05,
-      "added_switch_cost": 0.004,
-      "forward_body_lengths_per_cycle": 0.9937374591827393,
-      "per_leg_max_switches": [
-        2,
-        4,
-        1,
-        2,
-        3,
-        2
-      ],
-      "max_switches": 4,
-      "maximum_lateral_drift_body_lengths": 0.18050609529018402,
-      "maximum_yaw_deg": 28.82126235961914,
-      "minimum_dwell_s": 0.08,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "Brief command dwell intervals",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "62fcc12a227454d1064de59733653d89a6501d31465e8a841c15024bf479d51c",
-        "policy.onnx": "c179d42c9db833e021600fef0051472f93a3a1bd57f245cbbc4741cfc8243058"
-      },
-      "negative_control": false
-    },
-    {
-      "algorithm": "DDQN",
-      "family": "dqn-family",
-      "algorithm_directory": "ddqn",
-      "experiment": "original-plus-added-switch",
-      "directory": "candidates/dqn-family/ddqn/original-plus-added-switch/original-5x__added-5x__forward-0.9253-body-lengths",
+      "directory": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-5x__added-5x__forward-0.9253-body-lengths",
       "multiplier": 5,
       "original_switch_weight": -0.025,
       "added_switch_cost": 0.002,
@@ -326,31 +765,128 @@
         4
       ],
       "max_switches": 4,
-      "maximum_lateral_drift_body_lengths": 0.2604635953903198,
       "maximum_yaw_deg": 28.93763542175293,
+      "maximum_lateral_drift_body_lengths": 0.2604635953903198,
       "minimum_dwell_s": 0.02,
+      "p05_dwell_s": 0.1,
+      "median_dwell_s": 0.28,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Brief command dwell intervals",
+        "Includes dwell shorter than 0.1 s",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "7c22dcb1d5f437f02ecee7a3e9c6fa2b3671517a8f3e351baac7d222524c6756",
-        "policy.onnx": "6a7f1a382e1bb080a3163c48b1a93f706e73029f1a8209d609b785e6598d8a96"
-      },
-      "negative_control": false
+        "metrics.json": "57d8c5bfc6dd004e560c0f42bfa92b673c2bee486c063ce0c9266a4d3a3e8287",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "6daed1d81c41823d2f74ed972ad802dbbf78388a28c969976e9db7b46971b7f7",
+        "config.json": "8ce455dc77392e734be3b8ee9ba7a006d3bdc84b6a09ddac46da0da89caaa898",
+        "README.md": "102e2528aa250edeb3b3bb0cc1cc2febaad04922231a5f48496d5dd8d0345da4",
+        "policy.onnx": "6a7f1a382e1bb080a3163c48b1a93f706e73029f1a8209d609b785e6598d8a96",
+        "validation.json": "041deffc7d8ef832193662591840c4688a00c98aec10a35250ae3a5323b69917",
+        "evaluation.json": "8a62e6771c8c8bd5a94950b9582be799044c5ddf85546ef1832a7ffbe33a84ff",
+        "policy.pt": "7c22dcb1d5f437f02ecee7a3e9c6fa2b3671517a8f3e351baac7d222524c6756"
+      }
     },
     {
+      "id": "ddqn-higher-0.9937",
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "displacement_group": "higher-displacement",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-10x__added-10x__forward-0.9937-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 0.9937374591827393,
+      "per_leg_max_switches": [
+        2,
+        4,
+        1,
+        2,
+        3,
+        2
+      ],
+      "max_switches": 4,
+      "maximum_yaw_deg": 28.82126235961914,
+      "maximum_lateral_drift_body_lengths": 0.18050609529018402,
+      "minimum_dwell_s": 0.08,
+      "p05_dwell_s": 0.14,
+      "median_dwell_s": 0.32,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Includes dwell shorter than 0.1 s",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "2c747c5868da744282328fb511afc58b90772cc0ebf37502a1292ac13aff1d46",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "3e5532809dff5a6f87d78010a7bbce73431a30c5c84a9f349b2a802cc71a66aa",
+        "config.json": "aad006bdb2826d3eb5e178d06e76209ca0f8db43e8cb74eca01c3a57a2b389f7",
+        "README.md": "4a98646521f3674720d4463d739d2e564b7ac8d0ac49b200f58bf4477fb9775b",
+        "policy.onnx": "c179d42c9db833e021600fef0051472f93a3a1bd57f245cbbc4741cfc8243058",
+        "validation.json": "d42cd59c195c50fc1b9a47a83e3d74af5f6777d13b3f2b22f393784489a18759",
+        "evaluation.json": "d26f22a9f1008d06e1ff999af70ba7008e56f4e1b0d503d491d8c3c8d01668e7",
+        "policy.pt": "62fcc12a227454d1064de59733653d89a6501d31465e8a841c15024bf479d51c"
+      }
+    },
+    {
+      "id": "ddqn-higher-1.0025",
+      "algorithm": "DDQN",
+      "family": "dqn-family",
+      "algorithm_directory": "ddqn",
+      "displacement_group": "higher-displacement",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/dqn-family/ddqn/higher-displacement/original-plus-added-switch/original-30x__added-30x__forward-1.0025-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.012,
+      "forward_body_lengths_per_cycle": 1.0024821758270264,
+      "per_leg_max_switches": [
+        2,
+        2,
+        0,
+        0,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 30.434185028076172,
+      "maximum_lateral_drift_body_lengths": 0.29585015773773193,
+      "minimum_dwell_s": 0.14,
+      "p05_dwell_s": 0.16,
+      "median_dwell_s": 0.26,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "08111527a536a6b4cddafc2c77c2b4f150f53ed42e2517b7e0c8f2a4700d86df",
+        "run_meta.json": "762eebf4058d7b80c4c23d214f5feb4e02d53d5aeb80b406e08d641f53b0f423",
+        "index.html": "63f10bf41c328bacb6de7e193e7a3d1e4a412ec7a613fd55d5210e936c893ef9",
+        "config.json": "d4898ddb35483aee4368af9a36adfebd682c447151e537afb8e363dedd2558cb",
+        "README.md": "723ea78baec0b0dc441b92c84f0c4e0d6021c57a17ab41d9afcb41d88edd992c",
+        "policy.onnx": "56a9868eab236c6be7385b2bb655983dfc7e236ec0225d351cc4d6429f0d3f5c",
+        "validation.json": "bbb5587d599e0788feeb77d03dd1271ae0b4157ec14918b7528fafa99f66058e",
+        "evaluation.json": "18193aeba50a2d64876a424540a9eca46b155b7ba841ba3c4adce017d9d388a3",
+        "policy.pt": "c9b802982800c650ffa59e6fe4d716818617dec52d82f8c816bc6c8a307c8b5e"
+      }
+    },
+    {
+      "id": "ppo-moderate-0.6173",
       "algorithm": "PPO",
       "family": "ppo-family",
       "algorithm_directory": "ppo",
+      "displacement_group": "target-band",
       "experiment": "original-plus-added-switch",
-      "directory": "candidates/ppo-family/ppo/original-plus-added-switch/original-100x__added-100x__forward-0.7428-body-lengths",
-      "multiplier": 100,
-      "original_switch_weight": -0.5,
-      "added_switch_cost": 0.04,
-      "forward_body_lengths_per_cycle": 0.7428354620933533,
+      "directory": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.6173-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.004,
+      "forward_body_lengths_per_cycle": 0.6172518730163574,
       "per_leg_max_switches": [
         2,
         2,
@@ -360,96 +896,167 @@
         2
       ],
       "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.35609129071235657,
-      "maximum_yaw_deg": 42.20976638793945,
-      "minimum_dwell_s": 0.08,
+      "maximum_yaw_deg": 28.490589141845703,
+      "maximum_lateral_drift_body_lengths": 0.4418989419937134,
+      "minimum_dwell_s": 0.04,
+      "p05_dwell_s": 0.06,
+      "median_dwell_s": 0.5,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Large heading deviation",
-        "Brief command dwell intervals",
+        "Includes dwell shorter than 0.1 s",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "9500dc5f2362a55160a86334cbe6e1beeed55413befdb6069becf398d770150c",
-        "policy.onnx": "88c6a678b12bff73ff7d3b7f2635fe4ca45f4eb96ebc437ba8738427998c653d"
-      },
-      "negative_control": false
+        "metrics.json": "d84484e9aa29cc73337015622e899accb6403995867ca57797a1c88b3e3407ea",
+        "run_meta.json": "a42fefa61dd9160233a08d92c47c936845ef615bfb238be6a9c8eb11e57c06e8",
+        "index.html": "0e83ea7e1e5f8050be2569aedefb7542db6d90033b6cec34d7bcb5d8764478cb",
+        "config.json": "94c0bf52672abd85c4f107d21b0dcfacac0a41f443a5114f7ff4aa440f5a647a",
+        "README.md": "2dcf8d110892cd188b3376f12078e46977c9cde44fb2fbdde1fb520614bb4cd1",
+        "policy.onnx": "e0f31bf6fe6f3408d187ff856407ddc191883331144be898993695f77c4a1578",
+        "validation.json": "665a426ce220ae29c800e65d1217f2a25c435f64c33fb0a6057fa676f02a440d",
+        "evaluation.json": "0706f8a0aff32a5cbe769650c763b7c1f78d77b52eb59861cd047d8fe55f37fd",
+        "policy.pt": "5cea1b9da357f74a248a35d687f036528c3803ad72e95efdf1104d6a5ea71fcc"
+      }
     },
     {
+      "id": "ppo-moderate-0.6550",
       "algorithm": "PPO",
       "family": "ppo-family",
       "algorithm_directory": "ppo",
+      "displacement_group": "target-band",
       "experiment": "original-plus-added-switch",
-      "directory": "candidates/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.7452-body-lengths",
+      "directory": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-5x__added-5x__forward-0.6550-body-lengths",
       "multiplier": 5,
       "original_switch_weight": -0.025,
       "added_switch_cost": 0.002,
-      "forward_body_lengths_per_cycle": 0.7451761364936829,
+      "forward_body_lengths_per_cycle": 0.655011773109436,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        0,
+        2,
+        2
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 27.4531307220459,
+      "maximum_lateral_drift_body_lengths": 0.453177809715271,
+      "minimum_dwell_s": 0.16,
+      "p05_dwell_s": 0.18,
+      "median_dwell_s": 0.52,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "0ba9e168e21180a4bc234fe08ce7b363b9b098a018be0ad25413d1d3468bc561",
+        "run_meta.json": "a42fefa61dd9160233a08d92c47c936845ef615bfb238be6a9c8eb11e57c06e8",
+        "index.html": "02ed2dd7946e7c6faabf73a8aa44b916a5df567b0e852979d235e55633adab6f",
+        "config.json": "ab7f247d54f7e1a2160b0686b66f913f58a1cccf94585a6489be14909f49083c",
+        "README.md": "7d347da0ea3457e7af25fd4ceebbc13d6a650dc7b913ebcf8bc9dbaa21710f3f",
+        "policy.onnx": "85d23c5dfaf14d6adde075e9a55ac24c4fac1b53e7be68da3808ecbaced110f1",
+        "validation.json": "858a04ebf4d80173be52b7caefb6eb177a846e26ca58c666e0e9ef9e718d43ed",
+        "evaluation.json": "814ca852bafcc8eed857bab3361b09432d7769a8a9c8f34bcfb69db9d51357bc",
+        "policy.pt": "f826eff28d7a2bda9e4d6e508860961ea49cb6a8a72a6c8b91e2d7dc78236255"
+      }
+    },
+    {
+      "id": "ppo-moderate-0.6778",
+      "algorithm": "PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "ppo",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-30x__added-30x__forward-0.6778-body-lengths",
+      "multiplier": 30,
+      "original_switch_weight": -0.15,
+      "added_switch_cost": 0.012,
+      "forward_body_lengths_per_cycle": 0.6778306365013123,
       "per_leg_max_switches": [
         2,
         2,
         3,
         2,
         2,
-        3
+        2
       ],
       "max_switches": 3,
-      "maximum_lateral_drift_body_lengths": 0.2135208249092102,
-      "maximum_yaw_deg": 32.734283447265625,
-      "minimum_dwell_s": 0.06,
+      "maximum_yaw_deg": 32.692840576171875,
+      "maximum_lateral_drift_body_lengths": 0.386884480714798,
+      "minimum_dwell_s": 0.12,
+      "p05_dwell_s": 0.14,
+      "median_dwell_s": 0.48,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Brief command dwell intervals",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "041ca723644d1a9f451694975a5450f9b68be809c81a91ad5de120a7a9a6c553",
-        "policy.onnx": "1593048be27b079d384db0ce3b3bbe8f80a52e284e5357fadbf56169db24077e"
-      },
-      "negative_control": false
+        "metrics.json": "7ac14c8a6aeb937fb97c2515663199ba201ae03db574ac3b64ac731c96be3e12",
+        "run_meta.json": "a42fefa61dd9160233a08d92c47c936845ef615bfb238be6a9c8eb11e57c06e8",
+        "index.html": "f40ca734392ba9468fb594a67072ff5297a0d14413e8885a7fc133f8d9ef010c",
+        "config.json": "f0803515e06807e86d6e7f69412cabd4febafb785ff422f2b5febd93e4c26819",
+        "README.md": "6a0fb495ca947f6edc4273833af6f62ff9502631e79584749ca843f22d24c372",
+        "policy.onnx": "74cfca92af953932cfd8103274211788ca3e8840537434792a36b41c88e0ba24",
+        "validation.json": "45660ade6e7a536dc1e5caba459d2c92c744900ac0637cca5e7e7f86d933a1d7",
+        "evaluation.json": "c17ed055dd8e50ded33d96160c4f9ba74c8a95e999a07d23105bc37c694d12e2",
+        "policy.pt": "ecbfe163446b63b21ce505f3d880ea123924c8c200e9c59ec72e9f649b5b44c9"
+      }
     },
     {
+      "id": "ppo-moderate-0.7115",
       "algorithm": "PPO",
       "family": "ppo-family",
       "algorithm_directory": "ppo",
+      "displacement_group": "target-band",
       "experiment": "original-only",
-      "directory": "candidates/ppo-family/ppo/original-only/original-5x__added-off__forward-0.6776-body-lengths",
-      "multiplier": 5,
-      "original_switch_weight": -0.025,
+      "directory": "candidates/ppo-family/ppo/target-band/original-only/original-10x__added-off__forward-0.7115-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
       "added_switch_cost": 0.0,
-      "forward_body_lengths_per_cycle": 0.6775875091552734,
+      "forward_body_lengths_per_cycle": 0.7114558815956116,
       "per_leg_max_switches": [
         2,
         2,
-        4,
-        4,
-        4,
+        2,
+        2,
+        2,
         4
       ],
       "max_switches": 4,
-      "maximum_lateral_drift_body_lengths": 0.20277968049049377,
-      "maximum_yaw_deg": 27.525733947753906,
+      "maximum_yaw_deg": 31.002798080444336,
+      "maximum_lateral_drift_body_lengths": 0.24397192895412445,
       "minimum_dwell_s": 0.02,
+      "p05_dwell_s": 0.02,
+      "median_dwell_s": 0.46,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Brief command dwell intervals",
+        "Includes dwell shorter than 0.1 s",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "3b8e056b67de6a2107d81d3037750db34852c080937999cc682b3daf1ea9c3e3",
-        "policy.onnx": "01a42331bbde09af15274291371b79b919291014431a86da74bcc0015adb9a0c"
-      },
-      "negative_control": false
+        "metrics.json": "b1632ec54737f872e08ad034cf8a28598f47c1a9d33ba1b39a120d8b56c05bd5",
+        "run_meta.json": "a42fefa61dd9160233a08d92c47c936845ef615bfb238be6a9c8eb11e57c06e8",
+        "index.html": "a03ec1f254b8d9502feb2eab6a045538d8e10680cbbcf3e229f57b93168439ef",
+        "config.json": "ff734470598d23135b8d17d278b1926766b7c2cab0e76029c3803d4d190c277b",
+        "README.md": "4bcbdcfef7a12ada80b4820c7a6cbcf0f34e46e481fde9b3a31b513199ca6a83",
+        "policy.onnx": "088aff05272d7c4311557debd110067beb86436e3f8b2296799f7eb8c0a21277",
+        "validation.json": "88b3fa6ee4c07b345cc39f45498a33d7d423ab33c6643a3164719835e9df282f",
+        "evaluation.json": "69f2f6cb2d20a6804aafada5a8dbfbf555a72d119223eef9ed463bc271579511",
+        "policy.pt": "4013d640cfd274b79f00117bea5bfd5979b888140961317ec9fe83405d3d133c"
+      }
     },
     {
+      "id": "ppo-moderate-0.7519",
       "algorithm": "PPO",
       "family": "ppo-family",
       "algorithm_directory": "ppo",
+      "displacement_group": "target-band",
       "experiment": "original-plus-added-switch",
-      "directory": "candidates/ppo-family/ppo/original-plus-added-switch/original-10x__added-10x__forward-0.7519-body-lengths",
+      "directory": "candidates/ppo-family/ppo/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.7519-body-lengths",
       "multiplier": 10,
       "original_switch_weight": -0.05,
       "added_switch_cost": 0.004,
@@ -463,28 +1070,168 @@
         2
       ],
       "max_switches": 4,
-      "maximum_lateral_drift_body_lengths": 0.2577100694179535,
       "maximum_yaw_deg": 29.74260139465332,
+      "maximum_lateral_drift_body_lengths": 0.2577100694179535,
       "minimum_dwell_s": 0.08,
+      "p05_dwell_s": 0.12,
+      "median_dwell_s": 0.44,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Brief command dwell intervals",
-        "Some legs keep a constant high-level command",
+        "Includes dwell shorter than 0.1 s",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "55e811d6204b78d6ce560285169e638a96373fdff0b4d7a53dd866c504b021d9",
-        "policy.onnx": "7b065e759b1bbfa386f84e90c282c9edb9ec989d1496e5d8508f489b38280a57"
-      },
-      "negative_control": false
+        "metrics.json": "d3131ed66612b27de29ec3d698f7d067d8717946012e1d783513df4dc6fbe318",
+        "run_meta.json": "a42fefa61dd9160233a08d92c47c936845ef615bfb238be6a9c8eb11e57c06e8",
+        "index.html": "13524f27c89ed386398a322ea028a01180cf15349858aae6cf082dc179379065",
+        "config.json": "94c0bf52672abd85c4f107d21b0dcfacac0a41f443a5114f7ff4aa440f5a647a",
+        "README.md": "2b6fe0953cb69b13e3c75d7a2addccee51d7f7c7f9cc8f7fff2e09aea52240e0",
+        "policy.onnx": "7b065e759b1bbfa386f84e90c282c9edb9ec989d1496e5d8508f489b38280a57",
+        "validation.json": "9060f5d1ade3e5be1eb3347d844ad69b00e14c2dd9ca387ff57bb935665b4952",
+        "evaluation.json": "0706f8a0aff32a5cbe769650c763b7c1f78d77b52eb59861cd047d8fe55f37fd",
+        "policy.pt": "55e811d6204b78d6ce560285169e638a96373fdff0b4d7a53dd866c504b021d9"
+      }
     },
     {
+      "id": "masked-ppo-moderate-0.6018",
       "algorithm": "Masked PPO",
       "family": "ppo-family",
       "algorithm_directory": "masked-ppo",
+      "displacement_group": "target-band",
+      "experiment": "original-plus-added-switch",
+      "directory": "candidates/ppo-family/masked-ppo/target-band/original-plus-added-switch/original-5x__added-5x__forward-0.6018-body-lengths",
+      "multiplier": 5,
+      "original_switch_weight": -0.025,
+      "added_switch_cost": 0.002,
+      "forward_body_lengths_per_cycle": 0.6018054485321045,
+      "per_leg_max_switches": [
+        4,
+        2,
+        4,
+        4,
+        2,
+        4
+      ],
+      "max_switches": 4,
+      "maximum_yaw_deg": 31.61249542236328,
+      "maximum_lateral_drift_body_lengths": 0.2742880880832672,
+      "minimum_dwell_s": 0.02,
+      "p05_dwell_s": 0.06,
+      "median_dwell_s": 0.42,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Includes dwell shorter than 0.1 s",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "075866f446d0f01d69c523cf78b999dd2b5332455f65269b5c36b976b3949d62",
+        "run_meta.json": "203fd6a50e7a1438864b7df48cd855184b2443466e576018b2f43aee46f97ac4",
+        "index.html": "c3141da1777529b7de7328fe94f2693f7860c7de5c67d056deb80880ad5868ae",
+        "config.json": "674b1a0bcb4ec3b2ae916498f056188bc727180cbb26f0d1e3cb2624a2fc2240",
+        "README.md": "eb7a59062fa97aff83f8a62e21ee128570054a8bb710d923bb60f5f2a0f1eebe",
+        "policy.onnx": "a07d107eba2bc972e647729bd460a8ed9a4f5ad5af21fdd039feb912f0443fb9",
+        "validation.json": "e47a2aef7e90280ece48961d41f500947a302fadb72ac2b1d110b81a79a5091d",
+        "evaluation.json": "4690f16454871121ac019ff8e3322062d9867aaa4c7ca353336730d6ca7bb61a",
+        "policy.pt": "5dd4368f554971b5e17d3efb618c0e05b69b7c6fd98a92911ec0f4f1de00ac5d"
+      }
+    },
+    {
+      "id": "masked-ppo-moderate-0.6327",
+      "algorithm": "Masked PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "masked-ppo",
+      "displacement_group": "target-band",
       "experiment": "original-only",
-      "directory": "candidates/ppo-family/masked-ppo/original-only/original-30x__added-off__forward-0.6728-body-lengths",
+      "directory": "candidates/ppo-family/masked-ppo/target-band/original-only/original-10x__added-off__forward-0.6327-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.6327484250068665,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        2,
+        0,
+        0
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 27.652515411376953,
+      "maximum_lateral_drift_body_lengths": 0.32986676692962646,
+      "minimum_dwell_s": 0.04,
+      "p05_dwell_s": 0.04,
+      "median_dwell_s": 0.5,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Includes dwell shorter than 0.1 s",
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "a83f1447a497162acea48db2cb6313568f48382622fc64eb3a13eaa733d31524",
+        "run_meta.json": "203fd6a50e7a1438864b7df48cd855184b2443466e576018b2f43aee46f97ac4",
+        "index.html": "65f0fe10c7bd08ebae0c9fd9619d50813db0ae2df5cf91c3f3eeb8108df1e305",
+        "config.json": "95bab504d874752aeea2870c703d66f979fb8137f740c038bf2cf62a66916c88",
+        "README.md": "ec01eda941adb95bdf28330f44394d9a654712f1b0b5a8fa9c31e47b562a071d",
+        "policy.onnx": "fe9fb21aa2a64df21377853c5cff39e03807b270e2e835d77d40bb1bb9303db0",
+        "validation.json": "03fdf9c0d9ab2227acad9c958210f80cbfb3819d324cc2bcb74db88c6f399bf5",
+        "evaluation.json": "5f72f7263c47f4902a4cf5336148f0c07ff913122f4cf1a023081678b4e0adc8",
+        "policy.pt": "994f7e16ded3d43210fe96c7bc7d7b0d5eda78e764d294d9af59e64dd3b33bf8"
+      }
+    },
+    {
+      "id": "masked-ppo-moderate-0.6497",
+      "algorithm": "Masked PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "masked-ppo",
+      "displacement_group": "target-band",
+      "experiment": "original-only",
+      "directory": "candidates/ppo-family/masked-ppo/target-band/original-only/original-10x__added-off__forward-0.6497-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
+      "added_switch_cost": 0.0,
+      "forward_body_lengths_per_cycle": 0.649691641330719,
+      "per_leg_max_switches": [
+        2,
+        2,
+        2,
+        2,
+        0,
+        0
+      ],
+      "max_switches": 2,
+      "maximum_yaw_deg": 32.82724380493164,
+      "maximum_lateral_drift_body_lengths": 0.3822286128997803,
+      "minimum_dwell_s": 0.28,
+      "p05_dwell_s": 0.3,
+      "median_dwell_s": 0.54,
+      "fall_fraction": 0.0,
+      "torso_contact_fraction": 0.0,
+      "limitations": [
+        "Hardware performance not verified"
+      ],
+      "artifact_sha256": {
+        "metrics.json": "06ae43ff8116472fe741ae6b58583904dd303e0e01ea22b3d46db41409a9b000",
+        "run_meta.json": "203fd6a50e7a1438864b7df48cd855184b2443466e576018b2f43aee46f97ac4",
+        "index.html": "09dd5adb3d59c88ea82b5b2a88e2172dc13f84726e55a0ce66593dbe75e2dd04",
+        "config.json": "95bab504d874752aeea2870c703d66f979fb8137f740c038bf2cf62a66916c88",
+        "README.md": "1b1a59d61cc23a5b43c3d2074762443f96bb5d8ad57ba29123b68508702c8fab",
+        "policy.onnx": "cb44b755c11d8f3a54ec3a20f9493c948220c35ecf67b96289e5b8bb51a6c128",
+        "validation.json": "96a1ab4c4813131432ca502e8869e229c75bfd19fa312c38be798d54fc945de2",
+        "evaluation.json": "5f72f7263c47f4902a4cf5336148f0c07ff913122f4cf1a023081678b4e0adc8",
+        "policy.pt": "5a475d28a27d2d859bb48105731ce7b1539184383d4e3b313e9cca46e924c0f9"
+      }
+    },
+    {
+      "id": "masked-ppo-moderate-0.6728",
+      "algorithm": "Masked PPO",
+      "family": "ppo-family",
+      "algorithm_directory": "masked-ppo",
+      "displacement_group": "target-band",
+      "experiment": "original-only",
+      "directory": "candidates/ppo-family/masked-ppo/target-band/original-only/original-30x__added-off__forward-0.6728-body-lengths",
       "multiplier": 30,
       "original_switch_weight": -0.15,
       "added_switch_cost": 0.0,
@@ -498,62 +1245,37 @@
         0
       ],
       "max_switches": 3,
-      "maximum_lateral_drift_body_lengths": 0.2729742228984833,
       "maximum_yaw_deg": 28.970306396484375,
+      "maximum_lateral_drift_body_lengths": 0.2729742228984833,
       "minimum_dwell_s": 0.06,
+      "p05_dwell_s": 0.08,
+      "median_dwell_s": 0.48,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Brief command dwell intervals",
-        "Some legs keep a constant high-level command",
+        "Includes dwell shorter than 0.1 s",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "a8dd24b0c180417bc1a2aaf16e04f31d3b1c2d94779a17e0891400dfa8d71161",
-        "policy.onnx": "de4d1201d4ae90e0bad75b35c3bad1b95ba2aad50c251f701fcbe26928b5b3ba"
-      },
-      "negative_control": false
+        "metrics.json": "8946409b17f39eb74c92c4017a9c4cf32a30a6415c4a6f7c1c69d3886a3c4735",
+        "run_meta.json": "203fd6a50e7a1438864b7df48cd855184b2443466e576018b2f43aee46f97ac4",
+        "index.html": "83053e58077f1d4b142b22cc480b913fcb0aa90da5c451d9d01eb26fbd7462b4",
+        "config.json": "91a20a53597bc43271ee075030f0dd9b34ba05a65e012eeaeecec7f76559ac3c",
+        "README.md": "ea00a2d78b1794b0428990e7ec3d90532c0895b7dc799ddc4b1a87d50c0f01a9",
+        "policy.onnx": "de4d1201d4ae90e0bad75b35c3bad1b95ba2aad50c251f701fcbe26928b5b3ba",
+        "validation.json": "188b94d85fa97f9221d281ed7f2c8df0a70bf5349d054a4c521eb1fce80c8f2d",
+        "evaluation.json": "d1d9522d37292d8d85ffc6fe345b9f91431ecdb6ae44ec3d0c61dd8fd4ac4896",
+        "policy.pt": "a8dd24b0c180417bc1a2aaf16e04f31d3b1c2d94779a17e0891400dfa8d71161"
+      }
     },
     {
+      "id": "masked-ppo-moderate-0.6816",
       "algorithm": "Masked PPO",
       "family": "ppo-family",
       "algorithm_directory": "masked-ppo",
+      "displacement_group": "target-band",
       "experiment": "original-only",
-      "directory": "candidates/ppo-family/masked-ppo/original-only/original-5x__added-off__forward-0.6495-body-lengths",
-      "multiplier": 5,
-      "original_switch_weight": -0.025,
-      "added_switch_cost": 0.0,
-      "forward_body_lengths_per_cycle": 0.6494620442390442,
-      "per_leg_max_switches": [
-        4,
-        2,
-        2,
-        2,
-        2,
-        2
-      ],
-      "max_switches": 4,
-      "maximum_lateral_drift_body_lengths": 0.19395004212856293,
-      "maximum_yaw_deg": 29.504995346069336,
-      "minimum_dwell_s": 0.02,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "Brief command dwell intervals",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "8b678ef26bf704488f46c45df4a7086903b42326fc516a48b83ccd27899230ac",
-        "policy.onnx": "83a14957d007cbe02aecb06c14d17d6d04f7372f39ce524f31a9e99359c0efd0"
-      },
-      "negative_control": false
-    },
-    {
-      "algorithm": "Masked PPO",
-      "family": "ppo-family",
-      "algorithm_directory": "masked-ppo",
-      "experiment": "original-only",
-      "directory": "candidates/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6816-body-lengths",
+      "directory": "candidates/ppo-family/masked-ppo/target-band/original-only/original-10x__added-off__forward-0.6816-body-lengths",
       "multiplier": 10,
       "original_switch_weight": -0.05,
       "added_switch_cost": 0.0,
@@ -567,98 +1289,37 @@
         0
       ],
       "max_switches": 4,
-      "maximum_lateral_drift_body_lengths": 0.24343998730182648,
       "maximum_yaw_deg": 26.908674240112305,
+      "maximum_lateral_drift_body_lengths": 0.24343998730182648,
       "minimum_dwell_s": 0.02,
+      "p05_dwell_s": 0.02,
+      "median_dwell_s": 0.41000000000000003,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Brief command dwell intervals",
-        "Some legs keep a constant high-level command",
+        "Includes dwell shorter than 0.1 s",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "670317368919eb3bf0f3f7ccd0412fd9011d3085286db8d1a10eaef43e74c830",
-        "policy.onnx": "e8a3e45a4866a4344944516af211112a37ff454ee62e63b28ecf999a9b451583"
-      },
-      "negative_control": false
+        "metrics.json": "af0b2efe2dd6ba5476b0de1a6eb66f442a9ab318953c83003db83f2d00080313",
+        "run_meta.json": "203fd6a50e7a1438864b7df48cd855184b2443466e576018b2f43aee46f97ac4",
+        "index.html": "1d157d6a51cd03857e1baf2af1335373cc583e1175ea937c6412799a9bd07ec8",
+        "config.json": "95bab504d874752aeea2870c703d66f979fb8137f740c038bf2cf62a66916c88",
+        "README.md": "88abb47fa6f41e381d5797e12309999c6137f077bebf08476080b74282cc4c18",
+        "policy.onnx": "e8a3e45a4866a4344944516af211112a37ff454ee62e63b28ecf999a9b451583",
+        "validation.json": "b31b6afc88affd70d476308a13f3c8391dd0cdc770de9b58041f7d282c5da4f1",
+        "evaluation.json": "5f72f7263c47f4902a4cf5336148f0c07ff913122f4cf1a023081678b4e0adc8",
+        "policy.pt": "670317368919eb3bf0f3f7ccd0412fd9011d3085286db8d1a10eaef43e74c830"
+      }
     },
     {
-      "algorithm": "Masked PPO",
-      "family": "ppo-family",
-      "algorithm_directory": "masked-ppo",
-      "experiment": "original-plus-added-switch",
-      "directory": "candidates/ppo-family/masked-ppo/original-plus-added-switch/original-30x__added-30x__forward-0.6774-body-lengths",
-      "multiplier": 30,
-      "original_switch_weight": -0.15,
-      "added_switch_cost": 0.012,
-      "forward_body_lengths_per_cycle": 0.6773647665977478,
-      "per_leg_max_switches": [
-        4,
-        2,
-        2,
-        3,
-        2,
-        2
-      ],
-      "max_switches": 4,
-      "maximum_lateral_drift_body_lengths": 0.37395188212394714,
-      "maximum_yaw_deg": 36.875648498535156,
-      "minimum_dwell_s": 0.08,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "Large heading deviation",
-        "Brief command dwell intervals",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "1b9bef7980bcad65499ed2edb68e8b09a14c992bae8039b6c0aeeadeef32956a",
-        "policy.onnx": "994c177792265ee88ac35b34b4add8d8b8a55227cac680838611f6ed8c4b1664"
-      },
-      "negative_control": false
-    },
-    {
+      "id": "sac-discrete-one-step-moderate-0.6101",
       "algorithm": "SAC-D 1-step",
       "family": "sac-family",
       "algorithm_directory": "sac-discrete-one-step",
+      "displacement_group": "target-band",
       "experiment": "original-plus-added-switch",
-      "directory": "candidates/sac-family/sac-discrete-one-step/original-plus-added-switch/original-10x__added-10x__forward-0.5672-body-lengths",
-      "multiplier": 10,
-      "original_switch_weight": -0.05,
-      "added_switch_cost": 0.004,
-      "forward_body_lengths_per_cycle": 0.5672498941421509,
-      "per_leg_max_switches": [
-        2,
-        2,
-        0,
-        2,
-        0,
-        2
-      ],
-      "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.2919008731842041,
-      "maximum_yaw_deg": 26.036869049072266,
-      "minimum_dwell_s": 0.08,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "Brief command dwell intervals",
-        "Some legs keep a constant high-level command",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "171b1a0eaa2b9ef91be85904c031580235ab0e8e86eeceff9ca919315ffadabc",
-        "policy.onnx": "65d2f33a502556569f0fdace4d12d538f8ed1eeea7b01168865f6fd4b979d01c"
-      },
-      "negative_control": false
-    },
-    {
-      "algorithm": "SAC-D 1-step",
-      "family": "sac-family",
-      "algorithm_directory": "sac-discrete-one-step",
-      "experiment": "original-plus-added-switch",
-      "directory": "candidates/sac-family/sac-discrete-one-step/original-plus-added-switch/original-10x__added-10x__forward-0.6101-body-lengths",
+      "directory": "candidates/sac-family/sac-discrete-one-step/target-band/original-plus-added-switch/original-10x__added-10x__forward-0.6101-body-lengths",
       "multiplier": 10,
       "original_switch_weight": -0.05,
       "added_switch_cost": 0.004,
@@ -672,63 +1333,37 @@
         2
       ],
       "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.637710690498352,
       "maximum_yaw_deg": 34.47462844848633,
+      "maximum_lateral_drift_body_lengths": 0.637710690498352,
       "minimum_dwell_s": 0.42,
+      "p05_dwell_s": 0.42,
+      "median_dwell_s": 0.5,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "High lateral drift",
-        "Some legs keep a constant high-level command",
+        "Lateral drift exceeds 0.5 BL",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "b838514ea736d5c0cb9023aa8ee69af4f7fe77a7181ade63581103e2b2b3b0e1",
-        "policy.onnx": "5b6370cf4363d929311d67a5a36920725d6c13dd983f0fbb400753905fe8b63c"
-      },
-      "negative_control": false
+        "metrics.json": "4dcab042939cb8a199b97421e7e9d5fbeaaf247e80d783bdd93c65900830ca18",
+        "run_meta.json": "d35e879c75907400287a4f1b8a03aa2f5207e54d8f83ccb643e54c1d0e41032d",
+        "index.html": "139b6ba36ce330a0624ae107918a942199955ccf08e541e1d8c1e3522365f8ad",
+        "config.json": "d46551aef2a1dcd8810713e6621412dec0d66f4743dbc92e1d68df743a5b642b",
+        "README.md": "e36ce8607cc4354d91717c7d9330bc1b4657a7d978c64e2866af2d61fc72dbb2",
+        "policy.onnx": "5b6370cf4363d929311d67a5a36920725d6c13dd983f0fbb400753905fe8b63c",
+        "validation.json": "9b6fca58e605f10f2959a1f85e7d2184aa038c41aa4357cd076057e1df6dfccf",
+        "evaluation.json": "76f9f5e1fa59ac15c490b965f89b4303b80f14f3cfade64bb204334d053b2431",
+        "policy.pt": "b838514ea736d5c0cb9023aa8ee69af4f7fe77a7181ade63581103e2b2b3b0e1"
+      }
     },
     {
+      "id": "sac-discrete-one-step-moderate-0.6356",
       "algorithm": "SAC-D 1-step",
       "family": "sac-family",
       "algorithm_directory": "sac-discrete-one-step",
+      "displacement_group": "target-band",
       "experiment": "original-only",
-      "directory": "candidates/sac-family/sac-discrete-one-step/original-only/original-10x__added-off__forward-0.7744-body-lengths",
-      "multiplier": 10,
-      "original_switch_weight": -0.05,
-      "added_switch_cost": 0.0,
-      "forward_body_lengths_per_cycle": 0.7743656635284424,
-      "per_leg_max_switches": [
-        2,
-        2,
-        0,
-        0,
-        2,
-        0
-      ],
-      "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.8229434490203857,
-      "maximum_yaw_deg": 28.143293380737305,
-      "minimum_dwell_s": 0.26,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "High lateral drift",
-        "Some legs keep a constant high-level command",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "47daf58b2c2fdb4ab1f77295be060632d81baae53da15c7af8d3df209c2a45c5",
-        "policy.onnx": "235a93924bd642715fe534167637751c1882f587fbac63401fce4ddaeaca6465"
-      },
-      "negative_control": false
-    },
-    {
-      "algorithm": "SAC-D 1-step",
-      "family": "sac-family",
-      "algorithm_directory": "sac-discrete-one-step",
-      "experiment": "original-only",
-      "directory": "candidates/sac-family/sac-discrete-one-step/original-only/original-5x__added-off__forward-0.6356-body-lengths",
+      "directory": "candidates/sac-family/sac-discrete-one-step/target-band/original-only/original-5x__added-off__forward-0.6356-body-lengths",
       "multiplier": 5,
       "original_switch_weight": -0.025,
       "added_switch_cost": 0.0,
@@ -742,130 +1377,72 @@
         2
       ],
       "max_switches": 2,
-      "maximum_lateral_drift_body_lengths": 0.8307827115058899,
       "maximum_yaw_deg": 34.42356491088867,
+      "maximum_lateral_drift_body_lengths": 0.8307827115058899,
       "minimum_dwell_s": 0.26,
+      "p05_dwell_s": 0.34,
+      "median_dwell_s": 0.52,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "High lateral drift",
+        "Lateral drift exceeds 0.5 BL",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "8f09a6059e3b380d57b20dcfe8398faf5e72f0789ba2695855b4cbc13e9c27cb",
-        "policy.onnx": "59b31de1c4b3adeede180dd7f7cfb21fd016387c58c146bd1fe7fcfb7d0965b8"
-      },
-      "negative_control": false
+        "metrics.json": "c3676b4fdbe43661c6e43f4bb8111d98d90fc63baab89b549eb426dcbed60bd9",
+        "run_meta.json": "d35e879c75907400287a4f1b8a03aa2f5207e54d8f83ccb643e54c1d0e41032d",
+        "index.html": "0f4625db48dbd7c4e2e98467e220d4748c646eb628d73df3ca7650d1bb4a83f0",
+        "config.json": "1ef0ae3f2ef6267334d97a135cb7411923795fe5dc09234a12f68fd357a15047",
+        "README.md": "86211e2417e83b5801a6bb159bd75d642422043a9487a41d63fc190b5dbf37fb",
+        "policy.onnx": "59b31de1c4b3adeede180dd7f7cfb21fd016387c58c146bd1fe7fcfb7d0965b8",
+        "validation.json": "13dd776af863d20ade6da593762ee0f0a77e8e161fa1e34cfb02af738d0f13b7",
+        "evaluation.json": "13980370a1bb191aa6d8bfdab837c739461b411cb432f3df07e0434f240b6cba",
+        "policy.pt": "8f09a6059e3b380d57b20dcfe8398faf5e72f0789ba2695855b4cbc13e9c27cb"
+      }
     },
     {
-      "algorithm": "SAC-D 5-step",
+      "id": "sac-discrete-one-step-moderate-0.7744",
+      "algorithm": "SAC-D 1-step",
       "family": "sac-family",
-      "algorithm_directory": "sac-discrete-five-step",
+      "algorithm_directory": "sac-discrete-one-step",
+      "displacement_group": "target-band",
       "experiment": "original-only",
-      "directory": "candidates/sac-family/sac-discrete-five-step/original-only/original-100x__added-off__forward-0.0524-body-lengths",
-      "multiplier": 100,
-      "original_switch_weight": -0.5,
+      "directory": "candidates/sac-family/sac-discrete-one-step/target-band/original-only/original-10x__added-off__forward-0.7744-body-lengths",
+      "multiplier": 10,
+      "original_switch_weight": -0.05,
       "added_switch_cost": 0.0,
-      "forward_body_lengths_per_cycle": 0.05240575969219208,
+      "forward_body_lengths_per_cycle": 0.7743656635284424,
       "per_leg_max_switches": [
+        2,
+        2,
         0,
         0,
-        0,
-        0,
-        0,
+        2,
         0
       ],
-      "max_switches": 0,
-      "maximum_lateral_drift_body_lengths": 0.33590829372406006,
-      "maximum_yaw_deg": 65.38013458251953,
-      "minimum_dwell_s": null,
+      "max_switches": 2,
+      "maximum_yaw_deg": 28.143293380737305,
+      "maximum_lateral_drift_body_lengths": 0.8229434490203857,
+      "minimum_dwell_s": 0.26,
+      "p05_dwell_s": 0.3,
+      "median_dwell_s": 0.48,
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "limitations": [
-        "Large heading deviation",
-        "Low-displacement control; not a preferred walking policy",
-        "Some legs keep a constant high-level command",
+        "Lateral drift exceeds 0.5 BL",
         "Hardware performance not verified"
       ],
       "artifact_sha256": {
-        "policy.pt": "d60e90a224cf1a999007ee62069a2454aa7734b79b3570fa2d8d85db8ac07494",
-        "policy.onnx": "d8b98a1e8ca2d1f64c932b71d5cdfb916b406b0acf040aa0b2528700b62f448b"
-      },
-      "negative_control": true
-    },
-    {
-      "algorithm": "SAC-D 5-step",
-      "family": "sac-family",
-      "algorithm_directory": "sac-discrete-five-step",
-      "experiment": "original-plus-added-switch",
-      "directory": "candidates/sac-family/sac-discrete-five-step/original-plus-added-switch/original-30x__added-30x__forward-0.1083-body-lengths",
-      "multiplier": 30,
-      "original_switch_weight": -0.15,
-      "added_switch_cost": 0.012,
-      "forward_body_lengths_per_cycle": 0.10828611254692078,
-      "per_leg_max_switches": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "max_switches": 0,
-      "maximum_lateral_drift_body_lengths": 0.5428982377052307,
-      "maximum_yaw_deg": 155.53634643554688,
-      "minimum_dwell_s": null,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "High lateral drift",
-        "Large heading deviation",
-        "Low-displacement control; not a preferred walking policy",
-        "Some legs keep a constant high-level command",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "b306d4f5c9b3dbd341604bfcd76c7a7a896014a90999b41bd03b201ecf27c5ca",
-        "policy.onnx": "8b97ed5447c99374f17809a074ae4a4fb4e390c053dc432261bad0d916054140"
-      },
-      "negative_control": true
-    },
-    {
-      "algorithm": "SAC-D 5-step",
-      "family": "sac-family",
-      "algorithm_directory": "sac-discrete-five-step",
-      "experiment": "original-only",
-      "directory": "candidates/sac-family/sac-discrete-five-step/original-only/original-30x__added-off__forward-0.0400-body-lengths",
-      "multiplier": 30,
-      "original_switch_weight": -0.15,
-      "added_switch_cost": 0.0,
-      "forward_body_lengths_per_cycle": 0.03999939188361168,
-      "per_leg_max_switches": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "max_switches": 0,
-      "maximum_lateral_drift_body_lengths": 0.6734215021133423,
-      "maximum_yaw_deg": 179.96865844726562,
-      "minimum_dwell_s": null,
-      "fall_fraction": 0.0,
-      "torso_contact_fraction": 0.0,
-      "limitations": [
-        "High lateral drift",
-        "Large heading deviation",
-        "Low-displacement control; not a preferred walking policy",
-        "Some legs keep a constant high-level command",
-        "Hardware performance not verified"
-      ],
-      "artifact_sha256": {
-        "policy.pt": "5ae2dae6ca0a913428fc6155207425bae62c563a3636976677163c1437225563",
-        "policy.onnx": "56f1ef64ea21b75c7d3879a2adec35acc229291c9e21a38069ff47acc6bbf5a0"
-      },
-      "negative_control": true
+        "metrics.json": "590ec67b5dcecda434ef1bb69db2134c897817826964ea7c2331bb95d99c1087",
+        "run_meta.json": "d35e879c75907400287a4f1b8a03aa2f5207e54d8f83ccb643e54c1d0e41032d",
+        "index.html": "d5986aba243113c33076555b6ffd7c7f45e725e083b8fe5fdd50aaead993154f",
+        "config.json": "2a63522ab283694302c8433efdd985ef2474aa509fcfb0a66887106d19b9d32e",
+        "README.md": "d6a282cac9183f714ee75710fdb98ee5715b7c94250dd6e4bab0075ae65ae548",
+        "policy.onnx": "235a93924bd642715fe534167637751c1882f587fbac63401fce4ddaeaca6465",
+        "validation.json": "18a52a80f7d997d46b02ad76896bdcc3018cd9c8fcb44d35ba2f73c9f8e91497",
+        "evaluation.json": "c356055e3590dec7df48715d9636472bb088ad8f06973665f828f49b5d9e98e5",
+        "policy.pt": "47daf58b2c2fdb4ab1f77295be060632d81baae53da15c7af8d3df209c2a45c5"
+      }
     }
   ]
 }
