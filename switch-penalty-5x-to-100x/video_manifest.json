@@ -1133,7 +1133,7 @@
       "path": "github-policy-videos/displacement-above-0.8/dqn-family/ddqn/original-plus-added-switch/original-30x__added-30x__forward-1.0025-body-lengths/ddqn-higher-1.0025.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "dqn-moderate-0.7670",
       "algorithm": "DQN",
       "group": "target-band",
@@ -1148,16 +1148,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7670-body-lengths%2Fdqn-moderate-0.7670.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7670-body-lengths%2Fdqn-moderate-0.7670.mp4",
       "checkpoint_sha256": "7bb95542fef385937edaf47fa50a4bdf1272922f1f92bb9176e2785804209fd3",
       "video_sha256": "1cd9b2e2e7611a08f7bbafbfb1f72d90db1a649f31a4d8b3f8c07554461306d9",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/dqn/original-plus-added-switch/original-100x__added-100x__forward-0.7670-body-lengths/dqn-moderate-0.7670.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/dqn/original-plus-added-switch/original-100x__added-100x__forward-0.7670-body-lengths/dqn-moderate-0.7670.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "dqn-moderate-0.7739",
       "algorithm": "DQN",
       "group": "target-band",
@@ -1172,16 +1172,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.7739-body-lengths%2Fdqn-moderate-0.7739.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.7739-body-lengths%2Fdqn-moderate-0.7739.mp4",
       "checkpoint_sha256": "530dbe615666c3fb456fa332e93d64b4db45e6ad4261aeb5889a33b0cca23616",
       "video_sha256": "b74e3d607cbab0f62014a420b4f44521a3573c08e523f6cd16c7818a4c9efd95",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/dqn/original-plus-added-switch/original-10x__added-10x__forward-0.7739-body-lengths/dqn-moderate-0.7739.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/dqn/original-plus-added-switch/original-10x__added-10x__forward-0.7739-body-lengths/dqn-moderate-0.7739.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-moderate-0.6194",
       "algorithm": "DDQN",
       "group": "target-band",
@@ -1196,16 +1196,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 1.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6194-body-lengths%2Fddqn-moderate-0.6194.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6194-body-lengths%2Fddqn-moderate-0.6194.mp4",
       "checkpoint_sha256": "48d44fa00b5e5e3bd878becdefb18a289f6175d558d22d6e2550eb10e1e6dfde",
       "video_sha256": "39ace96eee0db996a8b7ccafe72fe4ff07ae873f5d34361a04c610061f47ba60",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-only/original-10x__added-off__forward-0.6194-body-lengths/ddqn-moderate-0.6194.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-only/original-10x__added-off__forward-0.6194-body-lengths/ddqn-moderate-0.6194.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-moderate-0.7232",
       "algorithm": "DDQN",
       "group": "target-band",
@@ -1220,16 +1220,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-10x__added-off__forward-0.7232-body-lengths%2Fddqn-moderate-0.7232.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-10x__added-off__forward-0.7232-body-lengths%2Fddqn-moderate-0.7232.mp4",
       "checkpoint_sha256": "68d1019aceb0d540c55ba25165d56ae676ef2cd0832ec579226a76dea6129fdf",
       "video_sha256": "ca316ffa3c85aeaf7a87c1b53f0c2b9c0acb78d12b69617003412220b05ded8b",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-only/original-10x__added-off__forward-0.7232-body-lengths/ddqn-moderate-0.7232.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-only/original-10x__added-off__forward-0.7232-body-lengths/ddqn-moderate-0.7232.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-moderate-0.7378",
       "algorithm": "DDQN",
       "group": "target-band",
@@ -1244,16 +1244,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.7378-body-lengths%2Fddqn-moderate-0.7378.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.7378-body-lengths%2Fddqn-moderate-0.7378.mp4",
       "checkpoint_sha256": "bb6980f5b8e676953404d44784993c482dbb3abd43765060ecc9d74d1ab34995",
       "video_sha256": "9de1659dbe6d4b91d87a2bb59b2409119a8bc732ee037d76b8b6ee819e8501eb",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-5x__added-5x__forward-0.7378-body-lengths/ddqn-moderate-0.7378.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-5x__added-5x__forward-0.7378-body-lengths/ddqn-moderate-0.7378.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-moderate-0.7523",
       "algorithm": "DDQN",
       "group": "target-band",
@@ -1268,16 +1268,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.7523-body-lengths%2Fddqn-moderate-0.7523.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.7523-body-lengths%2Fddqn-moderate-0.7523.mp4",
       "checkpoint_sha256": "5062c76211f2a1a97acba28f14e67110cb9170f3a13174772b45532ea5590e82",
       "video_sha256": "5b834e1b4db64473e642cc8f4cd695ca0b4004c07a44c8c0f9f2bde829db01e8",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-10x__added-10x__forward-0.7523-body-lengths/ddqn-moderate-0.7523.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-10x__added-10x__forward-0.7523-body-lengths/ddqn-moderate-0.7523.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-moderate-0.7898",
       "algorithm": "DDQN",
       "group": "target-band",
@@ -1292,16 +1292,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7898-body-lengths%2Fddqn-moderate-0.7898.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7898-body-lengths%2Fddqn-moderate-0.7898.mp4",
       "checkpoint_sha256": "6a16e8f7dbf47cc507c39b2a506a5048a54b6cd0cfa45412ce5386359c498110",
       "video_sha256": "a031c07270f86c61156374c590e9aea7f19a5771afbbbfba119d4bfee9182602",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.7898-body-lengths/ddqn-moderate-0.7898.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.7898-body-lengths/ddqn-moderate-0.7898.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-moderate-0.7908",
       "algorithm": "DDQN",
       "group": "target-band",
@@ -1316,16 +1316,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7908-body-lengths%2Fddqn-moderate-0.7908.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7908-body-lengths%2Fddqn-moderate-0.7908.mp4",
       "checkpoint_sha256": "b17be7a44afe25e5d05501026e97b962fd577ecc335623c1dc4532ac8f09aa6b",
       "video_sha256": "2a93328abaf64adfc32b866131e81ff5df85a0df23b8149b593da5e85d045df3",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.7908-body-lengths/ddqn-moderate-0.7908.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.7908-body-lengths/ddqn-moderate-0.7908.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-moderate-0.7939",
       "algorithm": "DDQN",
       "group": "target-band",
@@ -1340,16 +1340,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7939-body-lengths%2Fddqn-moderate-0.7939.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7939-body-lengths%2Fddqn-moderate-0.7939.mp4",
       "checkpoint_sha256": "0ab2fbc564771943cb6682052a73705789ffb4a269b64228869cac4b5f5ab46d",
       "video_sha256": "a1f92ff640ac195e46a6e39b2eef6ab437e17a4634603d6a30b16b55d26af4da",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.7939-body-lengths/ddqn-moderate-0.7939.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.7939-body-lengths/ddqn-moderate-0.7939.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-moderate-0.7965",
       "algorithm": "DDQN",
       "group": "target-band",
@@ -1364,16 +1364,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7965-body-lengths%2Fddqn-moderate-0.7965.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7965-body-lengths%2Fddqn-moderate-0.7965.mp4",
       "checkpoint_sha256": "5cc5652596f9ed992240143b4cec4597cd5b385c398ee7cc0631f5a80762fc72",
       "video_sha256": "b67354e29693fb1d6fb23e45fa3014ef58d4c04a68ae770de41c36f1e844911e",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.7965-body-lengths/ddqn-moderate-0.7965.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.7965-body-lengths/ddqn-moderate-0.7965.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.6285",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1388,16 +1388,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6285-body-lengths%2Fppo-moderate-0.6285.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6285-body-lengths%2Fppo-moderate-0.6285.mp4",
       "checkpoint_sha256": "8112d15b6081b143d101756e7c08590179e8168c3a29ba80aa00e7d6c573c27c",
       "video_sha256": "1443b9b3f95183c694975978d81f36ed3fb9eab9f80ad1bf636d140bd57ade78",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-only/original-10x__added-off__forward-0.6285-body-lengths/ppo-moderate-0.6285.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-only/original-10x__added-off__forward-0.6285-body-lengths/ppo-moderate-0.6285.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.6377",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1412,16 +1412,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.6377-body-lengths%2Fppo-moderate-0.6377.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.6377-body-lengths%2Fppo-moderate-0.6377.mp4",
       "checkpoint_sha256": "3ba396ec22e7436532913cf64dd00399ac736875d7a651d7c92d212069750865",
       "video_sha256": "462358939e6db3c0e35733df354c6be21890aa085b9a83b3ce6e963ba75ebcb9",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-100x__added-100x__forward-0.6377-body-lengths/ppo-moderate-0.6377.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-100x__added-100x__forward-0.6377-body-lengths/ppo-moderate-0.6377.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.6675",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1436,16 +1436,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6675-body-lengths%2Fppo-moderate-0.6675.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6675-body-lengths%2Fppo-moderate-0.6675.mp4",
       "checkpoint_sha256": "3cb28a5cdb3cc02b84f5297121eb2b4de2b59ba7131f71ad26148622956a59cd",
       "video_sha256": "e24734db269a2aea01362a2e7c5b44da8f7f3463bc29b1de3fce06779d7ac0e0",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6675-body-lengths/ppo-moderate-0.6675.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6675-body-lengths/ppo-moderate-0.6675.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.6760",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1460,16 +1460,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6760-body-lengths%2Fppo-moderate-0.6760.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6760-body-lengths%2Fppo-moderate-0.6760.mp4",
       "checkpoint_sha256": "47dada936fd601002b9be701772b540842199abf4de6f89d9e5fa25c9bfea49e",
       "video_sha256": "f87d1732a8ce86f97dc78788bb49712023f694b92ae713b6470d1f79fb58fe8e",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6760-body-lengths/ppo-moderate-0.6760.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6760-body-lengths/ppo-moderate-0.6760.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.6776",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1484,16 +1484,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-only%2Foriginal-5x__added-off__forward-0.6776-body-lengths%2Fppo-moderate-0.6776.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-only%2Foriginal-5x__added-off__forward-0.6776-body-lengths%2Fppo-moderate-0.6776.mp4",
       "checkpoint_sha256": "3b8e056b67de6a2107d81d3037750db34852c080937999cc682b3daf1ea9c3e3",
       "video_sha256": "ae9d5d9305c420f4dda87d1de4f28e5d0f57c634be2069af561b06a4e024621a",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-only/original-5x__added-off__forward-0.6776-body-lengths/ppo-moderate-0.6776.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-only/original-5x__added-off__forward-0.6776-body-lengths/ppo-moderate-0.6776.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.7145",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1508,16 +1508,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-only%2Foriginal-30x__added-off__forward-0.7145-body-lengths%2Fppo-moderate-0.7145.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-only%2Foriginal-30x__added-off__forward-0.7145-body-lengths%2Fppo-moderate-0.7145.mp4",
       "checkpoint_sha256": "80c41da93513da800e9d24f8646b2ca791a9f9ef77c369b9555ec82d3f564beb",
       "video_sha256": "5668792b529b174e2ca9359ffe362e593bf95b666cb2f9b13aeaeb34d4fa4a1f",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-only/original-30x__added-off__forward-0.7145-body-lengths/ppo-moderate-0.7145.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-only/original-30x__added-off__forward-0.7145-body-lengths/ppo-moderate-0.7145.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.7213",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1532,16 +1532,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.7213-body-lengths%2Fppo-moderate-0.7213.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.7213-body-lengths%2Fppo-moderate-0.7213.mp4",
       "checkpoint_sha256": "51a79a1e66cdcb8c248f4ed7c65d6a61e59f2c49023afa4439eda154260c564c",
       "video_sha256": "3dffaf37fa4763dddf709bc2b1c76083b10a8042bf36cd139d4ab55d678c59e3",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-only/original-10x__added-off__forward-0.7213-body-lengths/ppo-moderate-0.7213.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-only/original-10x__added-off__forward-0.7213-body-lengths/ppo-moderate-0.7213.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.7259",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1556,16 +1556,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.7259-body-lengths%2Fppo-moderate-0.7259.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.7259-body-lengths%2Fppo-moderate-0.7259.mp4",
       "checkpoint_sha256": "6edea37279d69ead5660a164581d1190efa35f1a7d43b001ab7014b812ba3976",
       "video_sha256": "9b95bb2f080b9447e8cd7fe9c69b570b9e8556353f7ddcfe9fba403e0d395e39",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.7259-body-lengths/ppo-moderate-0.7259.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.7259-body-lengths/ppo-moderate-0.7259.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.7299",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1580,16 +1580,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.7299-body-lengths%2Fppo-moderate-0.7299.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.7299-body-lengths%2Fppo-moderate-0.7299.mp4",
       "checkpoint_sha256": "ddb86c867ca4dca40f268526e804add2da34de0b1e518732bba56f89881a98e0",
       "video_sha256": "2f4e3355e9c719b6f4f4f58c09882e7a7284d7bc9102058bd7bf9fef0669d1d0",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-10x__added-10x__forward-0.7299-body-lengths/ppo-moderate-0.7299.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-10x__added-10x__forward-0.7299-body-lengths/ppo-moderate-0.7299.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.7428",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1604,16 +1604,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7428-body-lengths%2Fppo-moderate-0.7428.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.7428-body-lengths%2Fppo-moderate-0.7428.mp4",
       "checkpoint_sha256": "9500dc5f2362a55160a86334cbe6e1beeed55413befdb6069becf398d770150c",
       "video_sha256": "576b77cceec8eaee4d354d88b4082fee66645519e9edecc9b0cbe003072ae394",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-100x__added-100x__forward-0.7428-body-lengths/ppo-moderate-0.7428.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-100x__added-100x__forward-0.7428-body-lengths/ppo-moderate-0.7428.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ppo-moderate-0.7452",
       "algorithm": "PPO",
       "group": "target-band",
@@ -1628,16 +1628,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.7452-body-lengths%2Fppo-moderate-0.7452.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.7452-body-lengths%2Fppo-moderate-0.7452.mp4",
       "checkpoint_sha256": "041ca723644d1a9f451694975a5450f9b68be809c81a91ad5de120a7a9a6c553",
       "video_sha256": "09972c6c136819c662b27bc20b101be6a4324dcc6926f08e74b020cc5634cfa9",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.7452-body-lengths/ppo-moderate-0.7452.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/ppo/original-plus-added-switch/original-5x__added-5x__forward-0.7452-body-lengths/ppo-moderate-0.7452.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6039",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1652,16 +1652,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6039-body-lengths%2Fmasked-ppo-moderate-0.6039.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6039-body-lengths%2Fmasked-ppo-moderate-0.6039.mp4",
       "checkpoint_sha256": "64750707f39aa10d7e1969be924745896feef3dabc9d0ce1336959a7edf21441",
       "video_sha256": "b7a68b94f9bc3e10e6ca3d60b738f505918626c674388ca29b140972dafeb04c",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6039-body-lengths/masked-ppo-moderate-0.6039.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6039-body-lengths/masked-ppo-moderate-0.6039.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6064",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1676,16 +1676,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.6064-body-lengths%2Fmasked-ppo-moderate-0.6064.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.6064-body-lengths%2Fmasked-ppo-moderate-0.6064.mp4",
       "checkpoint_sha256": "58bfaec45864d07b885f5c1e5de7029119a948cbbae5271f1ae490ffe1131461",
       "video_sha256": "490ccfa981df8d0292967372dc3b50eec6f2ac305edf81b1fa6924ccf8e31943",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-10x__added-10x__forward-0.6064-body-lengths/masked-ppo-moderate-0.6064.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-10x__added-10x__forward-0.6064-body-lengths/masked-ppo-moderate-0.6064.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6108",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1700,16 +1700,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.6108-body-lengths%2Fmasked-ppo-moderate-0.6108.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.6108-body-lengths%2Fmasked-ppo-moderate-0.6108.mp4",
       "checkpoint_sha256": "2f1c4444a8f893a240cac96ee66671c343ac5d415fe42f1ff13d8e1c7e40cb98",
       "video_sha256": "c2568df2c02fdbd114af22b98410d9fa9c8c5b2ac4e5da2793eab7170ed31229",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-10x__added-10x__forward-0.6108-body-lengths/masked-ppo-moderate-0.6108.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-10x__added-10x__forward-0.6108-body-lengths/masked-ppo-moderate-0.6108.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6143",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1724,16 +1724,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6143-body-lengths%2Fmasked-ppo-moderate-0.6143.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6143-body-lengths%2Fmasked-ppo-moderate-0.6143.mp4",
       "checkpoint_sha256": "614a812524d539797168cd600d48db4520b839471fc63b05cbea1d4e1deda207",
       "video_sha256": "1ffec346bc92474ea9a22f48fd48d359d1bc97669dba4920d7745c7f21148f39",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6143-body-lengths/masked-ppo-moderate-0.6143.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6143-body-lengths/masked-ppo-moderate-0.6143.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6335",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1748,16 +1748,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6335-body-lengths%2Fmasked-ppo-moderate-0.6335.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6335-body-lengths%2Fmasked-ppo-moderate-0.6335.mp4",
       "checkpoint_sha256": "0adbf7b39f75b0538f5ffa06ca693461c9c632062564e0ee34acd3f3bfb6e0cd",
       "video_sha256": "2e4336bf02e9a8e5628e6d30cf6bd2ae46328d54dc8c53ae49c23c344ae2f801",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6335-body-lengths/masked-ppo-moderate-0.6335.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6335-body-lengths/masked-ppo-moderate-0.6335.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6385",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1772,16 +1772,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.6385-body-lengths%2Fmasked-ppo-moderate-0.6385.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-10x__added-10x__forward-0.6385-body-lengths%2Fmasked-ppo-moderate-0.6385.mp4",
       "checkpoint_sha256": "6b2fd7824551d80bb10f68914922db5ac876a47c754ec57733c1299146fcf065",
       "video_sha256": "97e8d58135c74f335b84023a839c0efcf2a04e1abe0193f66945658fd528a100",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-10x__added-10x__forward-0.6385-body-lengths/masked-ppo-moderate-0.6385.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-10x__added-10x__forward-0.6385-body-lengths/masked-ppo-moderate-0.6385.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6392",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1796,16 +1796,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6392-body-lengths%2Fmasked-ppo-moderate-0.6392.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6392-body-lengths%2Fmasked-ppo-moderate-0.6392.mp4",
       "checkpoint_sha256": "a3d25c7a2480bc1a4f612f26af6e77de7a5cb0d18b31bad28ab3f8c022d66076",
       "video_sha256": "dd122730ab3d55ca16ca693322b72a7133b9a496a2f5185c75c32db66cf01dc8",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6392-body-lengths/masked-ppo-moderate-0.6392.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6392-body-lengths/masked-ppo-moderate-0.6392.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6579",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1820,16 +1820,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6579-body-lengths%2Fmasked-ppo-moderate-0.6579.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.6579-body-lengths%2Fmasked-ppo-moderate-0.6579.mp4",
       "checkpoint_sha256": "a7132fa909b8501584f26cdf6edd6109014a54089d966b436b8313be75e692cd",
       "video_sha256": "63fb79064e490bce7cf531347450139ea75c462084aaea1ffc5ace64039c0ce6",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6579-body-lengths/masked-ppo-moderate-0.6579.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-5x__added-5x__forward-0.6579-body-lengths/masked-ppo-moderate-0.6579.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6600",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1844,16 +1844,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6600-body-lengths%2Fmasked-ppo-moderate-0.6600.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6600-body-lengths%2Fmasked-ppo-moderate-0.6600.mp4",
       "checkpoint_sha256": "d0cb6adfe422626500e633f2612e98dfb810a6492017ef4043328e5ac5c85d88",
       "video_sha256": "090c3cd6412628117eb5a4723dac15df795d5007f5408cabad6338000fbab7da",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6600-body-lengths/masked-ppo-moderate-0.6600.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6600-body-lengths/masked-ppo-moderate-0.6600.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6670",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1868,16 +1868,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6670-body-lengths%2Fmasked-ppo-moderate-0.6670.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-only%2Foriginal-10x__added-off__forward-0.6670-body-lengths%2Fmasked-ppo-moderate-0.6670.mp4",
       "checkpoint_sha256": "fc441df75984f9ffa4280a8ee5109c237acdc8d5fef0dcf884b2388c81e0a904",
       "video_sha256": "6daf009d0f157f0839854c9e0524dfbbdca9c5c6b6917ffef3ab3a622251adf3",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6670-body-lengths/masked-ppo-moderate-0.6670.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-only/original-10x__added-off__forward-0.6670-body-lengths/masked-ppo-moderate-0.6670.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "masked-ppo-moderate-0.6774",
       "algorithm": "Masked PPO",
       "group": "target-band",
@@ -1892,16 +1892,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-30x__added-30x__forward-0.6774-body-lengths%2Fmasked-ppo-moderate-0.6774.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-0.6-to-0.8%2Fppo-family%2Fmasked-ppo%2Foriginal-plus-added-switch%2Foriginal-30x__added-30x__forward-0.6774-body-lengths%2Fmasked-ppo-moderate-0.6774.mp4",
       "checkpoint_sha256": "1b9bef7980bcad65499ed2edb68e8b09a14c992bae8039b6c0aeeadeef32956a",
       "video_sha256": "dde07f8e34f9730cb3d1d3f2ea619e05e5da0bd9b19fc6f7734d454420dedb9b",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-30x__added-30x__forward-0.6774-body-lengths/masked-ppo-moderate-0.6774.mp4"
+      "path": "additional-policy-videos/displacement-0.6-to-0.8/ppo-family/masked-ppo/original-plus-added-switch/original-30x__added-30x__forward-0.6774-body-lengths/masked-ppo-moderate-0.6774.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "dqn-higher-0.8328",
       "algorithm": "DQN",
       "group": "higher-displacement",
@@ -1916,16 +1916,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.8328-body-lengths%2Fdqn-higher-0.8328.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.8328-body-lengths%2Fdqn-higher-0.8328.mp4",
       "checkpoint_sha256": "4ccc1884f3dc4d1eff6ff94a1f62602d914b19ac2664c4778ae21abc85d43b93",
       "video_sha256": "49e0874deab873eec081b80b627bfa4c75e2f13bcb03dd1927831dadc36db19f",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/dqn/original-plus-added-switch/original-100x__added-100x__forward-0.8328-body-lengths/dqn-higher-0.8328.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/dqn/original-plus-added-switch/original-100x__added-100x__forward-0.8328-body-lengths/dqn-higher-0.8328.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "dqn-higher-0.8553",
       "algorithm": "DQN",
       "group": "higher-displacement",
@@ -1940,16 +1940,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.8553-body-lengths%2Fdqn-higher-0.8553.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.8553-body-lengths%2Fdqn-higher-0.8553.mp4",
       "checkpoint_sha256": "665a4bb450f193360a2efdfdf05716b5f902b73070bf1d22f367d2c1c172320a",
       "video_sha256": "ea03d7c71302ab4d687631b49441b31040e1beacc8f8af21e6c5d89c19c73417",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/dqn/original-plus-added-switch/original-100x__added-100x__forward-0.8553-body-lengths/dqn-higher-0.8553.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/dqn/original-plus-added-switch/original-100x__added-100x__forward-0.8553-body-lengths/dqn-higher-0.8553.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "dqn-higher-0.8941",
       "algorithm": "DQN",
       "group": "higher-displacement",
@@ -1964,16 +1964,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-only%2Foriginal-100x__added-off__forward-0.8941-body-lengths%2Fdqn-higher-0.8941.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-only%2Foriginal-100x__added-off__forward-0.8941-body-lengths%2Fdqn-higher-0.8941.mp4",
       "checkpoint_sha256": "d9fed95f2c256b4b4fa4293f7b1cc806f70a1c112b83b7dfb3834ec58fd90655",
       "video_sha256": "db8faf4f1a58c5ead07b682f1d7e184493e11e379bfbe1ee2240f57334eb5f96",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/dqn/original-only/original-100x__added-off__forward-0.8941-body-lengths/dqn-higher-0.8941.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/dqn/original-only/original-100x__added-off__forward-0.8941-body-lengths/dqn-higher-0.8941.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "dqn-higher-0.9427",
       "algorithm": "DQN",
       "group": "higher-displacement",
@@ -1988,16 +1988,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-only%2Foriginal-10x__added-off__forward-0.9427-body-lengths%2Fdqn-higher-0.9427.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-only%2Foriginal-10x__added-off__forward-0.9427-body-lengths%2Fdqn-higher-0.9427.mp4",
       "checkpoint_sha256": "50c43951de8d26a228f5687754d9a4b329f88c10ac9c94bcc89722fe20b6ce0b",
       "video_sha256": "d4e96f56a7149dbe21737f03ee795567a9a3bea94c083b5bd1bad3f5573e057a",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/dqn/original-only/original-10x__added-off__forward-0.9427-body-lengths/dqn-higher-0.9427.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/dqn/original-only/original-10x__added-off__forward-0.9427-body-lengths/dqn-higher-0.9427.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "dqn-higher-0.9894",
       "algorithm": "DQN",
       "group": "higher-displacement",
@@ -2012,16 +2012,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.9894-body-lengths%2Fdqn-higher-0.9894.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fdqn%2Foriginal-plus-added-switch%2Foriginal-5x__added-5x__forward-0.9894-body-lengths%2Fdqn-higher-0.9894.mp4",
       "checkpoint_sha256": "4c83c0619d68277f0357eb5ee5854c55d7efa91f7b767a8404cb202591b91d8f",
       "video_sha256": "9983ac159af1870a4b3d12a67a7a0ca39a0e481185c69d941abcd2121bc794a8",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/dqn/original-plus-added-switch/original-5x__added-5x__forward-0.9894-body-lengths/dqn-higher-0.9894.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/dqn/original-plus-added-switch/original-5x__added-5x__forward-0.9894-body-lengths/dqn-higher-0.9894.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-higher-0.8355",
       "algorithm": "DDQN",
       "group": "higher-displacement",
@@ -2036,16 +2036,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.8355-body-lengths%2Fddqn-higher-0.8355.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-plus-added-switch%2Foriginal-100x__added-100x__forward-0.8355-body-lengths%2Fddqn-higher-0.8355.mp4",
       "checkpoint_sha256": "0abf5e92261661039174dca2a026d87b63d4fd9d6a267dc0f3eb7bb531450d85",
       "video_sha256": "6661ae920882720cd83431bf192d7510b4eb13b83d4345772576a536da3d56b7",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.8355-body-lengths/ddqn-higher-0.8355.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/ddqn/original-plus-added-switch/original-100x__added-100x__forward-0.8355-body-lengths/ddqn-higher-0.8355.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-higher-0.8738",
       "algorithm": "DDQN",
       "group": "higher-displacement",
@@ -2060,16 +2060,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-100x__added-off__forward-0.8738-body-lengths%2Fddqn-higher-0.8738.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-100x__added-off__forward-0.8738-body-lengths%2Fddqn-higher-0.8738.mp4",
       "checkpoint_sha256": "5493d249bf25ca5cebacfcb5735aec3ec8b72174019af6ea387e89b958cf56e2",
       "video_sha256": "cdcd5c062499c40666f067bc91ab850997dd6c3352dd2e8093d49f02a79b7e06",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/ddqn/original-only/original-100x__added-off__forward-0.8738-body-lengths/ddqn-higher-0.8738.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/ddqn/original-only/original-100x__added-off__forward-0.8738-body-lengths/ddqn-higher-0.8738.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-higher-0.9005",
       "algorithm": "DDQN",
       "group": "higher-displacement",
@@ -2084,16 +2084,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-100x__added-off__forward-0.9005-body-lengths%2Fddqn-higher-0.9005.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-100x__added-off__forward-0.9005-body-lengths%2Fddqn-higher-0.9005.mp4",
       "checkpoint_sha256": "9f06c5d77ed080c5f7a1134e9981aeaf979918e1640e1b3b7cb6446a621f580f",
       "video_sha256": "50b83468f502db262514947ef71da40778357a4327a3e7b0d807224e895fd32e",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/ddqn/original-only/original-100x__added-off__forward-0.9005-body-lengths/ddqn-higher-0.9005.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/ddqn/original-only/original-100x__added-off__forward-0.9005-body-lengths/ddqn-higher-0.9005.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-higher-0.9471",
       "algorithm": "DDQN",
       "group": "higher-displacement",
@@ -2108,16 +2108,16 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-100x__added-off__forward-0.9471-body-lengths%2Fddqn-higher-0.9471.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-100x__added-off__forward-0.9471-body-lengths%2Fddqn-higher-0.9471.mp4",
       "checkpoint_sha256": "7ccc0812c29a02677ecb38348e2e4c84b6f4f60f42ad778980b126abbfdfc381",
       "video_sha256": "ad72df4e4c55457783efb68713e995c3ed79612ad36995e927a85b52ca485040",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/ddqn/original-only/original-100x__added-off__forward-0.9471-body-lengths/ddqn-higher-0.9471.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/ddqn/original-only/original-100x__added-off__forward-0.9471-body-lengths/ddqn-higher-0.9471.mp4"
     },
     {
-      "collection": "additional-simulation-videos",
+      "collection": "additional-policy-videos",
       "candidate_id": "ddqn-higher-0.9948",
       "algorithm": "DDQN",
       "group": "higher-displacement",
@@ -2132,13 +2132,13 @@
       "fall_fraction": 0.0,
       "torso_contact_fraction": 0.0,
       "github_candidate_url": "",
-      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-simulation-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-30x__added-off__forward-0.9948-body-lengths%2Fddqn-higher-0.9948.mp4",
+      "video_file_url": "https://pennstateoffice365-my.sharepoint.com/personal/bqc5667_psu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fbqc5667_psu_edu%2FDocuments%2FLIBR%2FExperiments%2FHexapod%2FVideos%2FRL_Robin%2FRL_Binary%2Fadditional-policy-videos%2Fdisplacement-above-0.8%2Fdqn-family%2Fddqn%2Foriginal-only%2Foriginal-30x__added-off__forward-0.9948-body-lengths%2Fddqn-higher-0.9948.mp4",
       "checkpoint_sha256": "f3b89e913a43ba319478eb94fa8bc03fbd93d9511b9510250c3cbd57340be9c4",
       "video_sha256": "1d4d78c1101a9c34b87b0e6b1d16efaede8d61fb2b5458835835302c335283e4",
       "duration_s": 6.02,
       "frame_rate": "50/1",
       "playback_speed": 1,
-      "path": "additional-simulation-videos/displacement-above-0.8/dqn-family/ddqn/original-only/original-30x__added-off__forward-0.9948-body-lengths/ddqn-higher-0.9948.mp4"
+      "path": "additional-policy-videos/displacement-above-0.8/dqn-family/ddqn/original-only/original-30x__added-off__forward-0.9948-body-lengths/ddqn-higher-0.9948.mp4"
     }
   ],
   "verification": {
@@ -2149,7 +2149,7 @@
         "target": 33,
         "higher": 14
       },
-      "additional-simulation-videos": {
+      "additional-policy-videos": {
         "target": 32,
         "higher": 10
       }
