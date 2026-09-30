@@ -112,9 +112,12 @@ design -- see the note above the tripod baseline run below.
 With the anti-phase Wave 2 the tripod anchor comes out around 0.44 BL/cycle forward
 (+0.83 m over the 6-cycle window, straightness ~0.98), in line with the ~0.4 of the
 hardware.  The earlier ~0.05-0.09 BL/cycle recorded here was the *in-phase* Wave 2 bug --
-the two byte-identical CSV spine columns barely bent the body.  ``step_dt`` (0.02 s),
-``n_cycles`` (6.0) and ``BODY_LENGTH_M`` (0.315) are all correct, and a ``--spine_gain 0``
-run shows the leg bits alone net ~0 so almost all of the anchor's travel is the body wave.
+the two byte-identical CSV spine columns barely bent the body.  The raw timing and
+arithmetic are verified for this protocol: ``step_dt`` is 0.02 s, the window is 6.0 s,
+and ``BODY_LENGTH_M`` is 0.315.  The value ``n_cycles=6`` uses the fixed 1.0 s
+scripted spine clock, not a separately measured leg-command repetition rate.  A
+``--spine_gain 0`` run shows the leg bits alone net ~0 so almost all of the anchor's
+travel is the body wave.
 
 Two more things this number is NOT, kept here so they travel with it:
 * It is measured over a NO-RESET window (every termination is neutralised -- see the
@@ -273,6 +276,14 @@ parser.add_argument(
     type=float,
     default=2.0,
     help="pinned goal distance (m); far enough that reach_goal cannot fire in the window",
+)
+parser.add_argument(
+    "--friction",
+    type=float,
+    default=None,
+    help="optional explicit static/dynamic friction for a quantitative rollout. "
+    "When omitted, retain the legacy deterministic midpoint of the task range; "
+    "pass 0.21 to reproduce the published switch-penalty package condition.",
 )
 parser.add_argument(
     "--policy",
@@ -449,10 +460,17 @@ def pin_events(cfg) -> None:
         elif name == "physics_material":
             for k in ("static_friction_range", "dynamic_friction_range", "restitution_range"):
                 if k in p:
-                    m = _mid(p[k])
                     old = p[k]
+                    m = (
+                        args.friction
+                        if args.friction is not None and k in ("static_friction_range", "dynamic_friction_range")
+                        else _mid(p[k])
+                    )
                     p[k] = (m, m)
-                    AUDIT.append(f"events.{name}.{k}: {old} -> {p[k]}")
+                    source = (
+                        "explicit --friction" if args.friction is not None and "friction" in k else "range midpoint"
+                    )
+                    AUDIT.append(f"events.{name}.{k}: {old} -> {p[k]} ({source})")
             if "num_buckets" in p:
                 AUDIT.append(f"events.{name}.num_buckets: {p['num_buckets']} -> 1")
                 p["num_buckets"] = 1
@@ -846,7 +864,9 @@ def make_net_policy(path):
     # the checkpoint's parent dir). Honour it here so the greedy argmax can never pick an
     # action the policy was never allowed to explore.
     legal = None
-    meta_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(path))), "run_meta.json")
+    meta_path = os.path.join(os.path.dirname(os.path.abspath(path)), "run_meta.json")
+    if not os.path.isfile(meta_path):
+        meta_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(path))), "run_meta.json")
     if os.path.isfile(meta_path):
         with open(meta_path) as _mf:
             _rm = json.load(_mf)
@@ -905,6 +925,7 @@ def do(fn, label, meta=None):
                         "steps": args.steps,
                         "seed": args.seed,
                         "goal_distance": args.goal_distance,
+                        "requested_friction": args.friction,
                         "warmup_steps_discarded": args.warmup,
                         "fall_threshold_N": args.fall_threshold,
                         "step_dt": base.step_dt,

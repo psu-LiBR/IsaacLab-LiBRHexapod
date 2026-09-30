@@ -1,0 +1,8 @@
+{
+  "algo": "ppo",
+  "obs_dim": 32,
+  "n_actions": 64,
+  "seed": 46,
+  "num_envs": 4096,
+  "asymmetric_critic": true
+}

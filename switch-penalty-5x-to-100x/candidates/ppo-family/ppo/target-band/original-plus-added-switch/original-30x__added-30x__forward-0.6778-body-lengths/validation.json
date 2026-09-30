@@ -1,0 +1,61 @@
+{
+  "checkpoint_sha256": "ecbfe163446b63b21ce505f3d880ea123924c8c200e9c59ec72e9f649b5b44c9",
+  "onnx_sha256": "74cfca92af953932cfd8103274211788ca3e8840537434792a36b41c88e0ba24",
+  "synthetic_samples": 2049,
+  "sample_distribution": "zero + standard normal + uniform [-20,20]; seed 319",
+  "original_loader_vs_packaged_loader_mismatches": 0,
+  "original_loader_vs_export_module_mismatches": 0,
+  "original_loader_vs_onnx_mismatches": 0,
+  "torch_version": "2.11.0+cu128",
+  "onnx_version": "1.21.0",
+  "onnxruntime_version": "1.30.0",
+  "inference": {
+    "algo": "ppo",
+    "obs_dim": 32,
+    "n_actions": 64,
+    "action_dim": 6,
+    "obs_normalization": true,
+    "legal_actions": null,
+    "n_legal_actions": 64
+  },
+  "simulator_reproduction": {
+    "actual_bl_per_cycle": 0.6778306365013123,
+    "expected_bl_per_cycle": 0.6778306365013123,
+    "bl_absolute_error": 0.0,
+    "resets": 0,
+    "measurement_valid": true,
+    "metric_equal": {
+      "per_leg_max": true,
+      "dwell_min_s": true,
+      "dwell_p05_s": true,
+      "dwell_median_s": true,
+      "single_step_pulse_fraction": true,
+      "yaw_abs_max_deg": true,
+      "lateral_abs_max_bl": true,
+      "fall_env_fraction": true,
+      "torso_contact_env_fraction": true,
+      "complete_cycles": true
+    },
+    "pass": true,
+    "scope": "Packaged checkpoint, sibling metadata, exact configuration and branch source; 64 environments, seed 7, 300 measured steps.",
+    "formatting_note": "Executable AST matches tested source; only formatting, license comments and unused imports changed."
+  },
+  "hardware_validation": "not performed",
+  "cpu_deployment_dry_run": {
+    "duration_s": 5,
+    "steps": 250,
+    "returncode": 0,
+    "fake_imu": true,
+    "in_memory_bus": true,
+    "all_values_finite": true,
+    "binary_outputs_valid": true
+  },
+  "evaluation_source_sha256": {
+    "evaluate_switch_candidate.py": "f777862a08e8fdda14d3818cf1daf58d70f0b7c9dc822331bb37804dc164ec6e",
+    "switch_metrics.py": "b6790f82fece9f30eefd1eec3c0d86451b180a868307c99a5f31a5bc32dc47d6",
+    "switch_policy_loader.py": "552a6ca0d22d9740ce029208b25386dd2722c7b4b41e779bc609ef380a412cee",
+    "switch_command_reward.py": "891d153236448c627c95d66660f4175cb4d0c0acf53852453f417873d474a4e5",
+    "overnight_config.py": "a10da486925bb2b4ed81661d8a2a8490611cba7a9dfcd1548c12fdfce73f8cf5",
+    "discrete_action_wrapper.py": "507676403d05f2e9c1e95163997ca55cbd3faf91a3c829ff186268837e1c5fac"
+  }
+}

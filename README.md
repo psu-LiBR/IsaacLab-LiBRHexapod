@@ -1,3 +1,28 @@
+# Binary RL · Extended Quadruped
+
+Results and policy handoff for the existing binary-contact controller.
+
+- **[Switch penalty · 5×–100×](switch-penalty-5x-to-100x/README.md):** 47 representative checkpoints and ONNX policies: 33 at 0.6–0.8 BL/cycle and 14 above 0.8, with reward configurations, measurements and exact reproduction commands. Start here for the current simulation-to-robot handoff.
+- **[Preliminary · 6 algorithms × 4 rewards](preliminary-6algorithms-4rewards/README.md):** the earlier comparison and original curves; videos are shared separately.
+- **[Binary policy implementation](scripts/reinforcement_learning/binary_rl/README_binary_rl.md)** · **[Robot runtime](scripts/sim2real_transfer/README.md)**
+
+## Result structure
+
+~~~text
+preliminary-6algorithms-4rewards/   Earlier reward comparison
+switch-penalty-5x-to-100x/          Current policy handoff
+  candidates/
+    dqn-family/                   DQN and DDQN
+    ppo-family/                   PPO and Masked PPO
+    sac-family/                   Discrete SAC, one-step and five-step
+scripts/reinforcement_learning/binary_rl/   Training and policy export
+scripts/sim2real_transfer/                  Existing robot runtime
+~~~
+
+The current handoff README contains the candidate-specific deployment configuration and tested commands. Simulation eligibility and software validation do not establish physical robot performance.
+
+---
+
 ![Isaac Lab](docs/source/_static/isaaclab.jpg)
 
 ---

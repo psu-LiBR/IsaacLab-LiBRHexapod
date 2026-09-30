@@ -157,6 +157,21 @@ def build_export_module(checkpoint_path: str, run_meta_path: str | None = None) 
     legal_bias = torch.zeros(N_ACTIONS)
     legal_actions = None
     am = meta.get("action_mask")
+    # A packaged checkpoint need not retain its original run directory. Preserve
+    # an embedded mask rather than silently exporting an unrestricted policy.
+    policy_state = ck.get("policy", {}) if isinstance(ck, dict) else {}
+    embedded_mask = policy_state.get("_action_mask")
+    if embedded_mask is not None:
+        embedded_mask = embedded_mask.detach().cpu().bool().flatten()
+        if embedded_mask.numel() != N_ACTIONS or not embedded_mask.any():
+            raise ValueError("invalid action mask stored in checkpoint")
+        embedded_legal = embedded_mask.nonzero().flatten().tolist()
+        if isinstance(am, dict) and am.get("legal_actions"):
+            if sorted(am["legal_actions"]) != embedded_legal:
+                raise ValueError("metadata action mask disagrees with checkpoint")
+        am = {"legal_actions": embedded_legal}
+    if meta.get("algo") == "ppo_masked" and not (isinstance(am, dict) and am.get("legal_actions")):
+        raise ValueError("masked PPO requires legal actions in metadata or checkpoint")
     if isinstance(am, dict) and am.get("legal_actions"):
         legal_actions = sorted(int(a) for a in am["legal_actions"])
         legal_bias = torch.full((N_ACTIONS,), -1.0e9)

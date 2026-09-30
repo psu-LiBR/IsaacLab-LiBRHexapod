@@ -1,0 +1,8 @@
+{
+  "algo": "dqn",
+  "obs_dim": 32,
+  "n_actions": 64,
+  "seed": 46,
+  "num_envs": 4096,
+  "replay_transitions": 1003520
+}
