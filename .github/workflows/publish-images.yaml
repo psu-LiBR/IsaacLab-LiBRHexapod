@@ -31,6 +31,7 @@ env:
 
 jobs:
   resolve-branches:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Resolve publish branches
     runs-on: ubuntu-latest
     timeout-minutes: 1

@@ -86,6 +86,7 @@ env:
 
 jobs:
   changes:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Detect Changes
     runs-on: ubuntu-latest
     permissions:
@@ -122,6 +123,7 @@ jobs:
           ^\.github/test-subsets/ :: CI test subset config
 
   config:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Load Config
     runs-on: ubuntu-latest
     outputs:
@@ -169,6 +171,7 @@ jobs:
         echo "CI image tag: isaac-lab-ci:${sanitized_ref}-${SHA}"
 
   test-dockerfile-contract:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: dockerfile-contract
     # Static analysis of the Dockerfile text: no image, no GPU, no Isaac Sim.
     runs-on: ubuntu-latest

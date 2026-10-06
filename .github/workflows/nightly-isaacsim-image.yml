@@ -46,6 +46,7 @@ env:
 
 jobs:
   update-image-pin:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Update Isaac Sim image pin
     runs-on: ubuntu-latest
     timeout-minutes: 10

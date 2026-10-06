@@ -24,6 +24,7 @@ jobs:
   request-docker-ci:
     name: Request Docker CI
     if: >-
+      github.repository == 'isaac-sim/IsaacLab' &&
       github.event.issue.pull_request &&
       github.event.comment.body == 'run-ci'
     runs-on: ubuntu-latest

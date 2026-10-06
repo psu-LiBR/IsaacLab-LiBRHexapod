@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   test-multi-gpu:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Multi-GPU (${{ matrix.physics }}, ${{ matrix.renderer }})
     # Use dedicated multi-GPU runner to avoid blocking standard CI resources
     # Configure this label on a runner with 2+ GPUs (e.g., g5.12xlarge with 4x A10G)

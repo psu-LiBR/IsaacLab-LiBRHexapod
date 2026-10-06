@@ -37,6 +37,7 @@ env:
 
 jobs:
   changes:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
@@ -87,6 +88,7 @@ jobs:
             ^\.github/actions/(run-tests|run-package-tests|ecr-build-push-pull|multi-gpu|detect-changes)/ :: Shared actions
 
   config:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Load Config
     runs-on: ubuntu-latest
     outputs:

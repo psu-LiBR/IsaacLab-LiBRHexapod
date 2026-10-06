@@ -63,6 +63,7 @@ jobs:
   # Dockerfile.base copies (pyproject.toml and uv.lock) that a
   # path filter would otherwise miss.
   changes:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Detect Changes
     runs-on: ubuntu-latest
     permissions:

@@ -25,6 +25,7 @@ permissions:
 
 jobs:
   changes:
+    if: github.repository == 'isaac-sim/IsaacLab'
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
