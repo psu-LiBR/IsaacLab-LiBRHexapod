@@ -65,6 +65,8 @@ parser.add_argument("--learning_starts", type=int, default=50)
 parser.add_argument("--log_interval", type=int, default=50)
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
+if args.action_switch_penalty:
+    parser.error("--action_switch_penalty counts binary contact flips and does not apply to continuous actions")
 args.headless = True
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
@@ -84,7 +86,7 @@ try:
 except ImportError:
     from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
-from binary_common import mlp, nstep_return, write_run_meta  # noqa: E402
+from binary_common import mlp, nstep_return, scale_action_rate_weight, switch_penalty_meta, write_run_meta  # noqa: E402
 
 torch.manual_seed(args.seed)
 LOG_STD_MIN, LOG_STD_MAX = -20.0, 2.0
@@ -98,6 +100,8 @@ os.makedirs(ckpt_dir, exist_ok=True)
 env_cfg = parse_env_cfg(args.task, device=args.device, num_envs=args.num_envs)
 env_cfg.seed = args.seed
 env_cfg.compute_final_obs = True
+# Continuous actions: only the action_rate_l2 multiplier applies (its weight scales squared joint-target changes).
+scale_action_rate_weight(env_cfg, args.action_rate_multiplier)
 action_scale = float(getattr(env_cfg.actions.joint_pos, "scale", 0.5))
 env = gym.make(args.task, cfg=env_cfg)
 base = env.unwrapped
@@ -195,7 +199,7 @@ def buf_store(o, s, a, no, ns, ret, disc, boot):
 
 
 n = args.n_step
-S = {k: deque(maxlen=n) for k in ("o", "s", "a", "rew", "term", "trunc", "no", "ns", "fo", "fs")}
+S = {k: deque(maxlen=n) for k in ("o", "s", "a", "rew", "term", "trunc", "no", "ns", "final_obs", "fs")}
 
 
 def _critic_obs(obs_dict):
@@ -213,7 +217,7 @@ def flush_front():
     tt = (trunc_win[last, ei].bool() & ~term_win[last, ei].bool()).unsqueeze(-1)
     no_end = torch.stack(list(S["no"]))[last, ei]
     ns_end = torch.stack(list(S["ns"]))[last, ei]
-    no = torch.where(tt, torch.stack(list(S["fo"]))[last, ei], no_end)
+    no = torch.where(tt, torch.stack(list(S["final_obs"]))[last, ei], no_end)
     ns = torch.where(tt, torch.stack(list(S["fs"]))[last, ei], ns_end)
     buf_store(S["o"][0], S["s"][0], S["a"][0], no, ns, ret, disc, boot)
 
@@ -232,6 +236,7 @@ write_run_meta(
     n_step=args.n_step,
     continuous=True,
     act_dim=act_dim,
+    **switch_penalty_meta(env, args),
 )
 
 obs, _ = env.reset()
@@ -253,15 +258,15 @@ for step in range(args.timesteps):
     nobs, rew, terminated, truncated, infos = env.step(act)
     no_t, ns_t = nobs["policy"], _critic_obs(nobs)
     done = (terminated | truncated).bool()
-    fo = infos.get("final_obs")
-    if fo is not None and done.any():
-        fo_t = torch.where(done.unsqueeze(-1), fo["policy"], no_t)
-        fs_t = torch.where(done.unsqueeze(-1), _critic_obs(fo), ns_t)
+    final_obs = infos.get("final_obs")
+    if final_obs is not None and done.any():
+        fo_t = torch.where(done.unsqueeze(-1), final_obs["policy"], no_t)
+        fs_t = torch.where(done.unsqueeze(-1), _critic_obs(final_obs), ns_t)
     else:
         fo_t, fs_t = no_t, ns_t
 
     for k, v in zip(
-        ("o", "s", "a", "rew", "term", "trunc", "no", "ns", "fo", "fs"),
+        ("o", "s", "a", "rew", "term", "trunc", "no", "ns", "final_obs", "fs"),
         (o_t, s_t, act, rew, terminated.float(), truncated.float(), no_t, ns_t, fo_t, fs_t),
     ):
         S[k].append(v)

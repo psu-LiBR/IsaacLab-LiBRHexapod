@@ -19,6 +19,11 @@ need to know about the training framework:
 * the bit decode (action index -> ``+-1`` vector), as a constant ``[64, 6]`` lookup
   (bit-identical to ``DiscreteBitsActionWrapper.decode`` / ``action_to_pm1``).
 
+The file also carries the sim's joint order as ONNX metadata (``sim_joint_names``, taken from the run's
+``run_meta.json``). The ``joint_pos`` / ``joint_vel`` observations are read by position, so the deployment
+``PolicyRunner`` compares this order with its ``joints.sim_order`` and refuses to start on a mismatch. A run whose
+``run_meta.json`` has no ``sim_joint_names`` (trained before it was recorded) cannot be exported.
+
 Works for the maintained comparison set -- DQN, Double-DQN, categorical PPO, masked PPO,
 SAC-D -- all of which store a plain MLP (64 Q-values or 64 logits) under ``q_network`` or
 ``policy``. Torch-only; no Isaac Sim, no skrl.
@@ -48,6 +53,9 @@ import torch
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from binary_action_mask import N_ACTIONS, action_to_pm1  # noqa: E402
+
+# ONNX metadata key holding the sim joint order as a JSON list; ``sim2real/policy_runner.py`` reads the same key.
+SIM_JOINT_NAMES_KEY = "sim_joint_names"
 
 # skrl RunningStandardScaler defaults (resources/preprocessors/torch/running_standard_scaler.py)
 _SCALER_EPS = 1.0e-8
@@ -93,11 +101,29 @@ def _build_mlp(state: dict[str, torch.Tensor]) -> torch.nn.Sequential:
     return net
 
 
+def _sim_joint_names(meta: dict) -> list[str] | None:
+    """The joint order recorded in ``run_meta.json``, or None for a run that predates it."""
+    names = meta.get(SIM_JOINT_NAMES_KEY)
+    if names is None:
+        return None
+    if not (isinstance(names, list) and len(names) == 8 and all(isinstance(n, str) for n in names)):
+        raise ValueError(f"run_meta {SIM_JOINT_NAMES_KEY} must be a list of 8 joint names, got {names!r}")
+    if len(set(names)) != len(names):
+        raise ValueError(f"run_meta {SIM_JOINT_NAMES_KEY} has duplicate joint names: {names}")
+    return names
+
+
 def _load_run_meta(checkpoint_path: str, explicit: str | None) -> dict:
-    path = explicit or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(checkpoint_path))), "run_meta.json")
-    if os.path.isfile(path):
-        with open(path) as f:
-            return json.load(f)
+    if explicit:
+        candidates = [explicit]
+    else:
+        # A checkpoint packaged next to its metadata first, then the usual <run>/checkpoints/<ckpt> layout.
+        ckpt_dir = os.path.dirname(os.path.abspath(checkpoint_path))
+        candidates = [os.path.join(ckpt_dir, "run_meta.json"), os.path.join(os.path.dirname(ckpt_dir), "run_meta.json")]
+    for path in candidates:
+        if os.path.isfile(path):
+            with open(path) as f:
+                return json.load(f)
     return {}
 
 
@@ -157,6 +183,21 @@ def build_export_module(checkpoint_path: str, run_meta_path: str | None = None) 
     legal_bias = torch.zeros(N_ACTIONS)
     legal_actions = None
     am = meta.get("action_mask")
+    # A packaged checkpoint need not retain its original run directory. Preserve
+    # an embedded mask rather than silently exporting an unrestricted policy.
+    policy_state = ck.get("policy", {}) if isinstance(ck, dict) else {}
+    embedded_mask = policy_state.get("_action_mask")
+    if embedded_mask is not None:
+        embedded_mask = embedded_mask.detach().cpu().bool().flatten()
+        if embedded_mask.numel() != N_ACTIONS or not embedded_mask.any():
+            raise ValueError("invalid action mask stored in checkpoint")
+        embedded_legal = embedded_mask.nonzero().flatten().tolist()
+        if isinstance(am, dict) and am.get("legal_actions"):
+            if sorted(am["legal_actions"]) != embedded_legal:
+                raise ValueError("metadata action mask disagrees with checkpoint")
+        am = {"legal_actions": embedded_legal}
+    if meta.get("algo") == "ppo_masked" and not (isinstance(am, dict) and am.get("legal_actions")):
+        raise ValueError("masked PPO requires legal actions in metadata or checkpoint")
     if isinstance(am, dict) and am.get("legal_actions"):
         legal_actions = sorted(int(a) for a in am["legal_actions"])
         legal_bias = torch.full((N_ACTIONS,), -1.0e9)
@@ -180,8 +221,45 @@ def build_export_module(checkpoint_path: str, run_meta_path: str | None = None) 
         "obs_normalization": obs_mean is not None,
         "legal_actions": legal_actions,
         "n_legal_actions": len(legal_actions) if legal_actions is not None else N_ACTIONS,
+        SIM_JOINT_NAMES_KEY: _sim_joint_names(meta),
     }
     return module, info
+
+
+def export_onnx(module: _BinaryPolicyExport, info: dict, out_path: str, opset: int = 18) -> None:
+    """Write ``module`` to ``out_path`` as ONNX, with the sim joint order stored as metadata.
+
+    Raises:
+        ValueError: If the run recorded no joint order. Nothing is written in that case.
+    """
+    names = info[SIM_JOINT_NAMES_KEY]
+    if names is None:
+        raise ValueError(
+            f"run_meta.json has no '{SIM_JOINT_NAMES_KEY}', so the deployment could not tell which joint order "
+            "this policy was trained on and would feed it mis-ordered joint_pos / joint_vel observations. "
+            "Retrain with the current training scripts, or add robot.data.joint_names from the sim to run_meta.json."
+        )
+    dummy = torch.zeros(1, info["obs_dim"])
+    with warnings.catch_warnings():
+        # The legacy TorchScript exporter is used deliberately: the new torch.export path
+        # emits a non-ASCII progress banner that crashes on a cp1252 console (Windows), and
+        # the graph here (affine + MLP + argmax + gather) is exactly what legacy handles well.
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module="torch.onnx")
+        torch.onnx.export(
+            module,
+            dummy,
+            out_path,
+            input_names=["obs"],
+            output_names=["action"],
+            opset_version=opset,
+            dynamo=False,
+        )
+    import onnx
+
+    model = onnx.load(out_path)
+    entry = model.metadata_props.add()
+    entry.key, entry.value = SIM_JOINT_NAMES_KEY, json.dumps(names)
+    onnx.save(model, out_path)
 
 
 def _self_check(onnx_path: str, module: _BinaryPolicyExport, obs_dim: int, n: int = 64) -> float:
@@ -219,21 +297,10 @@ def main() -> None:
     module, info = build_export_module(args.checkpoint, args.run_meta or None)
     print(f"[export_binary_onnx] {info}")
 
-    dummy = torch.zeros(1, info["obs_dim"])
-    with warnings.catch_warnings():
-        # The legacy TorchScript exporter is used deliberately: the new torch.export path
-        # emits a non-ASCII progress banner that crashes on a cp1252 console (Windows), and
-        # the graph here (affine + MLP + argmax + gather) is exactly what legacy handles well.
-        warnings.filterwarnings("ignore", category=DeprecationWarning, module="torch.onnx")
-        torch.onnx.export(
-            module,
-            dummy,
-            out_path,
-            input_names=["obs"],
-            output_names=["action"],
-            opset_version=args.opset,
-            dynamo=False,
-        )
+    try:
+        export_onnx(module, info, out_path, args.opset)
+    except ValueError as exc:
+        raise SystemExit(f"[export_binary_onnx] {exc}")
     print(f"[export_binary_onnx] wrote {out_path}")
 
     if not args.no_check:

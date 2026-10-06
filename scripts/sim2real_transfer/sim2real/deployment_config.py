@@ -173,5 +173,11 @@ def load_deployment_config(path: str) -> DeploymentConfig:
         )
 
     return DeploymentConfig(
-        serial=serial, joints=joints, imu=imu, control=control, commands=commands, binary=binary, localization=localization
+        serial=serial,
+        joints=joints,
+        imu=imu,
+        control=control,
+        commands=commands,
+        binary=binary,
+        localization=localization,
     )

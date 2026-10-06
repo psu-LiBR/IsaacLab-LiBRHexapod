@@ -12,18 +12,48 @@ CLAUDE.md's sim2real plan for the full derivation. This wrapper validates the
 loaded graph's shapes against the requested profile at construction time so a
 mismatched --policy/--profile pairing fails immediately instead of silently
 producing garbage actions.
+
+Policies exported by ``export_binary_onnx.py`` also carry the sim's joint order as ONNX
+metadata. The joint_pos / joint_vel observations are filled by position, so a policy fed
+joints in a different order than it was trained on gets wrong observations without any
+shape error; the optional ``sim_joint_order`` check catches that at construction.
 """
 
 from __future__ import annotations
+
+import json
 
 import numpy as np
 import onnxruntime as ort
 
 from .profiles import ProfileSpec
 
+# ONNX metadata key written by scripts/reinforcement_learning/binary_rl/export_binary_onnx.py.
+SIM_JOINT_NAMES_KEY = "sim_joint_names"
+
+
+def _joint_key(name: str) -> str:
+    """The sim names its joints ``FrontLink_Joint``; the deployment config uses ``FrontLink``."""
+    return name.removesuffix("_Joint")
+
 
 class PolicyRunner:
-    def __init__(self, onnx_path: str, profile: ProfileSpec):
+    """
+    Args:
+        onnx_path: Exported policy.
+        profile: Obs/action layout the policy must match.
+        sim_joint_order: The joint order the deployment feeds the policy (``joints.sim_order``). If given and the
+            graph records the order it was trained with, the two must match.
+        require_joint_order: Also fail when the graph records no joint order. Needs ``sim_joint_order``.
+    """
+
+    def __init__(
+        self,
+        onnx_path: str,
+        profile: ProfileSpec,
+        sim_joint_order: list[str] | None = None,
+        require_joint_order: bool = False,
+    ):
         self.profile = profile
         self.session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
 
@@ -50,7 +80,32 @@ class PolicyRunner:
                 f"profile '{profile.name}' expects action_dim={profile.action_dim}"
             )
 
+        self._check_joint_order(onnx_path, sim_joint_order, require_joint_order)
+
         self.last_action = np.zeros(profile.action_dim, dtype=np.float32)
+
+    def _check_joint_order(self, onnx_path: str, sim_joint_order: list[str] | None, required: bool) -> None:
+        if required and sim_joint_order is None:
+            raise ValueError("require_joint_order needs sim_joint_order to compare against")
+        if sim_joint_order is None:
+            return
+        raw = self.session.get_modelmeta().custom_metadata_map.get(SIM_JOINT_NAMES_KEY)
+        if raw is None:
+            if required:
+                raise ValueError(
+                    f"ONNX graph '{onnx_path}' records no '{SIM_JOINT_NAMES_KEY}', so its joint order cannot be "
+                    "checked against joints.sim_order. Re-export it with export_binary_onnx.py from a run whose "
+                    "run_meta.json has the joint order."
+                )
+            return
+        trained = [_joint_key(name) for name in json.loads(raw)]
+        deployed = [_joint_key(name) for name in sim_joint_order]
+        if trained != deployed:
+            raise ValueError(
+                f"joint order mismatch for '{onnx_path}': the policy was trained with {trained} but "
+                f"joints.sim_order is {deployed}. The joint_pos / joint_vel observations are filled by position, "
+                "so the policy would see the wrong joints. Fix sim_order in the deployment config."
+            )
 
     def reset(self) -> None:
         self.last_action = np.zeros(self.profile.action_dim, dtype=np.float32)

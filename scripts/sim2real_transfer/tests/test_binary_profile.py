@@ -13,8 +13,8 @@ from sim2real.deployment_config import load_deployment_config
 
 _BINARY_CFG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "deployment.binary.example.yaml")
 
-# sim DOF order used by the binary example config
-_SIM_ORDER = ["BackLink", "FrontLink", "MiddleLeft", "MiddleRight", "BackLeft", "BackRight", "FrontLeft", "FrontRight"]
+# sim DOF order of the HexapI articulation (robot.data.joint_names), used by the binary example config
+_SIM_ORDER = ["FrontLink", "BackLink", "MiddleLeft", "MiddleRight", "FrontLeft", "FrontRight", "BackLeft", "BackRight"]
 _LEG_ORDER = ["FrontRight", "FrontLeft", "MiddleRight", "MiddleLeft", "BackRight", "BackLeft"]
 
 STANCE, LIFT = 0.46, 1.18
@@ -105,3 +105,12 @@ def test_binary_example_config_parses_and_builds_adapter():
 def test_non_binary_example_config_has_no_binary_section():
     cfg = load_deployment_config(os.path.join(os.path.dirname(__file__), "..", "config", "deployment.example.yaml"))
     assert cfg.binary is None
+
+
+def test_binary_example_sim_order_matches_the_hexapi_articulation_order():
+    # The binary env runs on HexapiFlattened.usd. Its articulation lists the joints breadth-first, so
+    # robot.data.joint_names (and therefore the joint_pos / joint_vel obs slots) follow this order, as
+    # printed in the sim's joint table at startup. Obs slots are filled by position, so a different
+    # sim_order here feeds the policy the front/back legs and the two spine joints swapped.
+    cfg = load_deployment_config(_BINARY_CFG_PATH)
+    assert cfg.joints.sim_order == _SIM_ORDER

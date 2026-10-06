@@ -203,6 +203,10 @@ def train_all(args: argparse.Namespace, pipe_dir: Path) -> dict[str, bool]:
             "--experiment_name",
             algo,
             *extra,
+            "--action_rate_multiplier",
+            str(args.action_rate_multiplier),
+            "--action_switch_penalty",
+            str(args.action_switch_penalty),
         ]
         if args.wandb:
             cmd += [
@@ -678,6 +682,18 @@ def main() -> None:
     p.add_argument("--algos", nargs="+", default=list(ALGOS), choices=list(ALGOS))
     p.add_argument("--num-envs", type=int, default=4096)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--action-rate-multiplier",
+        type=float,
+        default=1.0,
+        help="scale the env's action_rate_l2 weight for every algorithm (main contact-switch knob; 1.0 = unchanged)",
+    )
+    p.add_argument(
+        "--action-switch-penalty",
+        type=float,
+        default=0.0,
+        help="OFF by default: cost per flipped leg per step of the optional action_switch_count reward",
+    )
     p.add_argument("--goal-distance", type=float, default=2.0)
     p.add_argument("--eval-num-envs", type=int, default=64)
     p.add_argument("--eval-steps", type=int, default=300)

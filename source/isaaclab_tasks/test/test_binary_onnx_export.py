@@ -62,6 +62,46 @@ def _run_onnx(onnx_path: Path, obs):
     return sess.run(None, {name: np.asarray(obs, dtype=np.float32)})[0]
 
 
+def test_embedded_mask_survives_missing_run_metadata(tmp_path):
+    net = bc.mlp(OBS_DIM, bam.N_ACTIONS)
+    state = net.state_dict()
+    mask = torch.zeros(64, dtype=torch.bool)
+    mask[25] = True
+    state["_action_mask"] = mask
+    checkpoint = tmp_path / "policy.pt"
+    torch.save({"policy": state}, checkpoint)
+    module, info = E.build_export_module(str(checkpoint))
+    assert info["legal_actions"] == [25]
+    assert _action_index_from_bits(module(torch.zeros(1, OBS_DIM))[0]) == 25
+
+
+def test_conflicting_metadata_mask_is_rejected(tmp_path):
+    state = bc.mlp(OBS_DIM, bam.N_ACTIONS).state_dict()
+    mask = torch.zeros(64, dtype=torch.bool)
+    mask[25] = True
+    state["_action_mask"] = mask
+    checkpoint = _write_run(tmp_path, {"policy": state}, {"action_mask": {"legal_actions": [38]}})
+    with pytest.raises(ValueError, match="disagrees"):
+        E.build_export_module(str(checkpoint))
+
+
+def test_explicit_masked_policy_requires_a_mask(tmp_path):
+    checkpoint = _write_run(tmp_path, {"policy": bc.mlp(OBS_DIM, bam.N_ACTIONS).state_dict()}, {"algo": "ppo_masked"})
+    with pytest.raises(ValueError, match="requires legal actions"):
+        E.build_export_module(str(checkpoint))
+
+
+def test_run_meta_next_to_checkpoint_is_found_and_preferred(tmp_path):
+    state = bc.mlp(OBS_DIM, bam.N_ACTIONS).state_dict()
+    # Parent-dir metadata says mask {38}; the sibling file next to the checkpoint says {25} and must win.
+    checkpoint = _write_run(tmp_path, {"policy": state}, {"algo": "ppo_masked", "action_mask": {"legal_actions": [38]}})
+    (checkpoint.parent / "run_meta.json").write_text(
+        json.dumps({"algo": "ppo_masked", "action_mask": {"legal_actions": [25]}})
+    )
+    _, info = E.build_export_module(str(checkpoint))
+    assert info["legal_actions"] == [25]
+
+
 def test_sacd_style_export_matches_argmax_decode(tmp_path):
     torch.manual_seed(0)
     net = bc.mlp(OBS_DIM, bam.N_ACTIONS)
@@ -166,3 +206,61 @@ def test_export_rejects_non_64_output_head(tmp_path):
     )
     with pytest.raises(ValueError, match="64 outputs"):
         E.build_export_module(str(ckpt_path))
+
+
+JOINT_NAMES = [
+    "FrontLink_Joint",
+    "BackLink_Joint",
+    "MiddleLeft_Joint",
+    "MiddleRight_Joint",
+    "FrontLeft_Joint",
+    "FrontRight_Joint",
+    "BackLeft_Joint",
+    "BackRight_Joint",
+]
+
+
+def _export_run(tmp_path: Path, meta_extra: dict):
+    net = bc.mlp(OBS_DIM, bam.N_ACTIONS)
+    meta = {"schema": 1, "algo": "dqn", "obs_dim": OBS_DIM, "n_actions": bam.N_ACTIONS, **meta_extra}
+    ckpt_path = _write_run(tmp_path, {"q_network": net.state_dict()}, meta)
+    return E.build_export_module(str(ckpt_path))
+
+
+def test_export_stores_the_sim_joint_order_as_onnx_metadata(tmp_path):
+    module, info = _export_run(tmp_path, {"sim_joint_names": JOINT_NAMES})
+    onnx_path = tmp_path / "policy.onnx"
+    E.export_onnx(module, info, str(onnx_path))
+    sess = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
+    assert json.loads(sess.get_modelmeta().custom_metadata_map[E.SIM_JOINT_NAMES_KEY]) == JOINT_NAMES
+    assert _run_onnx(onnx_path, [[0.0] * OBS_DIM]).shape == (1, 6)  # the graph itself is unchanged
+
+
+def test_export_refuses_a_run_that_recorded_no_joint_order(tmp_path):
+    module, info = _export_run(tmp_path, {})
+    onnx_path = tmp_path / "policy.onnx"
+    with pytest.raises(ValueError, match="sim_joint_names"):
+        E.export_onnx(module, info, str(onnx_path))
+    assert not onnx_path.exists()
+
+
+@pytest.mark.parametrize("names", [JOINT_NAMES[:7], JOINT_NAMES[:7] + [JOINT_NAMES[0]], "FrontLink_Joint"])
+def test_export_rejects_a_malformed_joint_order(tmp_path, names):
+    with pytest.raises(ValueError, match="sim_joint_names"):
+        _export_run(tmp_path, {"sim_joint_names": names})
+
+
+def test_exported_joint_order_is_checked_by_the_deployment_policy_runner(tmp_path):
+    sys.path.insert(0, str(BINARY_RL_DIR.parents[1] / "sim2real_transfer"))
+    from sim2real.policy_runner import SIM_JOINT_NAMES_KEY, PolicyRunner
+    from sim2real.profiles import PROFILES
+
+    assert SIM_JOINT_NAMES_KEY == E.SIM_JOINT_NAMES_KEY
+    module, info = _export_run(tmp_path, {"sim_joint_names": JOINT_NAMES})
+    onnx_path = tmp_path / "policy.onnx"
+    E.export_onnx(module, info, str(onnx_path))
+    hexapi = [name.removesuffix("_Joint") for name in JOINT_NAMES]
+    PolicyRunner(str(onnx_path), PROFILES["binary"], sim_joint_order=hexapi, require_joint_order=True)
+    old_usd = ["BackLink", "FrontLink", "MiddleLeft", "MiddleRight", "BackLeft", "BackRight", "FrontLeft", "FrontRight"]
+    with pytest.raises(ValueError, match="joint order mismatch"):
+        PolicyRunner(str(onnx_path), PROFILES["binary"], sim_joint_order=old_usd, require_joint_order=True)

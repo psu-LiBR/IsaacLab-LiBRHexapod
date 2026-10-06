@@ -71,6 +71,9 @@ For reference: the tripod gait occupies only two of the 64 actions, `25` and `38
 | `train_sac_continuous.py` | continuous SAC baseline on the 8-DOF goal env (arXiv:2605.24975); comparison point *outside* the contact-bit action space |
 | `run_discrete_pipeline.py` | one-shot train -> eval -> rank -> export -> video pipeline over all five algorithms (see §7); runs the other scripts as subprocesses |
 | `eval_protocol.py` | the shared evaluation protocol — all reported numbers come from this |
+| `switch_metrics.py` | per-leg contact-command switch counts per spine-wave cycle (`GAIT_PERIOD_S` = 1 s = 50 control steps; limit default 5 per leg per cycle; flags frozen legs); numpy only |
+| `switch_command_reward.py` | optional `action_switch_count` reward term (off by default; see §3) |
+| `REWARDS_A2_RECORD.md` | record of the A2 reward set from the contact-switch-penalty sweep, and how its penalty strengths map to the flags below |
 | `export_binary_onnx.py` | export a trained checkpoint to ONNX for sim-to-real (see §5) |
 | `play_discrete.py` | runs a checkpoint's greedy (argmax) policy on the Play env headless and records a root-tracking MP4 |
 | `play_discrete_closeup.py` | renders a checkpoint **or an open-loop gait** (`--gait_npz tripod` / `--gait_csv <csv>`) to a follow-cam video |
@@ -143,6 +146,19 @@ has only config and no charts, that is the pre-bridge behaviour — re-run, or
 `train_sac_continuous.py` defaults to `--task Isaac-Goal-Flat-Hexapod-v0` (it is not a
 binary-action script); the other five run on `Isaac-Goal-Flat-Hexapod-Binary-v0`.
 
+**Limiting contact-bit switching.** Every training script (and `run_discrete_pipeline.py`) takes two reward flags:
+`--action_rate_multiplier M` (default 1.0) multiplies the env's `action_rate_l2` weight and is the main knob;
+`--action_switch_penalty L` (default 0, off) adds the optional `action_switch_count` term at cost `L` per flipped leg.
+For +-1 bits the two carry the same signal, so tune the multiplier first. `train_sac_continuous.py` accepts only the
+multiplier. The resolved weights are saved in `run_meta.json`. `REWARDS_A2_RECORD.md` maps the sweep's strengths to
+these flags.
+
+`eval_protocol.py` measures the result: every policy it evaluates (baselines included) gets a `switch_metrics` block
+with the commanded-bit switches per leg per complete 50-step gait cycle, the fraction of leg-cycles within
+`--max_switches_per_leg_cycle` (default 5), frozen legs (flagged, not failed), dwell times and single-step pulses, and a
+`basic_screen_pass`. It counts the commanded bits, not measured foot contact, and needs `--warmup >= 1` so that no
+measured step sits at phase 0.
+
 Quick wiring check (a couple of minutes, no GPU-heavy load):
 
 ```bat
@@ -173,12 +189,16 @@ All reported numbers come from `eval_protocol.py`, run identically for every met
 > friction-sweep / equal-budget tables in `RESULTS_binary_rl.md` **still must be
 > re-measured**.
 >
-> An end-to-end audit of the BL/cycle **metric** (prompted by a 0.95 BL/cycle gait that
-> looked ~0.5 on video, then by a tripod anchor that dropped to ~0.05) found **no
-> arithmetic bug**: `step_dt` is genuinely 0.02 s (`sim.dt` 0.005 × `decimation` 4), the
-> window is exactly 6.0 cycles, `BODY_LENGTH_M` is 0.315, and `x_displacement_m` is the
-> per-env mean *net* forward displacement (cross-checked against the `progress` reward
-> term). Two real (non-metric) bugs **were** found in the tripod baseline and fixed
+> An end-to-end audit of the raw BL/cycle **arithmetic** (prompted by a 0.95 BL/cycle
+> gait that looked ~0.5 on video, then by a tripod anchor that dropped to ~0.05) found
+> no arithmetic error in `step_dt`, the saved net displacement, or the 0.315 m basis:
+> `step_dt` is genuinely 0.02 s (`sim.dt` 0.005 × `decimation` 4), the window is exactly
+> 6.0 s, `BODY_LENGTH_M` is 0.315, and `x_displacement_m` is the per-env mean *net*
+> forward displacement (cross-checked against the `progress` reward term). Here a cycle
+> means the fixed one-second scripted spine cycle, not a separately measured leg-motion
+> repetition. Six seconds are exactly six such nominal cycles; this does not imply every
+> leg switches at the same frequency.
+> Two real (non-metric) bugs **were** found in the tripod baseline and fixed
 > 2026-09-10: (1) `play_discrete_closeup.py --gait_npz tripod` was playing the RL
 > traveling wave (Wave 1) on the tripod leg schedule — it now swaps in Wave 2 like
 > `eval_protocol.py`; (2) Wave 2 is now an **anti-phase** analytic wave
@@ -292,7 +312,11 @@ property.) A checkpoint replay (`--checkpoint`) still uses Wave 1, as trained.
 (`obs [1, 32] float32 -> action [1, 6] float32` in `{-1, +1}`) that the
 `scripts/sim2real_transfer` `binary` profile consumes directly. The graph folds in the
 running obs-normalisation (PPO only), the greedy argmax over the 64 gait patterns, the
-masked-run legal set, and the bit decode.
+masked-run legal set, and the bit decode. It also stores the sim's joint order
+(`sim_joint_names`, from the run's `run_meta.json`) as ONNX metadata: the joint position and velocity observations
+are read by position, so `PolicyRunner` refuses a binary policy whose order differs from the deployment's
+`joints.sim_order`. A run trained before the order was recorded has no `sim_joint_names` and is not exported; retrain it
+or add `robot.data.joint_names` to its `run_meta.json`.
 
 ```bat
 isaaclab.bat -p scripts/reinforcement_learning/binary_rl/export_binary_onnx.py ^

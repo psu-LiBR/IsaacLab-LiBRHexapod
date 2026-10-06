@@ -73,16 +73,21 @@ serial:
   protocol_version: 2.0
 
 joints:
-  # Sim DOF order -- matches asset.data.joint_names / the policy's action order.
+  # Sim DOF order -- matches asset.data.joint_names of the HexapI articulation. The joint_pos
+  # and joint_vel obs slots are filled by position in this order, so it must match what the
+  # sim prints at startup. HexapiFlattened.usd lists the spine first (FrontLink, BackLink) and
+  # the legs Middle, Front, Back; the pre-HexapI USD (deployment.example.yaml) listed
+  # BackLink, FrontLink and the legs Middle, Back, Front. Check yours against a sim run with
+  # `robot.data.joint_names` before deploying a different USD.
   sim_order:
-    - BackLink
     - FrontLink
+    - BackLink
     - MiddleLeft
     - MiddleRight
-    - BackLeft
-    - BackRight
     - FrontLeft
     - FrontRight
+    - BackLeft
+    - BackRight
 
   # Real DOF order -- matches hexapod_tripod_adaptive.py's DXL_ID column order.
   real_order:
