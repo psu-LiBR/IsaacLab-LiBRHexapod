@@ -18,13 +18,12 @@ from typing import TYPE_CHECKING, Literal
 
 from isaaclab_newton.physics import NewtonCollisionPipelineCfg, NewtonSolverCfg
 
-from isaaclab.utils.configclass import configclass
-
-from ..deformable.newton_manager_cfg import NewtonModelSolverCfg
+from isaaclab.utils import configclass
 
 if TYPE_CHECKING:
     from isaaclab_newton.physics import NewtonManager
-    from newton import CollisionPipeline, ModelView
+    from newton import CollisionPipeline
+    from newton.solvers.experimental.coupled import ModelView
 
 
 @configclass
@@ -129,7 +128,7 @@ class CouplerProxyMappingCfg:
 
 
 @configclass
-class CouplerCfg(NewtonModelSolverCfg):
+class CouplerCfg(NewtonSolverCfg):
     """Base configuration for a Newton experimental coupled solver.
 
     Bodies, particles, joints, and shapes may be assigned to at most one
@@ -161,6 +160,20 @@ class CouplerProxyCfg(CouplerCfg):
 @configclass
 class CouplerAdmmCfg(CouplerCfg):
     """Configuration for Newton's linearized ADMM coupling."""
+
+    contact_max_triangle_pairs: int | None = None
+    """Internal ADMM triangle-pair capacity across all environments in one process.
+
+    ``None`` uses Newton's default. Must be less than ``2**20`` with
+    :attr:`rigid_contact_matching` set to ``"latest"`` or ``"sticky"``;
+    larger capacities require ``"disabled"``.
+    """
+
+    contact_reduction_hashtable_size_factor: float | None = None
+    """Contact-reduction hash table size relative to the internal triangle-pair capacity.
+
+    ``None`` uses Newton's default. Increase it for hash table fill or insertion warnings.
+    """
 
     contact_pairs: list[tuple[str, str]] | None = None
     """Symmetric contact interfaces as ``(entry_name, entry_name)`` pairs.

@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""IsaacTeleop-based teleoperation device for Isaac Lab."""
+"""Isaac Capture-based teleoperation device for Isaac Lab."""
 
 from __future__ import annotations
 
@@ -21,15 +21,18 @@ from .session_lifecycle import TeleopSessionLifecycle
 from .xr_anchor_manager import XrAnchorManager
 
 if TYPE_CHECKING:
+    from .haptic_feedback import HapticFeedbackCfg
     from .session_lifecycle import SupportsDLPack
+    from .visualizers.controller_aim_visualizer import ControllerAimVisualizer
+    from .visualizers.hand_joint_visualizer import HandJointVisualizer
 
 logger = logging.getLogger(__name__)
 
 
 class IsaacTeleopDevice:
-    """A IsaacTeleop-based teleoperation device for Isaac Lab.
+    """An Isaac Capture-based teleoperation device for Isaac Lab.
 
-    This device provides an interface between IsaacTeleop's retargeting pipeline
+    This device provides an interface between Isaac Capture's retargeting pipeline
     and Isaac Lab environments.  It composes three focused collaborators:
 
     * :class:`XrAnchorManager` -- XR anchor prim setup, synchronization,
@@ -42,10 +45,10 @@ class IsaacTeleopDevice:
     Together they manage:
 
     1. XR anchor configuration and synchronization
-    2. IsaacTeleop session lifecycle
+    2. Isaac Capture session lifecycle
     3. Action tensor generation from the retargeting pipeline
 
-    The device uses IsaacTeleop's TensorReorderer to flatten pipeline outputs
+    The device uses Isaac Capture's TensorReorderer to flatten pipeline outputs
     into a single action tensor matching the environment's action space.
 
     Frame rebasing:
@@ -105,13 +108,16 @@ class IsaacTeleopDevice:
         cfg: IsaacTeleopCfg,
         cloudxr_env_file: str | None = None,
         auto_launch_cloudxr: bool = True,
+        use_kit_xr_bridge: bool = True,
         mcap_record_path: str | None = None,
         mcap_replay_path: str | None = None,
+        enable_debug_visualization: bool = False,
+        haptic_cfg: HapticFeedbackCfg | None = None,
     ):
-        """Initialize the IsaacTeleop device.
+        """Initialize the Isaac Capture device.
 
         Args:
-            cfg: Configuration object for IsaacTeleop settings.
+            cfg: Configuration object for Isaac Capture settings.
             cloudxr_env_file: Optional path to a CloudXR ``.env`` file.
                 When provided and *auto_launch_cloudxr* is ``True``, the
                 CloudXR runtime is launched automatically during session
@@ -119,6 +125,11 @@ class IsaacTeleopDevice:
             auto_launch_cloudxr: Whether to auto-launch the CloudXR runtime
                 when *cloudxr_env_file* is set.  Ignored when
                 *cloudxr_env_file* is ``None``.
+            use_kit_xr_bridge: Whether to source live OpenXR handles from Kit's
+                XR bridge (``True``, the full XR rendering / anchor path) or run
+                standalone (``False``) with ``isaacteleop`` owning its own OpenXR
+                session through the CloudXR runtime -- teleop I/O with no Kit XR
+                rendering.  Typically wired to the ``--xr`` CLI flag.
             mcap_record_path: Optional MCAP file path to record the live
                 teleop session into.  Mutually exclusive with
                 *mcap_replay_path*.  Debug-grade only -- the produced file
@@ -129,6 +140,15 @@ class IsaacTeleopDevice:
                 XR connection and feeds the recorded tracker stream
                 through the pipeline.  Mutually exclusive with
                 *mcap_record_path*.
+            enable_debug_visualization: Whether tracking debug visualization
+                (red sphere markers at each OpenXR hand joint, RGB axis
+                markers at the controller aim poses) is enabled at session
+                start.  When ``False`` (the default), the pipeline carries no
+                visualization overhead.
+            haptic_cfg: Optional haptic-feedback configuration.  When provided,
+                the device renders per-hand output vectors pushed via
+                :meth:`send_haptic` on the configured device (controller, glove,
+                ...).  ``None`` disables haptics.
         """
         self._cfg = cfg
 
@@ -138,12 +158,24 @@ class IsaacTeleopDevice:
             cfg,
             cloudxr_env_file=cloudxr_env_file,
             auto_launch_cloudxr=auto_launch_cloudxr,
+            use_kit_xr_bridge=use_kit_xr_bridge,
             mcap_record_path=mcap_record_path,
             mcap_replay_path=mcap_replay_path,
+            enable_debug_visualization=enable_debug_visualization,
+            haptic_cfg=haptic_cfg,
         )
 
         self._prev_right_a_pressed = False
         self._prev_control_is_active: bool | None = None
+
+        # Each visualizer is created lazily on the first frame with matching
+        # data; the failure latches stop retry spam if creation fails (e.g.
+        # sim not ready).
+        self._enable_debug_visualization = enable_debug_visualization
+        self._hand_visualizer: HandJointVisualizer | None = None
+        self._hand_visualizer_failed = False
+        self._aim_visualizer: ControllerAimVisualizer | None = None
+        self._aim_visualizer_failed = False
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
@@ -153,9 +185,9 @@ class IsaacTeleopDevice:
             self._anchor_manager.cleanup()
 
     def __str__(self) -> str:
-        """Returns a string containing information about the IsaacTeleop device."""
+        """Returns a string containing information about the Isaac Capture device."""
         xr_cfg = self._cfg.xr_cfg
-        msg = f"IsaacTeleop Device: {self.__class__.__name__}\n"
+        msg = f"Isaac Capture Device: {self.__class__.__name__}\n"
         msg += f"\tAnchor Position: {xr_cfg.anchor_pos}\n"
         msg += f"\tAnchor Rotation: {xr_cfg.anchor_rot}\n"
         if xr_cfg.anchor_prim_path is not None:
@@ -178,7 +210,7 @@ class IsaacTeleopDevice:
         return msg
 
     def __enter__(self) -> IsaacTeleopDevice:
-        """Enter the context manager and prepare the IsaacTeleop session.
+        """Enter the context manager and prepare the Isaac Capture session.
 
         Builds the retargeting pipeline and attempts to acquire OpenXR handles
         from Kit's XR bridge extension.  If the handles are not yet available
@@ -192,21 +224,49 @@ class IsaacTeleopDevice:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context manager and clean up the IsaacTeleop session."""
+        """Exit the context manager and clean up the Isaac Capture session."""
         self._anchor_manager.cleanup()
         self._session_lifecycle.stop(exc_type, exc_val, exc_tb)
         return False
 
-    def reset(self) -> None:
+    def reset(self, pause: bool = False) -> None:
         """Reset the device state.
 
         Resets the XR anchor synchronizer and schedules a
         ``reset`` :class:`~isaacteleop.retargeting_engine.interface.execution_events.ExecutionEvents`
         for the next pipeline step so that all retargeters reinitialize
-        their cross-step state.
+        their cross-step state.  Also clears any pending haptic force so a
+        pulse in progress at reset time does not persist into the next episode.
+
+        Args:
+            pause: When ``True``, also pause a running session so teleop resumes
+                from a paused state -- the behavior for an *operator* reset
+                (e.g. keyboard ``R``). Defaults to ``False`` for a *host* reset
+                (e.g. environment auto-reset after task success), which keeps the
+                session running into the next episode.
         """
         self._anchor_manager.reset()
-        self._session_lifecycle.request_reset()
+        self._session_lifecycle.request_reset(pause=pause)
+        self._session_lifecycle.reset_haptics()
+
+    def request_start(self) -> None:
+        """Start teleoperation without an XR client.
+
+        Drives the internal teleop state machine toward RUNNING (see
+        :meth:`TeleopSessionLifecycle.request_start`). Useful for headless or
+        keyboard-driven control when no headset UI is available to send START.
+        No-op when no control channel is configured.
+        """
+        self._session_lifecycle.request_start()
+
+    def request_stop(self) -> None:
+        """Stop (pause) teleoperation without an XR client.
+
+        Drives the internal teleop state machine to PAUSED (see
+        :meth:`TeleopSessionLifecycle.request_stop`). No-op when no control
+        channel is configured.
+        """
+        self._session_lifecycle.request_stop()
 
     @property
     def last_control_events(self) -> ControlEvents:
@@ -230,7 +290,7 @@ class IsaacTeleopDevice:
     def advance(self, target_T_world: np.ndarray | torch.Tensor | SupportsDLPack | None = None) -> torch.Tensor | None:
         """Process current device state and return control commands.
 
-        If the IsaacTeleop session has not been started yet (because the OpenXR
+        If the Isaac Capture session has not been started yet (because the OpenXR
         handles were not available at ``__enter__`` time), this method will
         attempt to start it on each call.  Once the user clicks "Start AR" and
         the handles become available, the session is created transparently.
@@ -277,10 +337,79 @@ class IsaacTeleopDevice:
         if action is not None:
             # Poll controller buttons (e.g. toggle anchor rotation on right 'A' press)
             self._poll_buttons()
+            if self._enable_debug_visualization:
+                self._update_debug_visualization()
 
         self._dispatch_control_callbacks()
 
         return action
+
+    def send_haptic(self, endpoint: str, values) -> None:
+        """Render one frame of haptic output on a device endpoint.
+
+        Implements the :class:`~isaaclab_teleop.HapticFeedbackReceiver` protocol.
+        The vector is cached and injected into the haptic sink on the next
+        :meth:`advance`.  This is a no-op unless the device was constructed with
+        a ``haptic_cfg``.
+
+        Args:
+            endpoint: ``"left"`` or ``"right"`` (see
+                :data:`~isaaclab_teleop.haptic_feedback.ENDPOINT_LEFT`).
+            values: The per-hand output vector (one scalar for a rumble motor, one
+                value per finger for a glove); an all-zero vector stops feedback.
+        """
+        self._session_lifecycle.push_haptic(endpoint, values)
+
+    def send_client_message(self, message: dict) -> None:
+        """Queue a JSON message for delivery to the connected XR client.
+
+        Delivery is deferred until the control channel is connected, so a
+        message queued before the headset connects still reaches the client.
+        This is a no-op unless a control channel is configured.
+
+        Args:
+            message: A JSON-serializable dict carrying a ``"type"``
+                discriminator the client recognizes, e.g.
+                ``{"type": "system_notice", "message": {...}}``.
+        """
+        self._session_lifecycle.send_client_message(message)
+
+    # ------------------------------------------------------------------
+    # Debug visualization
+    # ------------------------------------------------------------------
+
+    def _update_debug_visualization(self) -> None:
+        """Create and update the enabled tracking debug visualizers."""
+        result = self._session_lifecycle.last_step_result
+        if result is None:
+            return
+        world_T_anchor = self._anchor_manager.get_world_matrix()
+
+        if TeleopSessionLifecycle.HAND_LEFT_KEY in result or TeleopSessionLifecycle.HAND_RIGHT_KEY in result:
+            if self._hand_visualizer is None and not self._hand_visualizer_failed:
+                try:
+                    from .visualizers.hand_joint_visualizer import HandJointVisualizer
+
+                    self._hand_visualizer = HandJointVisualizer()
+                except Exception:
+                    logger.debug("HandJointVisualizer creation failed; disabling hand debug", exc_info=True)
+                    self._hand_visualizer_failed = True
+            if self._hand_visualizer is not None:
+                self._hand_visualizer.update(result, world_T_anchor)
+
+        left_controller = self._session_lifecycle.last_left_controller
+        right_controller = self._session_lifecycle.last_right_controller
+        if left_controller is not None or right_controller is not None:
+            if self._aim_visualizer is None and not self._aim_visualizer_failed:
+                try:
+                    from .visualizers.controller_aim_visualizer import ControllerAimVisualizer
+
+                    self._aim_visualizer = ControllerAimVisualizer()
+                except Exception:
+                    logger.debug("ControllerAimVisualizer creation failed; disabling aim debug", exc_info=True)
+                    self._aim_visualizer_failed = True
+            if self._aim_visualizer is not None:
+                self._aim_visualizer.update(left_controller, right_controller, world_T_anchor)
 
     # ------------------------------------------------------------------
     # Control event -> callback bridge
@@ -408,7 +537,7 @@ class IsaacTeleopDevice:
 def _enable_teleop_bridge() -> None:
     """Enable the XR teleop bridge extension and configure carb settings.
 
-    Must be called after the Omniverse AppLauncher has started.
+    Must be called after the Kit launcher has started.
     """
     import carb.settings
     import omni.kit.app
@@ -425,8 +554,11 @@ def create_isaac_teleop_device(
     callbacks: dict[str, Callable] | None = None,
     cloudxr_env_file: str | None = None,
     auto_launch_cloudxr: bool = True,
+    use_kit_xr_bridge: bool = True,
     mcap_record_path: str | None = None,
     mcap_replay_path: str | None = None,
+    enable_debug_visualization: bool = False,
+    haptic_cfg: HapticFeedbackCfg | None = None,
 ) -> IsaacTeleopDevice:
     """Create an :class:`IsaacTeleopDevice` with required Omniverse extension setup.
 
@@ -445,7 +577,7 @@ def create_isaac_teleop_device(
         before the device is constructed.
 
     Args:
-        cfg: IsaacTeleop configuration.
+        cfg: Isaac Capture configuration.
         sim_device: If provided, overrides ``cfg.sim_device`` so action tensors
             are placed on the requested torch device (e.g. ``"cuda:0"``).
         callbacks: Optional mapping of command keys (e.g. ``"START"``, ``"STOP"``,
@@ -458,6 +590,14 @@ def create_isaac_teleop_device(
             when *cloudxr_env_file* is set.  Set to ``False`` to skip the
             launch (e.g. when running the runtime externally).  Ignored
             when *cloudxr_env_file* is ``None``.
+        use_kit_xr_bridge: Whether to drive the session from Kit's XR bridge
+            (the full XR rendering / anchor path).  When ``True`` (default) the
+            ``isaacsim.kit.xr.teleop.bridge`` extension is enabled and the
+            session sources its OpenXR handles from Kit.  When ``False`` the
+            session runs standalone -- the bridge is left untouched and
+            ``isaacteleop`` creates its own OpenXR session through the CloudXR
+            runtime, so teleop I/O works headless without Kit XR rendering.
+            Typically wired to the ``--xr`` CLI flag.
         mcap_record_path: Optional MCAP file path to record the live teleop
             session into.  Debug-grade only.  Mutually exclusive with
             *mcap_replay_path*.
@@ -465,6 +605,13 @@ def create_isaac_teleop_device(
             returned device runs in :class:`SessionMode.REPLAY` and the XR
             teleop bridge is left untouched.  Mutually exclusive with
             *mcap_record_path*.
+        enable_debug_visualization: Whether tracking debug visualization is
+            enabled at session start.  See
+            :paramref:`IsaacTeleopDevice.enable_debug_visualization`.
+        haptic_cfg: Optional haptic-feedback configuration.  When provided, the
+            returned device implements
+            :class:`~isaaclab_teleop.HapticFeedbackReceiver` and renders per-hand
+            output vectors on the configured device (controller, glove, ...).
 
     Returns:
         A fully configured :class:`IsaacTeleopDevice` ready for use in a
@@ -476,24 +623,29 @@ def create_isaac_teleop_device(
             "set at most one to switch between LIVE recording and REPLAY playback."
         )
 
-    # Replay sessions never talk to Kit's XR bridge, so loading/enabling the
-    # bridge extension would only add startup latency and noisy log lines.
-    if mcap_replay_path is None:
+    # Replay sessions never talk to Kit's XR bridge, and standalone sessions
+    # (use_kit_xr_bridge=False) deliberately bypass it, so loading/enabling the
+    # bridge extension would only add startup latency, noisy log lines, and --
+    # for standalone -- pull in the Kit XR rendering stack we want to avoid.
+    if mcap_replay_path is None and use_kit_xr_bridge:
         _enable_teleop_bridge()
 
     if sim_device is not None:
         cfg.sim_device = sim_device
 
     if mcap_replay_path is not None:
-        logger.info("Using IsaacTeleop stack for teleoperation (REPLAY mode)")
+        logger.info("Using Isaac Capture stack for teleoperation (REPLAY mode)")
     else:
-        logger.info("Using IsaacTeleop stack for teleoperation")
+        logger.info("Using Isaac Capture stack for teleoperation")
     device = IsaacTeleopDevice(
         cfg,
         cloudxr_env_file=cloudxr_env_file,
         auto_launch_cloudxr=auto_launch_cloudxr,
+        use_kit_xr_bridge=use_kit_xr_bridge,
         mcap_record_path=mcap_record_path,
         mcap_replay_path=mcap_replay_path,
+        enable_debug_visualization=enable_debug_visualization,
+        haptic_cfg=haptic_cfg,
     )
 
     if callbacks is not None:

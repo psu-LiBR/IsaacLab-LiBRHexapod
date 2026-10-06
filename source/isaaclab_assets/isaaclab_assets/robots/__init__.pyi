@@ -22,7 +22,11 @@ __all__ = [
     "GR1T2_CFG",
     "GR1T2_HIGH_PD_CFG",
     "FRANKA_PANDA_CFG",
+    "FRANKA_MINIMAL_CFG",
+    "FRANKA_PANDA_LEGACY_CFG",
+    "FRANKA_PANDA_LEGACY_HIGH_PD_CFG",
     "FRANKA_PANDA_HIGH_PD_CFG",
+    "FRANKA_PANDA_MENAGERIE_CFG",
     "FRANKA_ROBOTIQ_GRIPPER_CFG",
     "FOURBAR_POLE_CFG",
     "GALBOT_ONE_CHARLIE_CFG",
@@ -38,6 +42,8 @@ __all__ = [
     "RIDGEBACK_FRANKA_PANDA_CFG",
     "SAWYER_CFG",
     "SHADOW_HAND_CFG",
+    "SHADOW_HAND_NEWTON_CFG",
+    "SHADOW_HAND_PHYSX_CFG",
     "SO101_CFG",
     "SO101_HIGH_PD_CFG",
     "joint_parameter_lookup",
@@ -78,7 +84,15 @@ from .cart_double_pendulum import CART_DOUBLE_PENDULUM_CFG
 from .cartpole import CARTPOLE_CFG
 from .cassie import CASSIE_CFG
 from .fourier import GR1T2_CFG, GR1T2_HIGH_PD_CFG
-from .franka import FRANKA_PANDA_CFG, FRANKA_PANDA_HIGH_PD_CFG, FRANKA_ROBOTIQ_GRIPPER_CFG
+from .franka import (
+    FRANKA_PANDA_CFG,
+    FRANKA_MINIMAL_CFG,
+    FRANKA_PANDA_LEGACY_CFG,
+    FRANKA_PANDA_LEGACY_HIGH_PD_CFG,
+    FRANKA_PANDA_HIGH_PD_CFG,
+    FRANKA_PANDA_MENAGERIE_CFG,
+    FRANKA_ROBOTIQ_GRIPPER_CFG,
+)
 from .fourbar_pole import FOURBAR_POLE_CFG
 from .galbot import GALBOT_ONE_CHARLIE_CFG
 from .hexapod import HEXAPOD_CFG
@@ -90,7 +104,7 @@ from .pick_and_place import PICK_AND_PLACE_CFG
 from .quadcopter import CRAZYFLIE_CFG
 from .ridgeback_franka import RIDGEBACK_FRANKA_PANDA_CFG
 from .sawyer import SAWYER_CFG
-from .shadow_hand import SHADOW_HAND_CFG
+from .shadow_hand import SHADOW_HAND_CFG, SHADOW_HAND_NEWTON_CFG, SHADOW_HAND_PHYSX_CFG
 from .so101 import SO101_CFG, SO101_HIGH_PD_CFG
 from .spot import joint_parameter_lookup, SPOT_CFG
 from .unitree import (

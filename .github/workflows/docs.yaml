@@ -35,8 +35,7 @@ jobs:
 
     - name: Install dev requirements
       run: |
-        uv venv
-        uv pip install -r docs/requirements.txt
+        uv sync --extra dev
         echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
     - name: Build current version docs
