@@ -3,15 +3,36 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from isaaclab_physx.physics import PhysxCfg
+
+from isaaclab.physics import PhysxAutoCfg
 from isaaclab.sensors.imu import ImuCfg
+from isaaclab.sim import SimulationCfg
 from isaaclab.utils.configclass import configclass
 
 from isaaclab_tasks.core.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg, MySceneCfg
+from isaaclab_tasks.utils import PresetCfg
 
 ##
 # Pre-defined configs
 ##
 from isaaclab_assets import HEXAPOD_CFG  # isort: skip
+
+
+@configclass
+class HexapodPhysicsCfg(PresetCfg):
+    """Physics backend presets for the hexapod velocity/goal/binary environments.
+
+    The shared locomotion base config defaults to Newton MJWarp, but the hexapod's actuator model
+    (:class:`~isaaclab.actuators.DCMotorCfg` torque-speed curve), friction calibration (static and dynamic
+    friction ranges) and every recorded result were tuned on PhysX. This preset keeps PhysX as the default.
+    Newton is deliberately not offered here yet; add a ``newton_mjwarp`` entry on a separate branch once the
+    actuator and friction behaviour has been re-validated there.
+    """
+
+    isaacsim_physx = PhysxCfg(gpu_max_rigid_patch_count=10 * 2**15)
+    physx = PhysxAutoCfg(isaacsim_physx=isaacsim_physx)
+    default = isaacsim_physx
 
 
 @configclass
@@ -23,6 +44,7 @@ class HexapodSceneCfg(MySceneCfg):
 
 @configclass
 class HexapodRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
+    sim: SimulationCfg = SimulationCfg(physics=HexapodPhysicsCfg())
     scene: HexapodSceneCfg = HexapodSceneCfg(num_envs=4096, env_spacing=2.5)
 
     def __post_init__(self):
@@ -52,14 +74,13 @@ class HexapodRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         _body_link_names = (
             "CenterLink|BackLink|FrontLink|MiddleLeft|MiddleRight|BackLeft|BackRight|FrontLeft|FrontRight"
         )
-        self.scene.contact_forces.default.prim_path = f"{{ENV_REGEX_NS}}/Robot/Geometry/({_body_link_names})"
-        self.scene.contact_forces.physx.prim_path = f"{{ENV_REGEX_NS}}/Robot/Geometry/({_body_link_names})"
+        self.scene.contact_forces.prim_path = f"{{ENV_REGEX_NS}}/Robot/Geometry/({_body_link_names})"
 
         # parent class's events/terminations also target "base"; hexapod's root body is CenterLink.
         # These are articulation body names (asset.data.body_names), matched via re.fullmatch against
         # the rigid-body link names -- NOT USD prim paths -- so no "Geometry" segment here.
         self.events.add_base_mass.params["asset_cfg"].body_names = "CenterLink"
-        self.events.base_com.default.params["asset_cfg"].body_names = "CenterLink"
+        self.events.base_com.params["asset_cfg"].body_names = "CenterLink"
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "CenterLink"
         self.terminations.base_contact.params["sensor_cfg"].body_names = "CenterLink"
 

@@ -30,9 +30,9 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         # self.events.add_base_mass.params["asset_cfg"].body_names="CenterLink"
         self.events.add_base_mass.params["asset_cfg"].body_names = ["CenterLink", "BackLink", "FrontLink"]
         self.events.add_base_mass.params["mass_distribution_params"] = (1.0, 1.0)  # scale factor 1.0 = no randomization
-        self.events.base_com.default.params["asset_cfg"].body_names = "CenterLink"
-        # self.events.base_com.default.params["asset_cfg"].body_names=["CenterLink_01", "BackLink_01", "FrontLink_01"]
-        self.events.base_com.default.params["com_range"] = {
+        self.events.base_com.params["asset_cfg"].body_names = "CenterLink"
+        # self.events.base_com.params["asset_cfg"].body_names=["CenterLink_01", "BackLink_01", "FrontLink_01"]
+        self.events.base_com.params["com_range"] = {
             "x": (0.0, 0.0),
             "y": (0.0, 0.0),
             "z": (0.0, 0.0),
