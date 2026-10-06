@@ -10,7 +10,7 @@ batch-size-1, opset 18)."""
 import torch
 
 
-def export_tiny_mlp(tmp_path, obs_dim, action_dim, weight_scale=1.0, filename="policy.onnx"):
+def export_tiny_mlp(tmp_path, obs_dim, action_dim, weight_scale=1.0, filename="policy.onnx", sim_joint_names=None):
     class TinyPolicy(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -28,4 +28,14 @@ def export_tiny_mlp(tmp_path, obs_dim, action_dim, weight_scale=1.0, filename="p
         model, dummy_obs, str(onnx_path),
         input_names=["obs"], output_names=["actions"], opset_version=18,
     )
+    if sim_joint_names is not None:
+        # Same metadata key and JSON encoding as export_binary_onnx.py.
+        import json
+
+        import onnx
+
+        proto = onnx.load(str(onnx_path))
+        entry = proto.metadata_props.add()
+        entry.key, entry.value = "sim_joint_names", json.dumps(sim_joint_names)
+        onnx.save(proto, str(onnx_path))
     return str(onnx_path)

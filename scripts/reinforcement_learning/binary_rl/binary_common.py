@@ -157,6 +157,29 @@ def switch_penalty_meta(env: Any, args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def sim_joint_order_meta(env: Any) -> dict[str, Any]:
+    """Record the articulation's joint order, for ``run_meta.json``.
+
+    The deployed policy receives its ``joint_pos`` and ``joint_vel`` observations by position in this order, so
+    ``export_binary_onnx.py`` bakes it into the ONNX file and the deployment refuses a policy whose order differs
+    from its ``joints.sim_order``.
+
+    Args:
+        env: Either a ``DiscreteBitsActionWrapper`` (raw env read from ``base_env``) or a plain gym env.
+    """
+    base = getattr(env, "base_env", None) or env.unwrapped
+    robot = next(iter(base.scene.articulations.values()))
+    return {"sim_joint_names": [str(name) for name in robot.data.joint_names]}
+
+
+def env_run_meta(env: Any, args: argparse.Namespace) -> dict[str, Any]:
+    """Everything ``run_meta.json`` needs from the built env: switch-penalty weights and the joint order.
+
+    Call it right after ``build_env``, before ``wrap_env`` re-wraps ``env`` and hides the raw env.
+    """
+    return {**switch_penalty_meta(env, args), **sim_joint_order_meta(env)}
+
+
 # --------------------------------------------------------------------------------------
 # Environment
 # --------------------------------------------------------------------------------------

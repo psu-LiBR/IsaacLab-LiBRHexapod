@@ -74,10 +74,10 @@ import torch  # noqa: E402
 import torch.nn.functional as F  # noqa: E402
 from binary_common import (  # noqa: E402
     build_env,
+    env_run_meta,
     maybe_init_wandb,
     mlp,
     nstep_return,
-    switch_penalty_meta,
     write_run_meta,
 )
 
@@ -100,8 +100,9 @@ env = build_env(
     action_rate_multiplier=args.action_rate_multiplier,
     action_switch_penalty=args.action_switch_penalty,
 )
-# Read the resolved reward weights now: later code re-wraps `env`, and the raw env config is only reachable here.
-switch_meta = switch_penalty_meta(env, args)
+# Read the resolved reward weights and the joint order now: later code re-wraps `env`, and the raw env is only
+# reachable here.
+env_meta = env_run_meta(env, args)
 device = env.device
 N = env.num_envs
 N_ACT = env.n_actions
@@ -178,7 +179,7 @@ write_run_meta(
     num_envs=args.num_envs,
     timesteps=args.timesteps,
     n_step=args.n_step,
-    **switch_meta,
+    **env_meta,
 )
 
 wandb_run = maybe_init_wandb(args, experiment_name, "sac_d", {"n_step": args.n_step})

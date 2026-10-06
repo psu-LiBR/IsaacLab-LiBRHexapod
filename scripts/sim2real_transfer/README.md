@@ -75,7 +75,11 @@ profile (`velocity`, `goal`, or `binary`).
   `binary:` section in the deployment config, so **copy
   `config/deployment.binary.example.yaml`** (not `deployment.example.yaml`) --
   it carries the HexapI positive-leg joint convention. Export the checkpoint
-  with `binary_rl/export_binary_onnx.py`. The six leg joints snap between the
+  with `binary_rl/export_binary_onnx.py`; the graph records the joint order it
+  was trained with and `run_policy.py` refuses to start if `joints.sim_order`
+  differs or the order is missing (the HexapI USD lists the spine first:
+  FrontLink, BackLink, then MiddleLeft/Right, FrontLeft/Right, BackLeft/Right).
+  The six leg joints snap between the
   two fixed stance/lift angles from the policy bits; the two spine joints run a
   fixed analytic traveling wave recreated host-side (front joint a pure sine,
   rear joint the same sine shifted 90 deg -- Wave 1 in

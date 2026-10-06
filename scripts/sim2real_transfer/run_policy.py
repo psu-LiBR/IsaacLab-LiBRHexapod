@@ -86,7 +86,10 @@ def main() -> None:
     joint_mapping = JointMapping(cfg.joints)
     profile = PROFILES[args.profile]
 
-    policy = PolicyRunner(args.policy, profile)
+    # A binary policy must carry the joint order it was trained with; velocity/goal exports predate that metadata.
+    policy = PolicyRunner(
+        args.policy, profile, sim_joint_order=cfg.joints.sim_order, require_joint_order=args.profile == "binary"
+    )
     obs_builder = make_obs_builder(args.profile)
     localizer = (
         DeadReckoningLocalizer(forward_speed_estimate=cfg.localization.forward_speed_estimate)

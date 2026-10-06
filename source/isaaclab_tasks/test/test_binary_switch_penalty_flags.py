@@ -22,6 +22,16 @@ import binary_common as bc  # noqa: E402
 from switch_command_reward import action_switch_count  # noqa: E402
 
 CURRENT_ACTION_RATE_WEIGHT = -5.0e-4  # HexapodGoalEnvCfg
+HEXAPI_JOINT_NAMES = [
+    "FrontLink_Joint",
+    "BackLink_Joint",
+    "MiddleLeft_Joint",
+    "MiddleRight_Joint",
+    "FrontLeft_Joint",
+    "FrontRight_Joint",
+    "BackLeft_Joint",
+    "BackRight_Joint",
+]
 
 
 def _cfg(action_rate_weight=CURRENT_ACTION_RATE_WEIGHT):
@@ -46,6 +56,10 @@ def _discrete_env(cfg):
         num_envs = 2
         single_observation_space = gym.spaces.Box(-1.0, 1.0, (32,))
         observation_space = gym.spaces.Box(-1.0, 1.0, (2, 32))
+
+        scene = SimpleNamespace(
+            articulations={"robot": SimpleNamespace(data=SimpleNamespace(joint_names=list(HEXAPI_JOINT_NAMES)))}
+        )
 
         def __init__(self):
             self.cfg = cfg
@@ -128,10 +142,10 @@ def test_discrete_training_scripts_forward_both_flags_to_build_env(script):
     assert "action_rate_multiplier=args.action_rate_multiplier" in call
     assert "action_switch_penalty=args.action_switch_penalty" in call
     # The raw env config is only reachable before skrl re-wraps `env`, so the meta is read right after build_env.
-    meta_at = source.index("switch_meta = switch_penalty_meta(env, args)")
+    meta_at = source.index("env_meta = env_run_meta(env, args)")
     wrap_at = source.find("env = wrap_env(env")
     assert wrap_at == -1 or meta_at < wrap_at
-    assert "**switch_meta" in source
+    assert "**env_meta" in source
 
 
 def test_continuous_sac_applies_the_multiplier_and_rejects_the_switch_penalty():
@@ -143,3 +157,9 @@ def test_continuous_sac_applies_the_multiplier_and_rejects_the_switch_penalty():
 def test_pipeline_forwards_both_flags_to_every_trainer():
     source = (SCRIPTS / "run_discrete_pipeline.py").read_text()
     assert '"--action_rate_multiplier"' in source and '"--action_switch_penalty"' in source
+
+
+def test_run_meta_records_the_sim_joint_order():
+    meta = bc.env_run_meta(_discrete_env(_cfg()), _args())
+    assert meta["sim_joint_names"] == HEXAPI_JOINT_NAMES
+    assert meta["action_rate_l2_weight"] == CURRENT_ACTION_RATE_WEIGHT  # the switch-penalty fields are still there

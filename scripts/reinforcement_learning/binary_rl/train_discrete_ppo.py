@@ -75,10 +75,10 @@ from binary_action_mask import legal_action_mask  # noqa: E402
 from binary_common import (
     MaskedCategoricalMixin,
     build_env,
+    env_run_meta,
     mask_meta,
     maybe_init_wandb,
     mlp,
-    switch_penalty_meta,
     write_run_meta,
 )
 from skrl.agents.torch.ppo import PPO, PPO_CFG
@@ -101,8 +101,9 @@ env = build_env(
     action_rate_multiplier=args.action_rate_multiplier,
     action_switch_penalty=args.action_switch_penalty,
 )
-# Read the resolved reward weights now: later code re-wraps `env`, and the raw env config is only reachable here.
-switch_meta = switch_penalty_meta(env, args)
+# Read the resolved reward weights and the joint order now: later code re-wraps `env`, and the raw env is only
+# reachable here.
+env_meta = env_run_meta(env, args)
 env = wrap_env(env, wrapper="isaaclab-single-agent")
 device = env.device
 n_actions = int(env.action_space.n)
@@ -212,7 +213,7 @@ write_run_meta(
     num_envs=args.num_envs,
     timesteps=args.timesteps,
     asymmetric_critic=env.state_space is not None,
-    **switch_meta,
+    **env_meta,
     **extra_meta,
 )
 

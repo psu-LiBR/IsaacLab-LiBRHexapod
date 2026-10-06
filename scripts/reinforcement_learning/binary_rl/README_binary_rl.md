@@ -312,7 +312,11 @@ property.) A checkpoint replay (`--checkpoint`) still uses Wave 1, as trained.
 (`obs [1, 32] float32 -> action [1, 6] float32` in `{-1, +1}`) that the
 `scripts/sim2real_transfer` `binary` profile consumes directly. The graph folds in the
 running obs-normalisation (PPO only), the greedy argmax over the 64 gait patterns, the
-masked-run legal set, and the bit decode.
+masked-run legal set, and the bit decode. It also stores the sim's joint order
+(`sim_joint_names`, from the run's `run_meta.json`) as ONNX metadata: the joint position and velocity observations
+are read by position, so `PolicyRunner` refuses a binary policy whose order differs from the deployment's
+`joints.sim_order`. A run trained before the order was recorded has no `sim_joint_names` and is not exported; retrain it
+or add `robot.data.joint_names` to its `run_meta.json`.
 
 ```bat
 isaaclab.bat -p scripts/reinforcement_learning/binary_rl/export_binary_onnx.py ^
