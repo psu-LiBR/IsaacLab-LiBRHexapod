@@ -250,7 +250,7 @@ restored so every subsequent policy in the sweep sees the RL env wave.  The two 
 distinct.  ``--spine_gain != 1.0`` disables this swap (see the tripod run).
 
 Run (from the repo root):
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/eval_protocol.py ^
+  python scripts/reinforcement_learning/binary_rl/eval_protocol.py ^
       --policy net dqn_100k runs_binary/dqn_s42/checkpoints/agent_100000.pt ^
       --policy net ppo_masked_100k runs_binary/ppo_masked_s42/checkpoints/agent_100000.pt ^
       --out eval_results.json

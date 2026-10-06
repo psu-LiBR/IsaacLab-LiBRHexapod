@@ -29,7 +29,7 @@ The actor is saved under the ``"policy"`` key as a plain ``Sequential`` state di
 changes. A ``run_meta.json`` sidecar is written next to the checkpoints.
 
 Run (from the repo root):
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_sac_d.py ^
+  python scripts/reinforcement_learning/binary_rl/train_sac_d.py ^
       --num_envs 4096 --timesteps 100000 --seed 42 --experiment_name sacd_s42
 """
 

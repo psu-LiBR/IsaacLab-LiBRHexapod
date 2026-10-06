@@ -129,20 +129,22 @@ check (see the per-step loop) warns if env 0 resets/terminates before the record
 window closes, since that would mean the window is not one continuous rollout.
 
 Run (from IsaacLab root, .venv active):
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
+  python scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
       --gait_npz tripod --video_length 600
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
+  python scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
       --checkpoint runs_binary/<exp>/checkpoints/best_agent.pt --video_length 600
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
+  python scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
       --gait_csv_pos "hexapod-assets/Sim Gaits/forward3_lleg35_amp65_sim.csv" --video_length 600
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
+  python scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
       --checkpoint runs_binary/<exp>/checkpoints/best_agent.pt ^
       --export_gait_csv runs_binary/<exp>/onnx_bundle/BEST_gait.csv
 """
 
 import argparse
+import contextlib
 
-from isaaclab.app import AppLauncher
+from isaaclab.app import add_launcher_args, launch_simulation
+from isaaclab.envs.utils.video_recorder_cfg import VideoRecorderCfg
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--task", default="Isaac-Goal-Flat-Hexapod-Binary-Play-v0")
@@ -231,7 +233,7 @@ parser.add_argument(
     "absolute elapsed time since reset (step_index * step_dt) -- it is NOT renormalized to "
     "start at 0. Only valid together with --export_gait_csv.",
 )
-AppLauncher.add_app_launcher_args(parser)
+add_launcher_args(parser)
 args = parser.parse_args()
 
 _sources = [bool(args.checkpoint), bool(args.gait_npz), bool(args.gait_csv), bool(args.gait_csv_pos)]
@@ -266,11 +268,6 @@ if args.gait_csv_start_step < 0:
 # the caller pinned --task explicitly.
 if args.gait_csv_pos and args.task == parser.get_default("task"):
     args.task = "Isaac-Velocity-Flat-Hexapod-Play-v0"
-
-args.headless = True
-args.enable_cameras = True
-app_launcher = AppLauncher(args)
-simulation_app = app_launcher.app
 
 import csv
 import os
@@ -315,15 +312,21 @@ else:
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "videos_gait")
 
 _name_prefix = "rl-video" if args.checkpoint else "gait-video"
-env = gym.make(args.task, cfg=env_cfg, render_mode="rgb_array")
-env = gym.wrappers.RecordVideo(
-    env,
-    video_folder=out_dir,
-    step_trigger=lambda step: step == 0,
-    video_length=args.video_length,
-    name_prefix=_name_prefix,
-    disable_logger=True,
-)
+# record the first --video_length steps from a headless Kit visualizer (no render_mode / RecordVideo wrapper);
+# the camera it reads (/OmniverseKit_Persp) is repositioned every step by _follow_cam below
+env_cfg.video_recorders = [
+    VideoRecorderCfg(
+        source="viz:kit",
+        output_dir=out_dir,
+        video_length=args.video_length,
+        output_filename_prefix=_name_prefix,
+    )
+]
+# launch_simulation starts the runtime the config needs (Kit for PhysX plus the recording visualizer);
+# it stays open for the whole script and is closed at the end
+_runtime = contextlib.ExitStack()
+_runtime.enter_context(launch_simulation(env_cfg, args))
+env = gym.make(args.task, cfg=env_cfg)
 # the raw-CSV position-replay path drives the env's native continuous JointPositionAction,
 # so it must NOT go through the 6-bit discrete wrapper.
 if not args.gait_csv_pos:
@@ -840,4 +843,4 @@ if _export_rows is not None:
     )
 
 env.close()
-simulation_app.close()
+_runtime.close()

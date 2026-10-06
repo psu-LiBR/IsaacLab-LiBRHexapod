@@ -29,12 +29,12 @@ Sequential (single-GPU) driver that, in one launch:
 
 This script does NOT import Isaac Sim: it runs each stage script as its own
 ``sys.executable <script>`` subprocess (Isaac Sim can only launch once per process). The
-pipeline is itself launched via ``isaaclab.bat -p`` so it already has the right
-interpreter + environment; re-invoking ``isaaclab.bat`` for the stages does NOT nest.
+pipeline is itself launched with ``python`` from the Isaac Lab uv environment, so it already has the
+right interpreter + environment; the stages reuse ``sys.executable``.
 
 Run from the repo root::
 
-    isaaclab.bat -p scripts/reinforcement_learning/binary_rl/run_discrete_pipeline.py --iterations 2000
+    python scripts/reinforcement_learning/binary_rl/run_discrete_pipeline.py --iterations 2000
 
 Resume after an interruption: run it again with the same ``--tag`` -- any algorithm whose
 final checkpoint already exists is skipped unless ``--force`` is given. ``--skip-train`` /
@@ -79,12 +79,11 @@ ALGOS: dict[str, tuple[str, list[str]]] = {
 def launcher_prefix() -> list[str]:
     """How to run a stage script.
 
-    The pipeline is launched with ``isaaclab.bat -p run_discrete_pipeline.py``, so this
-    process already runs under the Isaac Sim venv interpreter (``sys.executable``) with
-    the environment ``isaaclab`` set up. Each stage script does its own
-    ``from isaaclab.app import AppLauncher`` and only needs that interpreter + environment
-    -- so call it directly. Re-invoking ``isaaclab.bat`` here does NOT nest: its CLI
-    wrapper re-runs this pipeline's argv instead of the stage script.
+    The pipeline is launched with ``python run_discrete_pipeline.py`` from the Isaac Lab uv
+    environment, so this process already runs under the right interpreter (``sys.executable``)
+    with ``isaaclab`` installed. Each stage script starts its own simulation runtime
+    (``AppLauncher`` or ``launch_simulation``) and only needs that interpreter + environment
+    -- so call it directly.
     """
     return [sys.executable]
 

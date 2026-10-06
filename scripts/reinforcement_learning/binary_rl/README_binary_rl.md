@@ -96,29 +96,29 @@ not tracked in the repo; its 2026-09 output is cited in `hexapod_binary_env_cfg.
 
 ## 3. Training
 
-Run from the repo root. On Windows use `isaaclab.bat -p` (the scripts also work under a
-plain `python` if the `.venv` is active). `--timesteps` counts trainer iterations; each
+Run from the repo root with the Isaac Lab uv environment active (plain `python`; `uv run python`
+also works but re-syncs the project environment). `--timesteps` counts trainer iterations; each
 advances all `--num_envs` envs one step, so `100000 x 4096 = 4.096e8` env-steps.
 
 ```bat
 :: DQN  (Double DQN: --algo ddqn)
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete.py ^
+python scripts/reinforcement_learning/binary_rl/train_discrete.py ^
   --algo dqn --num_envs 4096 --timesteps 100000 --seed 42 --experiment_name dqn_s42
 
 :: categorical PPO
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py ^
+python scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py ^
   --num_envs 4096 --timesteps 100000 --seed 42 --experiment_name ppo_s42
 
 :: masked categorical PPO (legal set: >= 4 stance legs, plus the two tripods 25/38 = 24 of 64)
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py ^
+python scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py ^
   --num_envs 4096 --timesteps 100000 --seed 42 --mask --experiment_name ppo_masked_s42
 
 :: discrete SAC
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_sac_d.py ^
+python scripts/reinforcement_learning/binary_rl/train_sac_d.py ^
   --num_envs 4096 --timesteps 100000 --seed 42 --experiment_name sacd_s42
 
 :: continuous SAC baseline (8-DOF goal env, NOT the contact-bit space) — arXiv:2605.24975
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_sac_continuous.py ^
+python scripts/reinforcement_learning/binary_rl/train_sac_continuous.py ^
   --num_envs 4096 --timesteps 60000 --seed 42 --experiment_name sacc_s42
 ```
 
@@ -162,7 +162,7 @@ measured step sits at phase 0.
 Quick wiring check (a couple of minutes, no GPU-heavy load):
 
 ```bat
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete.py ^
+python scripts/reinforcement_learning/binary_rl/train_discrete.py ^
   --algo dqn --num_envs 512 --timesteps 1500 --replay_size 100000 --checkpoint_interval 500
 ```
 
@@ -215,7 +215,7 @@ All reported numbers come from `eval_protocol.py`, run identically for every met
 > continuous window, and (iii) possible video slow-motion (RecordVideo tags 50 fps).
 
 ```bat
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/eval_protocol.py ^
+python scripts/reinforcement_learning/binary_rl/eval_protocol.py ^
   --num_envs 64 --steps 300 --seed 7 --warmup 1 ^
   --policy net "dqn_s42@100k"        runs_binary/dqn_s42/checkpoints/agent_100000.pt ^
   --policy net "ddqn_s42@100k"       runs_binary/ddqn_s42/checkpoints/agent_100000.pt ^
@@ -286,11 +286,11 @@ is wired correctly — render it through `play_discrete_closeup.py`:
 
 ```bat
 :: the committed tripod_bit_demos.npz (exactly what BASE_tripod_csv_bits replays)
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
+python scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
   --gait_npz tripod --num_envs 4 --steps 600 --video_length 600
 
 :: or straight from a gait CSV (leg columns thresholded to contact bits on the fly)
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
+python scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
   --gait_csv "hexapod-assets/Sim Gaits/tripod_extendedquad_sim.csv" --num_envs 4
 ```
 
@@ -319,7 +319,7 @@ are read by position, so `PolicyRunner` refuses a binary policy whose order diff
 or add `robot.data.joint_names` to its `run_meta.json`.
 
 ```bat
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/export_binary_onnx.py ^
+python scripts/reinforcement_learning/binary_rl/export_binary_onnx.py ^
   --checkpoint runs_binary/ppo_masked_s42/checkpoints/agent_100000.pt ^
   --out policies/ppo_masked_s42.onnx
 ```
@@ -358,7 +358,7 @@ best, and export the whole candidate set to ONNX — in a single launch you can 
 from. One training run at a time (single-GPU). Run from the repo root:
 
 ```bat
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/run_discrete_pipeline.py --iterations 2000
+python scripts/reinforcement_learning/binary_rl/run_discrete_pipeline.py --iterations 2000
 ```
 
 What it does, in order:
@@ -429,7 +429,7 @@ used `N = 100000`; **2000 is a fast shakedown and will under-train PPO** — rai
 ### Quick shakedown of every optimizer (`--smoke`)
 
 ```bat
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/run_discrete_pipeline.py --smoke
+python scripts/reinforcement_learning/binary_rl/run_discrete_pipeline.py --smoke
 ```
 
 Runs all five algorithms end to end at a tiny scale (200 iters, 256 envs, one eval

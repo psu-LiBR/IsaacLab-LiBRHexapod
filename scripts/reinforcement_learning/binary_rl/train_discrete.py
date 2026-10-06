@@ -21,11 +21,11 @@ Algorithm references: Mnih et al. 2015 (DQN); van Hasselt, Guez, Silver 2016
 (arXiv:1509.06461, Double DQN). skrl DQN/DDQN docs: https://skrl.readthedocs.io.
 
 Smoke run (wiring check only):
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete.py --algo dqn ^
+  python scripts/reinforcement_learning/binary_rl/train_discrete.py --algo dqn ^
       --num_envs 512 --timesteps 1500 --checkpoint_interval 500
 
 Full run:
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete.py --algo dqn ^
+  python scripts/reinforcement_learning/binary_rl/train_discrete.py --algo dqn ^
       --num_envs 4096 --timesteps 100000 --experiment_name dqn_s42 --seed 42
 """
 

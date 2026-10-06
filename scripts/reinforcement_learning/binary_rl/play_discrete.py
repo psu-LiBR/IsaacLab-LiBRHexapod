@@ -23,14 +23,16 @@ no env config class is touched). Matches ``scripts/sim2real_transfer``'s
 module docstring for the full rationale. NOT wired into ``eval_protocol.py``, which
 already sidesteps the stop by pinning the goal beyond its no-reset window.
 
-Run (from IsaacLab root, .venv active):
-  CUDA_VISIBLE_DEVICES=<idle> ./isaaclab.sh -p scripts/reinforcement_learning/play_discrete.py \
+Run (from IsaacLab root, uv environment active):
+  python scripts/reinforcement_learning/binary_rl/play_discrete.py \
       --checkpoint runs_discrete/<exp>/checkpoints/best_agent.pt --video_length 600
 """
 
 import argparse
+import contextlib
 
-from isaaclab.app import AppLauncher
+from isaaclab.app import add_launcher_args, launch_simulation
+from isaaclab.envs.utils.video_recorder_cfg import VideoRecorderCfg
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--task", default="Isaac-Goal-Flat-Hexapod-Binary-Play-v0")
@@ -56,12 +58,8 @@ parser.add_argument(
     help="receding-horizon look-ahead distance [m] (same semantics as sim2real "
     "commands.goal.lookahead_m). Only used with --receding_horizon.",
 )
-AppLauncher.add_app_launcher_args(parser)
+add_launcher_args(parser)
 args = parser.parse_args()
-args.headless = True
-args.enable_cameras = True
-app_launcher = AppLauncher(args)
-simulation_app = app_launcher.app
 
 import os
 
@@ -89,14 +87,20 @@ env_cfg.viewer.eye = (1.6, 1.6, 1.0)
 env_cfg.viewer.lookat = (0.0, 0.0, 0.2)
 
 out_dir = args.out_dir or os.path.join(os.path.dirname(os.path.abspath(args.checkpoint)), "..", "videos_play")
-env = gym.make(args.task, cfg=env_cfg, render_mode="rgb_array")
-env = gym.wrappers.RecordVideo(
-    env,
-    video_folder=out_dir,
-    step_trigger=lambda step: step == 0,
-    video_length=args.video_length,
-    disable_logger=True,
-)
+# record the first --video_length steps from a headless Kit visualizer (no render_mode / RecordVideo wrapper)
+env_cfg.video_recorders = [
+    VideoRecorderCfg(
+        source="viz:kit",
+        output_dir=out_dir,
+        video_length=args.video_length,
+        output_filename_prefix="rl-video",
+    )
+]
+# launch_simulation starts the runtime the config needs (Kit for PhysX plus the recording visualizer);
+# it stays open for the whole script and is closed at the end
+_runtime = contextlib.ExitStack()
+_runtime.enter_context(launch_simulation(env_cfg, args))
+env = gym.make(args.task, cfg=env_cfg)
 env = DiscreteBitsActionWrapper(env, n_bits=6)
 device = env.device
 base = env.base_env  # raw ManagerBasedRLEnv (the wrapper's .unwrapped returns itself)
@@ -224,4 +228,4 @@ print(
 print(f"[play_discrete] video dir: {out_dir}")
 
 env.close()
-simulation_app.close()
+_runtime.close()

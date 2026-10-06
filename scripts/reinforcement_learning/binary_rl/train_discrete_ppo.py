@@ -28,11 +28,11 @@ greedy evaluator restricts its argmax the same way.
 Masked-action-space RL reference: Huang & Ontanon 2022 (arXiv:2006.14171).
 
 Smoke run (wiring check only):
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py ^
+  python scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py ^
       --num_envs 512 --timesteps 1500 --checkpoint_interval 500
 
 Full run (masked):
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py ^
+  python scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py ^
       --num_envs 4096 --timesteps 100000 --mask --experiment_name ppo_masked_s42 --seed 42
 """
 

@@ -58,12 +58,12 @@ Run
 ---
 Smoke::
 
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/sweep_leg_actuator_gains.py ^
+  python scripts/reinforcement_learning/binary_rl/sweep_leg_actuator_gains.py ^
       --num_envs 16 --stiffness 20 80 --damping 0.35 0.9 --periods_settle 2 --periods_record 2
 
 Full default grid::
 
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/sweep_leg_actuator_gains.py --num_envs 32
+  python scripts/reinforcement_learning/binary_rl/sweep_leg_actuator_gains.py --num_envs 32
 """
 
 from __future__ import annotations

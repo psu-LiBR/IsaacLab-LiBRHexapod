@@ -30,7 +30,7 @@ SAC-D -- all of which store a plain MLP (64 Q-values or 64 logits) under ``q_net
 
 Run (from the repo root)::
 
-    isaaclab.bat -p scripts/reinforcement_learning/binary_rl/export_binary_onnx.py ^
+    python scripts/reinforcement_learning/binary_rl/export_binary_onnx.py ^
         --checkpoint runs_binary/ppo_masked_s42/checkpoints/agent_100000.pt ^
         --out policies/ppo_masked_s42.onnx
 

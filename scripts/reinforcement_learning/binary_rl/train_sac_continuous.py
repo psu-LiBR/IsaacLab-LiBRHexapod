@@ -29,7 +29,7 @@ Twin Q-critics are asymmetric (they read the ``critic`` observation group, which
 ground-truth ``base_lin_vel``), matching the repo's other hexapod tasks.
 
 Run (from the repo root):
-  isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_sac_continuous.py ^
+  python scripts/reinforcement_learning/binary_rl/train_sac_continuous.py ^
       --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096 --timesteps 60000 --experiment_name sac_cont_s42
 """
 
