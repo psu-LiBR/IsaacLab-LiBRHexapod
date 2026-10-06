@@ -5,7 +5,7 @@
 
 from isaaclab.utils.configclass import configclass
 
-from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg  # ,RslRlSymmetryCfg
+from isaaclab_rl.rsl_rl import RslRlMLPModelCfg, RslRlOnPolicyRunnerCfg, RslRlPpoAlgorithmCfg  # ,RslRlSymmetryCfg
 
 # from isaaclab_tasks.core.velocity.mdp.symmetry import anymal
 
@@ -16,13 +16,17 @@ class HexapodRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 1500
     save_interval = 50
     experiment_name = "hexapod_rough"
-    policy = RslRlPpoActorCriticCfg(
-        init_noise_std=1.0,
-        actor_obs_normalization=False,
-        critic_obs_normalization=False,
-        actor_hidden_dims=[512, 256, 128],
-        critic_hidden_dims=[512, 256, 128],
+    obs_groups = {"actor": ["policy"], "critic": ["policy"]}
+    actor = RslRlMLPModelCfg(
+        hidden_dims=[512, 256, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0, std_type="scalar"),
+    )
+    critic = RslRlMLPModelCfg(
+        hidden_dims=[512, 256, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         value_loss_coef=1.0,
@@ -47,7 +51,7 @@ class HexapodFlatPPORunnerCfg(HexapodRoughPPORunnerCfg):
 
         self.max_iterations = 2500
         self.experiment_name = "hexapod_flat"
-        self.policy.actor_hidden_dims = [128, 128, 128]
-        self.policy.critic_hidden_dims = [128, 128, 128]
+        self.actor.hidden_dims = [128, 128, 128]
+        self.critic.hidden_dims = [128, 128, 128]
         # Route asymmetric observations: actor sees "policy" group (33-dim), critic sees "critic" group (36-dim)
-        self.obs_groups = {"policy": ["policy"], "critic": ["critic"]}
+        self.obs_groups = {"actor": ["policy"], "critic": ["critic"]}

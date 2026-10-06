@@ -16,10 +16,10 @@ class HexapodGoalPPORunnerCfg(HexapodRoughPPORunnerCfg):
         self.max_iterations = 3000
         self.num_steps_per_env = 96
         self.experiment_name = "hexapod_goal"
-        self.policy.actor_hidden_dims = [128, 128, 128]
-        self.policy.critic_hidden_dims = [128, 128, 128]
-        self.policy.actor_obs_normalization = True
-        self.policy.critic_obs_normalization = True
+        self.actor.hidden_dims = [128, 128, 128]
+        self.critic.hidden_dims = [128, 128, 128]
+        self.actor.obs_normalization = True
+        self.critic.obs_normalization = True
         # gamma/lam raised further above the 0.99/0.95 rough/flat baseline: the terminal
         # reach_bonus/fall_penalty are an order of magnitude larger than any per-step term,
         # and at the old gamma=0.999 they were already discounted to ~10% of value by early
@@ -36,4 +36,4 @@ class HexapodGoalPPORunnerCfg(HexapodRoughPPORunnerCfg):
         # enough for the surrogate loss to counteract it reliably.
         self.algorithm.entropy_coef = 0.003
         # Route asymmetric observations: actor sees "policy" group, critic sees "critic" group
-        self.obs_groups = {"policy": ["policy"], "critic": ["critic"]}
+        self.obs_groups = {"actor": ["policy"], "critic": ["critic"]}
