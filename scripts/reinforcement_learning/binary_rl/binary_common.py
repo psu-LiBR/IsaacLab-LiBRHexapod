@@ -56,6 +56,21 @@ def add_common_cli(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--wandb_project", default="discrete-RL", help="W&B project name")
     parser.add_argument("--wandb_group", default="", help="W&B group (default: the algorithm name)")
     parser.add_argument("--wandb_name", default="", help="W&B run name (default: --experiment_name)")
+    # Contact-switch penalty knobs. Defaults leave the env's rewards untouched.
+    parser.add_argument(
+        "--action_rate_multiplier",
+        type=float,
+        default=1.0,
+        help="multiply the env's action_rate_l2 weight by this factor (the main knob for limiting contact-bit "
+        "switching; 1.0 keeps the env's weight, e.g. -5e-4 -> -0.05 at 100)",
+    )
+    parser.add_argument(
+        "--action_switch_penalty",
+        type=float,
+        default=0.0,
+        help="OFF by default. If > 0, add the action_switch_count reward with this cost per flipped leg per step "
+        "[reward units]. For +-1 bits it duplicates action_rate_l2, so prefer --action_rate_multiplier",
+    )
 
 
 def add_mask_cli(parser: argparse.ArgumentParser) -> None:
@@ -76,6 +91,66 @@ def add_mask_cli(parser: argparse.ArgumentParser) -> None:
 
 
 # --------------------------------------------------------------------------------------
+# Contact-switch penalty
+# --------------------------------------------------------------------------------------
+def scale_action_rate_weight(env_cfg: Any, multiplier: float) -> None:
+    """Multiply the env's ``action_rate_l2`` reward weight by ``multiplier``.
+
+    For the +-1 leg bits ``action_rate_l2`` equals ``4 x`` the number of flipped legs, so this is the main knob for
+    limiting contact-bit switching. ``1.0`` leaves the env untouched.
+
+    Args:
+        env_cfg: The parsed env config whose ``rewards.action_rate_l2`` term is scaled in place.
+        multiplier: Non-negative factor applied to the term's current weight.
+
+    Raises:
+        ValueError: If ``multiplier`` is negative, or the env has no ``action_rate_l2`` term to scale.
+    """
+    if multiplier < 0:
+        raise ValueError(f"action_rate_multiplier must be >= 0, got {multiplier}")
+    if multiplier == 1.0:
+        return
+    term = getattr(env_cfg.rewards, "action_rate_l2", None)
+    if term is None:
+        raise ValueError("the env has no action_rate_l2 reward term to scale")
+    term.weight = term.weight * multiplier
+
+
+def add_action_switch_penalty(env_cfg: Any, penalty: float) -> None:
+    """Add the optional :func:`switch_command_reward.action_switch_count` reward term.
+
+    Args:
+        env_cfg: The parsed env config; the term is added to ``rewards`` in place.
+        penalty: Cost per flipped leg per step [reward units]. ``0`` adds nothing.
+
+    Raises:
+        ValueError: If ``penalty`` is negative.
+    """
+    if penalty < 0:
+        raise ValueError(f"action_switch_penalty must be >= 0, got {penalty}")
+    if penalty == 0:
+        return
+    from switch_command_reward import action_switch_count
+
+    from isaaclab.managers import RewardTermCfg
+
+    env_cfg.rewards.action_switch_count = RewardTermCfg(func=action_switch_count, weight=-penalty)
+
+
+def switch_penalty_meta(env: Any, args: argparse.Namespace) -> dict[str, Any]:
+    """Record the contact-switch penalty settings and the reward weights they resolved to, for ``run_meta.json``."""
+    rewards = env.unwrapped.cfg.rewards
+    action_rate = getattr(rewards, "action_rate_l2", None)
+    switch_count = getattr(rewards, "action_switch_count", None)
+    return {
+        "action_rate_multiplier": args.action_rate_multiplier,
+        "action_rate_l2_weight": None if action_rate is None else action_rate.weight,
+        "action_switch_penalty": args.action_switch_penalty,
+        "action_switch_count_weight": None if switch_count is None else switch_count.weight,
+    }
+
+
+# --------------------------------------------------------------------------------------
 # Environment
 # --------------------------------------------------------------------------------------
 def build_env(
@@ -85,6 +160,8 @@ def build_env(
     device: str = "cuda:0",
     n_bits: int = 6,
     compute_final_obs: bool = False,
+    action_rate_multiplier: float = 1.0,
+    action_switch_penalty: float = 0.0,
 ):
     """Build the binary-contact env wrapped as ``Discrete(2**n_bits)``.
 
@@ -97,6 +174,10 @@ def build_env(
         compute_final_obs: When ``True``, sets ``env_cfg.compute_final_obs`` so
             ``env.step`` exposes the pre-reset observation in ``extras["final_obs"]``
             (needed for timeout-aware value bootstrapping in the off-policy trainers).
+        action_rate_multiplier: Factor applied to the env's ``action_rate_l2`` weight (see
+            :func:`scale_action_rate_weight`).
+        action_switch_penalty: Cost per flipped leg per step of the optional ``action_switch_count`` reward;
+            ``0`` leaves it off (see :func:`add_action_switch_penalty`).
 
     Returns:
         The ``DiscreteBitsActionWrapper``-wrapped environment.
@@ -116,6 +197,8 @@ def build_env(
     env_cfg.seed = seed
     if compute_final_obs:
         env_cfg.compute_final_obs = True
+    scale_action_rate_weight(env_cfg, action_rate_multiplier)
+    add_action_switch_penalty(env_cfg, action_switch_penalty)
     env = gym.make(task, cfg=env_cfg)
     return DiscreteBitsActionWrapper(env, n_bits=n_bits)
 

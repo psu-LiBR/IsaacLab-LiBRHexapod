@@ -69,7 +69,7 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym  # noqa: E402
 import torch  # noqa: E402
-from binary_common import build_env, maybe_init_wandb, mlp, write_run_meta  # noqa: E402
+from binary_common import build_env, maybe_init_wandb, mlp, switch_penalty_meta, write_run_meta  # noqa: E402
 from skrl.agents.torch.ddqn import DDQN, DDQN_CFG
 from skrl.agents.torch.dqn import DQN, DQN_CFG
 from skrl.envs.wrappers.torch import wrap_env
@@ -81,7 +81,14 @@ from skrl.utils import set_seed
 set_seed(args.seed)
 
 # --- env ---
-env = build_env(args.task, args.num_envs, args.seed, args.device)
+env = build_env(
+    args.task,
+    args.num_envs,
+    args.seed,
+    args.device,
+    action_rate_multiplier=args.action_rate_multiplier,
+    action_switch_penalty=args.action_switch_penalty,
+)
 env = wrap_env(env, wrapper="isaaclab-single-agent")
 device = env.device
 n_actions = int(env.action_space.n)
@@ -173,6 +180,7 @@ write_run_meta(
     num_envs=args.num_envs,
     timesteps=args.timesteps,
     replay_transitions=memory_slots * env.num_envs,
+    **switch_penalty_meta(env, args),
 )
 
 wandb_run = maybe_init_wandb(args, experiment_name, args.algo, {"replay_transitions": memory_slots * env.num_envs})

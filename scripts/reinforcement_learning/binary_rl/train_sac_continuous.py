@@ -65,6 +65,8 @@ parser.add_argument("--learning_starts", type=int, default=50)
 parser.add_argument("--log_interval", type=int, default=50)
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
+if args.action_switch_penalty:
+    parser.error("--action_switch_penalty counts binary contact flips and does not apply to continuous actions")
 args.headless = True
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
@@ -84,7 +86,7 @@ try:
 except ImportError:
     from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
-from binary_common import mlp, nstep_return, write_run_meta  # noqa: E402
+from binary_common import mlp, nstep_return, scale_action_rate_weight, switch_penalty_meta, write_run_meta  # noqa: E402
 
 torch.manual_seed(args.seed)
 LOG_STD_MIN, LOG_STD_MAX = -20.0, 2.0
@@ -98,6 +100,8 @@ os.makedirs(ckpt_dir, exist_ok=True)
 env_cfg = parse_env_cfg(args.task, device=args.device, num_envs=args.num_envs)
 env_cfg.seed = args.seed
 env_cfg.compute_final_obs = True
+# Continuous actions: only the action_rate_l2 multiplier applies (its weight scales squared joint-target changes).
+scale_action_rate_weight(env_cfg, args.action_rate_multiplier)
 action_scale = float(getattr(env_cfg.actions.joint_pos, "scale", 0.5))
 env = gym.make(args.task, cfg=env_cfg)
 base = env.unwrapped
@@ -232,6 +236,7 @@ write_run_meta(
     n_step=args.n_step,
     continuous=True,
     act_dim=act_dim,
+    **switch_penalty_meta(env, args),
 )
 
 obs, _ = env.reset()

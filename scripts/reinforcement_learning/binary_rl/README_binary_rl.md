@@ -71,6 +71,9 @@ For reference: the tripod gait occupies only two of the 64 actions, `25` and `38
 | `train_sac_continuous.py` | continuous SAC baseline on the 8-DOF goal env (arXiv:2605.24975); comparison point *outside* the contact-bit action space |
 | `run_discrete_pipeline.py` | one-shot train -> eval -> rank -> export -> video pipeline over all five algorithms (see §7); runs the other scripts as subprocesses |
 | `eval_protocol.py` | the shared evaluation protocol — all reported numbers come from this |
+| `switch_metrics.py` | per-leg contact-command switch counts per spine-wave cycle (`GAIT_PERIOD_S` = 1 s = 50 control steps; limit default 5 per leg per cycle; flags frozen legs); numpy only |
+| `switch_command_reward.py` | optional `action_switch_count` reward term (off by default; see §3) |
+| `REWARDS_A2_RECORD.md` | record of the A2 reward set from the contact-switch-penalty sweep, and how its penalty strengths map to the flags below |
 | `export_binary_onnx.py` | export a trained checkpoint to ONNX for sim-to-real (see §5) |
 | `play_discrete.py` | runs a checkpoint's greedy (argmax) policy on the Play env headless and records a root-tracking MP4 |
 | `play_discrete_closeup.py` | renders a checkpoint **or an open-loop gait** (`--gait_npz tripod` / `--gait_csv <csv>`) to a follow-cam video |
@@ -142,6 +145,13 @@ has only config and no charts, that is the pre-bridge behaviour — re-run, or
 
 `train_sac_continuous.py` defaults to `--task Isaac-Goal-Flat-Hexapod-v0` (it is not a
 binary-action script); the other five run on `Isaac-Goal-Flat-Hexapod-Binary-v0`.
+
+**Limiting contact-bit switching.** Every training script (and `run_discrete_pipeline.py`) takes two reward flags:
+`--action_rate_multiplier M` (default 1.0) multiplies the env's `action_rate_l2` weight and is the main knob;
+`--action_switch_penalty L` (default 0, off) adds the optional `action_switch_count` term at cost `L` per flipped leg.
+For +-1 bits the two carry the same signal, so tune the multiplier first. `train_sac_continuous.py` accepts only the
+multiplier. The resolved weights are saved in `run_meta.json`. `REWARDS_A2_RECORD.md` maps the sweep's strengths to
+these flags.
 
 Quick wiring check (a couple of minutes, no GPU-heavy load):
 
