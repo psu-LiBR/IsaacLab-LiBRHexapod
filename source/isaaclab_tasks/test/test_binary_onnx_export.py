@@ -62,6 +62,46 @@ def _run_onnx(onnx_path: Path, obs):
     return sess.run(None, {name: np.asarray(obs, dtype=np.float32)})[0]
 
 
+def test_embedded_mask_survives_missing_run_metadata(tmp_path):
+    net = bc.mlp(OBS_DIM, bam.N_ACTIONS)
+    state = net.state_dict()
+    mask = torch.zeros(64, dtype=torch.bool)
+    mask[25] = True
+    state["_action_mask"] = mask
+    checkpoint = tmp_path / "policy.pt"
+    torch.save({"policy": state}, checkpoint)
+    module, info = E.build_export_module(str(checkpoint))
+    assert info["legal_actions"] == [25]
+    assert _action_index_from_bits(module(torch.zeros(1, OBS_DIM))[0]) == 25
+
+
+def test_conflicting_metadata_mask_is_rejected(tmp_path):
+    state = bc.mlp(OBS_DIM, bam.N_ACTIONS).state_dict()
+    mask = torch.zeros(64, dtype=torch.bool)
+    mask[25] = True
+    state["_action_mask"] = mask
+    checkpoint = _write_run(tmp_path, {"policy": state}, {"action_mask": {"legal_actions": [38]}})
+    with pytest.raises(ValueError, match="disagrees"):
+        E.build_export_module(str(checkpoint))
+
+
+def test_explicit_masked_policy_requires_a_mask(tmp_path):
+    checkpoint = _write_run(tmp_path, {"policy": bc.mlp(OBS_DIM, bam.N_ACTIONS).state_dict()}, {"algo": "ppo_masked"})
+    with pytest.raises(ValueError, match="requires legal actions"):
+        E.build_export_module(str(checkpoint))
+
+
+def test_run_meta_next_to_checkpoint_is_found_and_preferred(tmp_path):
+    state = bc.mlp(OBS_DIM, bam.N_ACTIONS).state_dict()
+    # Parent-dir metadata says mask {38}; the sibling file next to the checkpoint says {25} and must win.
+    checkpoint = _write_run(tmp_path, {"policy": state}, {"algo": "ppo_masked", "action_mask": {"legal_actions": [38]}})
+    (checkpoint.parent / "run_meta.json").write_text(
+        json.dumps({"algo": "ppo_masked", "action_mask": {"legal_actions": [25]}})
+    )
+    _, info = E.build_export_module(str(checkpoint))
+    assert info["legal_actions"] == [25]
+
+
 def test_sacd_style_export_matches_argmax_decode(tmp_path):
     torch.manual_seed(0)
     net = bc.mlp(OBS_DIM, bam.N_ACTIONS)
