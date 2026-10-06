@@ -240,5 +240,5 @@ def test_phase_one_source_configuration():
     assert "self.algorithm.gamma = 0.9995" in agent_source
     assert "self.algorithm.lam = 0.97" in agent_source
     assert "self.algorithm.entropy_coef = 0.003" in agent_source
-    assert "self.policy.actor_obs_normalization = True" in agent_source
-    assert "self.policy.critic_obs_normalization = True" in agent_source
+    assert "self.actor.obs_normalization = True" in agent_source
+    assert "self.critic.obs_normalization = True" in agent_source
