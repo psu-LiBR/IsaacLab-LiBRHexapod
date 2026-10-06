@@ -13,8 +13,6 @@ from .hexapod_obs_cfg import HexapodFlatObservationsCfg
 from .hexapod_rewards import (
     feet_air_time_per_leg,  # noqa: F401 -- reverted to fixed-threshold; kept for reference
     track_ang_vel_z_exp_deadzone,  # noqa: F401 -- commented alternative
-    track_ang_vel_z_exp_ema,
-    # track_ang_vel_z_exp_moving_avg,  # fixed-window alternative; import if switching to it
     track_ang_vel_z_exp_episode_avg,  # noqa: F401 -- caused entropy divergence (1/N vanishing gradient); kept for reference
 )
 from .rough_env_cfg import HexapodRoughEnvCfg
@@ -39,8 +37,11 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
             "y": (0.0, 0.0),
             "z": (0.0, 0.0),
         }
-        self.events.physics_material.params["static_friction_range"] = (0.2, 0.3)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.2, 0.25)
+        # 2026-09 real-robot friction sweep calibration: training randomizes the effective
+        # ground friction over 0.18-0.25 (robot-side material; terrain stays mu=1.0 with
+        # friction_combine_mode="multiply", so multiply(robot_mu, 1.0) == robot_mu).
+        self.events.physics_material.params["static_friction_range"] = (0.18, 0.25)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.18, 0.25)
 
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "CenterLink"
 
@@ -95,9 +96,11 @@ class HexapodFlatEnvCfg(HexapodRoughEnvCfg):
         self.rewards.track_ang_vel_z_exp.weight = 0.45
         # self.rewards.track_ang_vel_z_exp.weight = 0.8  # original -- instantaneous, no averaging
         # self.rewards.track_ang_vel_z_exp.params["std"] = math.sqrt(0.25)*0.15  # original
-        self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_deadzone    # deadzone version
+        self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_deadzone  # deadzone version
         self.rewards.track_ang_vel_z_exp.params = {
-            "std": math.sqrt(0.25)*0.15, "command_name": "base_velocity", "deadzone": 1.6
+            "std": math.sqrt(0.25) * 0.15,
+            "command_name": "base_velocity",
+            "deadzone": 1.6,
         }
         # self.rewards.track_ang_vel_z_exp.func = track_ang_vel_z_exp_moving_avg  # fixed-window version
         # self.rewards.track_ang_vel_z_exp.params = {
@@ -189,10 +192,10 @@ class HexapodFlatEnvCfg_PLAY(HexapodFlatEnvCfg):
 
         self.commands.base_velocity.resampling_time_range = (1000.0, 1000.0)
 
-        self.events.physics_material.params["static_friction_range"] = (0.17, 0.21)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.13, 0.17)
-        # self.scene.terrain.physics_material.static_friction= 0.8
-        # self.scene.terrain.physics_material.dynamic_friction= 0.6
+        # 2026-09 real-robot friction sweep calibration: eval/PLAY pins the effective
+        # ground friction to the single best sweep row (mu = 0.21).
+        self.events.physics_material.params["static_friction_range"] = (0.21, 0.21)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.21, 0.21)
 
         # camera settings -- follow robot from behind and above
         self.viewer.eye = (-1.0, 0.0, 0.5)

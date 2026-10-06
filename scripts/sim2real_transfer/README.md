@@ -1,6 +1,6 @@
 # sim2real_transfer
 
-Runs a trained hexapod RL policy (exported to ONNX by `play.py`) on the real
+Runs a trained hexapod RL policy (exported to ONNX by `isaaclab.bat play`, or `binary_rl/export_binary_onnx.py` for the binary profile) on the real
 robot: real IMU (via ROS2 `/imu`) + real Dynamixel servos + a Raspberry Pi,
 completely wirelessly. See `CLAUDE.md`'s sim2real plan for the full design
 rationale, key facts (obs layout, DOF ordering, motor IDs, control rate), and
@@ -64,13 +64,56 @@ python run_policy.py --policy <policy.onnx> --profile velocity --config config/d
 `--profile`); `PolicyRunner` shape-checks it against the profile at load, so a
 mismatched pairing fails immediately instead of producing garbage actions. No
 config or code changes needed to switch between checkpoints of the same
-profile (`velocity` or `goal`).
+profile (`velocity`, `goal`, or `binary`).
+
+## Profiles
+
+- `velocity` (obs 33, act 8) -- flat velocity-tracking policy.
+- `goal` (obs 34, act 8) -- goal-reaching policy; needs the localizer.
+- `binary` (obs 32, act 6) -- the binary-contact policy from
+  `scripts/reinforcement_learning/binary_rl`. Needs the localizer *and* a
+  `binary:` section in the deployment config, so **copy
+  `config/deployment.binary.example.yaml`** (not `deployment.example.yaml`) --
+  it carries the HexapI positive-leg joint convention. Export the checkpoint
+  with `binary_rl/export_binary_onnx.py`; the graph records the joint order it
+  was trained with and `run_policy.py` refuses to start if `joints.sim_order`
+  differs or the order is missing (the HexapI USD lists the spine first:
+  FrontLink, BackLink, then MiddleLeft/Right, FrontLeft/Right, BackLeft/Right).
+  The six leg joints snap between the
+  two fixed stance/lift angles from the policy bits; the two spine joints run a
+  fixed analytic traveling wave recreated host-side (front joint a pure sine,
+  rear joint the same sine shifted 90 deg -- Wave 1 in
+  `hexapod_binary_env_cfg.py`, not a CSV fit). `--action-scale-mult < 1` damps the
+  whole target toward `q_default` for bring-up. The joint map is **not** a
+  placeholder -- it is derived from the calibrated velocity/goal
+  `deployment.yaml` (legs `negate` = the HexapI leg-sign flip on the calibrated
+  old-USD `unchanged` map; spine emitted through the calibrated body
+  correction). The example file's header shows the full derivation; both spine
+  bring-up questions (wave phase direction, body-bend direction) were resolved on
+  real hardware 2026-09-15 -- phase direction confirmed correct as-is, body-bend
+  direction required negating `binary.spine.amplitude` for the real mount.
+
+## Continuous forward walking (goal / binary)
+
+`commands.goal.mode` selects how the goal-reaching policies are driven:
+
+- `fixed` (default) -- a stationary world point; the robot approaches it and
+  then has no goal left. Walks a set distance and stops.
+- `receding` -- the goal is kept `commands.goal.lookahead_m` metres ahead of the
+  robot every step, so the policy stays in its "far from the goal, keep walking"
+  regime and never slows near a target. `commands.goal.heading` is then the world
+  heading to hold. Only the localizer's gyro-integrated heading matters in this
+  mode (position drift cancels), so the constant-speed position assumption in
+  `DeadReckoningLocalizer` is not a concern -- but heading still drifts open-loop
+  (the BNO085 driver runs the game rotation vector, no magnetometer), so expect a
+  slow curve over multi-minute runs.
 
 ## Layout
 
 - `sim2real/` -- the package: `joint_mapping.py` (Sim<->Real DOF conversion,
-  most safety-critical file), `profiles.py` (obs schemas), `deployment_config.py`
-  (typed `deployment.yaml` loader), `policy_runner.py` (onnxruntime wrapper),
+  most safety-critical file), `profiles.py` (obs schemas), `binary_profile.py`
+  (binary-contact action decode + host-side analytic spine wave),
+  `deployment_config.py` (typed `deployment.yaml` loader), `policy_runner.py` (onnxruntime wrapper),
   `dynamixel_bus.py` / `imu.py` (hardware interfaces, each with a
   hardware-free dry-run/fake counterpart), `command_source.py` /
   `localization.py` (velocity/goal command handling), `safety.py` (watchdog,
@@ -86,7 +129,9 @@ profile (`velocity` or `goal`).
   `tools/log_imu_rotation_test.py`, `tools/log_imu_axis_alignment_test.py` --
   standalone hardware calibration/diagnostic helpers, not part of the bring-up
   sequence above.
-- `config/deployment.example.yaml` -- hardware facts template; copy to
-  `deployment.yaml` (gitignored) and calibrate before real bring-up.
+- `config/deployment.example.yaml` -- hardware facts template (velocity/goal);
+  copy to `deployment.yaml` (gitignored) and calibrate before real bring-up.
+- `config/deployment.binary.example.yaml` -- same, for the `binary` profile
+  (HexapI positive-leg convention + a `binary:` section).
 - `tests/` -- `python -m pytest tests/` from this directory, or
   `python -m pytest scripts/sim2real_transfer/tests/` from the repo root.

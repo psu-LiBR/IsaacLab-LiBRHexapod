@@ -51,9 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profile", required=True, choices=sorted(PROFILES))
     parser.add_argument("--config", required=True, help="Path to deployment.yaml.")
     parser.add_argument("--steps", type=int, default=200)
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Use DryRunDynamixelBus instead of the real serial bus."
-    )
+    parser.add_argument("--dry-run", action="store_true", help="Use DryRunDynamixelBus instead of the real serial bus.")
     parser.add_argument("--fake-imu", action="store_true", help="Use FakeImu instead of subscribing to /imu.")
     return parser.parse_args()
 

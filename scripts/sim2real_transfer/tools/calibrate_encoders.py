@@ -75,7 +75,11 @@ _CORRECTIONS: dict[str, tuple[float, float]] = {
     "negate": (-1.0, 0.0),
     "leg_negate_plus_pi": (-1.0, math.pi),
     "leg_negate_minus_pi": (-1.0, -math.pi),
+    "leg_minus_pi": (1.0, -math.pi),  # HexapI leg convention (binary profile)
 }
+
+# correction_group names that mark a joint as a leg (vs a spine/body joint).
+_LEG_CORRECTION_GROUPS = ("leg_negate_plus_pi", "leg_negate_minus_pi", "leg_minus_pi")
 
 
 def _open_bus(cfg: DeploymentConfig) -> RealDynamixelBus:
@@ -225,13 +229,9 @@ def cmd_scale(args: argparse.Namespace) -> None:
     cfg = load_deployment_config(args.config)
     ticks_per_rad_theory = cfg.joints.ticks_per_rev / (2.0 * math.pi)
 
-    leg_names = [
-        name
-        for name in cfg.joints.sim_order
-        if cfg.joints.correction_group[name] in ("leg_negate_plus_pi", "leg_negate_minus_pi")
-    ]
+    leg_names = [name for name in cfg.joints.sim_order if cfg.joints.correction_group[name] in _LEG_CORRECTION_GROUPS]
     if not leg_names:
-        print("No leg joints found (correction_group leg_negate_plus_pi/leg_negate_minus_pi) -- nothing to do.")
+        print(f"No leg joints found (correction_group in {_LEG_CORRECTION_GROUPS}) -- nothing to do.")
         return
 
     print("=" * 78)

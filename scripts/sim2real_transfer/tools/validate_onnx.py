@@ -89,7 +89,7 @@ def run_pipeline_check(
         command = _read_columns(row, "command", command_dim)
         joint_pos = _read_columns(row, "joint_pos", NUM_JOINTS)
         joint_vel = _read_columns(row, "joint_vel", NUM_JOINTS)
-        last_action = _read_columns(row, "last_action", NUM_JOINTS)
+        last_action = _read_columns(row, "last_action", policy.profile.last_action_dim)
         recorded_obs = _read_columns(row, "obs", obs_dim)
         recorded_action = _read_columns(row, "action", action_dim)
 

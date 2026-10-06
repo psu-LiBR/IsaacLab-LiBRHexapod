@@ -93,3 +93,9 @@ docs/superpowers/
 # binary-contact RL results are kept outside the repo
 scripts/reinforcement_learning/results_binary_rl/
 runs_discrete*/
+runs_binary*/
+eval_results*.json
+
+# binary-contact RL working notes (local only, not shared repo content)
+scripts/reinforcement_learning/binary_rl/PROGRESS_fable.md
+scripts/reinforcement_learning/binary_rl/REVIEW_binary_rl.md

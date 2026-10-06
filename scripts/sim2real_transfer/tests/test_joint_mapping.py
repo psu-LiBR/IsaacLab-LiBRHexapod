@@ -126,6 +126,35 @@ def test_leg_negate_minus_pi_formula():
     assert math.isclose(expected + 2 * math.pi, -(-0.47) + math.pi)
 
 
+def test_leg_minus_pi_formula():
+    # HexapI (binary-profile) leg map: real = sim - pi. It is leg_negate_minus_pi
+    # (real = -sim_old - pi) rewritten for the HexapI leg-sign flip (sim = -sim_old),
+    # so it lands on the same physical angle / same zero_tick as the calibrated
+    # velocity/goal profile.
+    cfg = JointsCfg(
+        sim_order=SIM_ORDER,
+        real_order=REAL_ORDER,
+        motor_ids=MOTOR_IDS,
+        correction_group={**CORRECTION_GROUP, "FrontLeft": "leg_minus_pi"},
+        ticks_per_rev=4096,
+        zero_tick=ZERO_TICK,
+        soft_limits_rad=SOFT_LIMITS,
+    )
+    jm = JointMapping(cfg)
+    sim_rad = np.zeros(len(SIM_ORDER))
+    sim_rad[SIM_ORDER.index("FrontLeft")] = 0.47  # HexapI leg rest pose (+0.47, not -0.47)
+    real_rad = jm.sim_rad_to_real_rad(sim_rad)
+    expected = 0.47 - math.pi
+    assert math.isclose(real_rad[REAL_ORDER.index("FrontLeft")], expected)
+    # Identical real angle to the old calibrated map at the same physical rest pose.
+    assert math.isclose(expected, -(-0.47) - math.pi)
+    # Rate: b has no effect on a derivative and a = +1, so velocity passes through.
+    sim_vel = np.zeros(len(SIM_ORDER))
+    sim_vel[SIM_ORDER.index("FrontLeft")] = 1.3
+    real_vel = jm.sim_radps_to_real_radps(sim_vel)
+    assert math.isclose(real_vel[REAL_ORDER.index("FrontLeft")], 1.3)
+
+
 def test_body_correction_formula():
     jm = make_mapping()
     sim_rad = np.zeros(len(SIM_ORDER))

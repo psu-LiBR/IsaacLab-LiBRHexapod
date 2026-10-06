@@ -15,6 +15,13 @@ accurate over a 45s episode) and assumes a constant forward speed for position
 isn't used here). Bring up the velocity profile first, since it has zero dependency
 on this module; validate this class separately (walk a known straight distance,
 compare estimate vs. actual) before trusting it in the goal profile.
+
+The weak part -- the constant-forward-speed position estimate -- only matters for
+a FIXED goal, where its error directly corrupts "how far to the goal". With
+`command_source.RecedingGoalCommand` the goal is regenerated a fixed distance
+ahead of this same estimate every step, so the position error cancels out of the
+body-frame pose_command and only `heading` (the gyro-integrated, reasonably
+accurate term) is load-bearing.
 """
 
 from __future__ import annotations

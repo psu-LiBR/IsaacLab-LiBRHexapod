@@ -182,6 +182,8 @@ extend-exclude = [
     ".vscode",
     "_*",
     ".git",
+    # retired, unmaintained experiment scripts kept for reference only
+    "scripts/reinforcement_learning/binary_rl/archive",
 ]
 
 [tool.ruff.lint]
@@ -271,6 +273,7 @@ exclude = [
     "**/logs",
     ".git",
     ".vscode",
+    "scripts/reinforcement_learning/binary_rl/archive",
 ]
 
 typeCheckingMode = "basic"

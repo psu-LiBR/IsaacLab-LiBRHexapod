@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -98,7 +98,14 @@ try:
 except ImportError:
     from isaaclab_tasks.utils import parse_env_cfg
 
-from discrete_action_wrapper import DiscreteBitsActionWrapper
+# Archived script: add the parent binary_rl/ dir to sys.path so the shared
+# discrete_action_wrapper module still resolves when run from archive/.
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+
+from discrete_action_wrapper import DiscreteBitsActionWrapper  # noqa: E402
 
 torch.manual_seed(args.seed)
 

@@ -8,8 +8,13 @@ were trained on.
 
 Velocity profile mirrors `hexapod_obs_cfg.py::HexapodFlatObservationsCfg.PolicyCfg`.
 Goal profile mirrors `hexapod_goal_obs_cfg.py::HexapodGoalObservationsCfg.PolicyCfg`.
-Both concatenate terms in this fixed order: gyro(3), gravity(3), command(3 or 4),
-joint_pos_rel(8), joint_vel(8), last_action(8). Noise is off at deploy time, matching
+Binary profile mirrors the same `HexapodGoalObservationsCfg.PolicyCfg` (the binary-contact
+env inherits it unchanged) but its `last_action` term is 6-dim, not 8: the policy only
+emits the six leg contact bits, and the two spine joints are driven by a scripted
+sinusoid the policy never sees (`hexapod_binary_env_cfg.py`).
+
+All profiles concatenate terms in this fixed order: gyro(3), gravity(3), command(3 or 4),
+joint_pos_rel(8), joint_vel(8), last_action(8 or 6). Noise is off at deploy time, matching
 `HexapodFlatEnvCfg_PLAY`/`HexapodGoalEnvCfg_PLAY`.
 """
 
@@ -27,19 +32,26 @@ class ProfileSpec:
     name: str
     command_dim: int
     command_field_names: tuple[str, ...]
+    # `last_action` obs width and the exported policy's action width. Both default to the
+    # 8 joint DOFs (velocity/goal profiles); the binary profile overrides them to 6.
+    last_action_dim: int = NUM_JOINTS
+    action_dim: int = NUM_JOINTS
 
     @property
     def obs_dim(self) -> int:
-        return 3 + 3 + self.command_dim + NUM_JOINTS + NUM_JOINTS + NUM_JOINTS
-
-    @property
-    def action_dim(self) -> int:
-        return NUM_JOINTS
+        return 3 + 3 + self.command_dim + NUM_JOINTS + NUM_JOINTS + self.last_action_dim
 
 
 PROFILES: dict[str, ProfileSpec] = {
     "velocity": ProfileSpec("velocity", command_dim=3, command_field_names=("vx", "vy", "yaw_rate")),
     "goal": ProfileSpec("goal", command_dim=4, command_field_names=("x", "y", "z", "heading")),
+    "binary": ProfileSpec(
+        "binary",
+        command_dim=4,
+        command_field_names=("x", "y", "z", "heading"),
+        last_action_dim=6,
+        action_dim=6,
+    ),
 }
 
 
@@ -74,11 +86,15 @@ class ObsBuilder:
         for name, arr in (
             ("joint_pos_sim", joint_pos_sim),
             ("joint_vel_sim", joint_vel_sim),
-            ("last_action_sim", last_action_sim),
             ("q_default_sim", q_default_sim),
         ):
             if arr.shape != (NUM_JOINTS,):
                 raise ValueError(f"{name} must be shape ({NUM_JOINTS},), got {arr.shape}")
+        if last_action_sim.shape != (self.spec.last_action_dim,):
+            raise ValueError(
+                f"last_action_sim must be shape ({self.spec.last_action_dim},) for profile "
+                f"'{self.spec.name}', got {last_action_sim.shape}"
+            )
         if command.shape != (self.spec.command_dim,):
             raise ValueError(
                 f"command must be shape ({self.spec.command_dim},) for profile '{self.spec.name}', got {command.shape}"
@@ -100,9 +116,15 @@ class GoalObsBuilder(ObsBuilder):
         super().__init__(PROFILES["goal"])
 
 
+class BinaryObsBuilder(ObsBuilder):
+    def __init__(self):
+        super().__init__(PROFILES["binary"])
+
+
 _BUILDERS: dict[str, type[ObsBuilder]] = {
     "velocity": VelocityObsBuilder,
     "goal": GoalObsBuilder,
+    "binary": BinaryObsBuilder,
 }
 
 

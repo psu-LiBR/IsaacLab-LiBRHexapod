@@ -15,7 +15,10 @@ serial:
   protocol_version: 2.0
 
 joints:
-  # Sim DOF order -- matches asset.data.joint_names / the RL policy's action order.
+  # Sim DOF order -- matches asset.data.joint_names / the RL policy's action order of the
+  # pre-HexapI USD (Hexapod_Flattened.usd) these velocity/goal policies were trained on. The
+  # HexapI USD (HexapiFlattened.usd) orders the joints differently: use the sim_order in
+  # deployment.binary.example.yaml for policies trained on it.
   sim_order:
     - BackLink
     - FrontLink
@@ -141,7 +144,25 @@ commands:
     vy: 0.0
     yaw_rate: 0.0
   goal:
+    # mode: fixed (default) -> walk to (x, y) in the localizer's start frame and
+    #   stop; the body-frame pose_command shrinks to zero on arrival.
+    # mode: receding -> the goal is kept `lookahead_m` ahead of the robot every
+    #   step, so the policy never leaves its "keep walking" regime and does not
+    #   slow near a target (continuous forward locomotion). `heading` is then the
+    #   world heading to hold; x/y are ignored. Only the localizer's
+    #   gyro-integrated heading matters -- position drift cancels. See
+    #   sim2real/command_source.py.
+    mode: fixed
+    lookahead_m: 2.0
     x: 5.0
     y: 0.0
     z: 0.0
     heading: 0.0
+
+# Optional. Omit entirely to keep the default 0.15 m/s (a rough sim-derived guess).
+# Only used by the `goal`/`binary` profiles, and only for `fixed`-mode navigation
+# accuracy -- `receding` mode only depends on the localizer's heading, not its
+# position estimate, so this value doesn't matter there. Set it from a known-distance
+# walk test (walk T seconds, measure actual displacement d, use d/T) once you have one.
+localization:
+  forward_speed_estimate: 0.15

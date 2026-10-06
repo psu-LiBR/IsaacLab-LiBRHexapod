@@ -15,6 +15,7 @@ import os
 
 from _onnx_test_utils import export_tiny_mlp
 from sim2real import control_loop
+from sim2real.binary_profile import BinaryActionAdapter
 from sim2real.command_source import make_command_source
 from sim2real.deployment_config import load_deployment_config
 from sim2real.dynamixel_bus import DryRunDynamixelBus
@@ -26,6 +27,7 @@ from sim2real.policy_runner import PolicyRunner
 from sim2real.profiles import PROFILES, make_obs_builder
 
 _EXAMPLE_CFG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "deployment.example.yaml")
+_BINARY_CFG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "deployment.binary.example.yaml")
 
 
 def _make_env(tmp_path, profile_name, weight_scale=0.0):
@@ -40,6 +42,90 @@ def _make_env(tmp_path, profile_name, weight_scale=0.0):
     command_source = make_command_source(profile_name, cfg.commands)
     localizer = DeadReckoningLocalizer() if profile_name == "goal" else None
     return cfg, jm, policy, obs_builder, bus, imu, command_source, localizer
+
+
+def _make_binary_env(tmp_path):
+    cfg = load_deployment_config(_BINARY_CFG_PATH)
+    jm = JointMapping(cfg.joints)
+    spec = PROFILES["binary"]
+    onnx_path = export_tiny_mlp(tmp_path, spec.obs_dim, spec.action_dim, weight_scale=1.0)
+    policy = PolicyRunner(onnx_path, spec)
+    obs_builder = make_obs_builder("binary")
+    bus = DryRunDynamixelBus(jm.motor_ids, initial_ticks=np.full(8, 1500))
+    imu = FakeImu()
+    command_source = make_command_source("binary", cfg.commands)
+    adapter = BinaryActionAdapter(cfg.binary, cfg.joints.sim_order)
+    return cfg, jm, policy, obs_builder, bus, imu, command_source, adapter
+
+
+def test_dry_run_binary_profile_requires_localizer_and_adapter(tmp_path):
+    cfg, jm, policy, obs_builder, bus, imu, command_source, adapter = _make_binary_env(tmp_path)
+    with pytest.raises(ValueError, match="localizer"):
+        control_loop.run(
+            cfg,
+            "binary",
+            policy,
+            obs_builder,
+            jm,
+            bus,
+            imu,
+            command_source,
+            localizer=None,
+            dry_run=True,
+            rate_hz=50.0,
+            duration_s=0.1,
+            binary_adapter=adapter,
+        )
+    with pytest.raises(ValueError, match="binary_adapter"):
+        control_loop.run(
+            cfg,
+            "binary",
+            policy,
+            obs_builder,
+            jm,
+            bus,
+            imu,
+            command_source,
+            localizer=DeadReckoningLocalizer(),
+            dry_run=True,
+            rate_hz=50.0,
+            duration_s=0.1,
+            binary_adapter=None,
+        )
+
+
+def test_dry_run_binary_profile_completes_and_targets_are_stance_or_lift(tmp_path):
+    cfg, jm, policy, obs_builder, bus, imu, command_source, adapter = _make_binary_env(tmp_path)
+    log_path = tmp_path / "binary_run.csv"
+    with CsvRunLogger(str(log_path), obs_dim=PROFILES["binary"].obs_dim, action_dim=6) as logger:
+        control_loop.run(
+            cfg,
+            "binary",
+            policy,
+            obs_builder,
+            jm,
+            bus,
+            imu,
+            command_source,
+            localizer=DeadReckoningLocalizer(),
+            logger=logger,
+            dry_run=True,
+            rate_hz=50.0,
+            duration_s=0.2,
+            binary_adapter=adapter,
+        )
+    assert bus.torque_on is False
+    with open(log_path, newline="") as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) > 2
+    # every logged leg target must be (near) one of the two fixed levels
+    leg_names = [n for n in jm.sim_order if n not in ("BackLink", "FrontLink")]
+    leg_idx = [jm.sim_order.index(n) for n in leg_names]
+    for row in rows:
+        legs = np.array([float(row[f"target_sim_{i}"]) for i in leg_idx])
+        near_stance = np.abs(legs - cfg.binary.stance_pos) < 0.05
+        near_lift = np.abs(legs - cfg.binary.lift_pos) < 0.05
+        assert np.all(near_stance | near_lift)
 
 
 def test_dry_run_velocity_profile_completes_and_logs(tmp_path):

@@ -11,10 +11,11 @@ never touches YAML directly.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import yaml
 
+from .binary_profile import BinaryActionCfg, BinarySpineCfg
 from .imu import DEFAULT_MAX_STALENESS_S
 
 
@@ -61,7 +62,20 @@ class ControlCfg:
 @dataclass(frozen=True)
 class CommandsCfg:
     velocity: dict[str, float]
-    goal: dict[str, float]
+    # `goal` also carries the optional non-numeric key `mode` ("fixed" | "receding")
+    # and, for receding mode, `lookahead_m` -- see command_source.make_command_source.
+    goal: dict[str, float | str]
+
+
+@dataclass(frozen=True)
+class LocalizationCfg:
+    # m/s, rough constant used by DeadReckoningLocalizer's position dead-reckoning
+    # (see localization.py). Sim-derived (~0.14-0.16 m/s), not measured on hardware
+    # yet -- override with a value from a known-distance walk test once you have one.
+    # Only affects the `goal`/`binary` profiles, and within those only `fixed`-mode
+    # navigation accuracy: `receding`-mode navigation only depends on the localizer's
+    # heading, not its position estimate (see command_source.RecedingGoalCommand).
+    forward_speed_estimate: float = 0.15
 
 
 @dataclass(frozen=True)
@@ -71,6 +85,11 @@ class DeploymentConfig:
     imu: ImuCfg
     control: ControlCfg
     commands: CommandsCfg
+    # Only required for `--profile binary`; absent for velocity/goal deployments.
+    binary: BinaryActionCfg | None = None
+    # Optional -- keeps existing deployment.yaml files, which predate this field,
+    # parsing unchanged with the same 0.15 m/s default DeadReckoningLocalizer used before.
+    localization: LocalizationCfg = field(default_factory=LocalizationCfg)
 
 
 def _require(d: dict, key: str, path: str):
@@ -131,4 +150,34 @@ def load_deployment_config(path: str) -> DeploymentConfig:
         goal=dict(_require(commands_raw, "goal", "commands")),
     )
 
-    return DeploymentConfig(serial=serial, joints=joints, imu=imu, control=control, commands=commands)
+    localization = LocalizationCfg()
+    if "localization" in raw:
+        loc_raw = raw["localization"]
+        if "forward_speed_estimate" in loc_raw:
+            localization = LocalizationCfg(forward_speed_estimate=float(loc_raw["forward_speed_estimate"]))
+
+    binary = None
+    if "binary" in raw:
+        binary_raw = raw["binary"]
+        spine_raw = _require(binary_raw, "spine", "binary")
+        binary = BinaryActionCfg(
+            stance_pos=float(_require(binary_raw, "stance_pos", "binary")),
+            lift_pos=float(_require(binary_raw, "lift_pos", "binary")),
+            leg_joint_order=list(_require(binary_raw, "leg_joint_order", "binary")),
+            spine=BinarySpineCfg(
+                amplitude={k: float(v) for k, v in _require(spine_raw, "amplitude", "binary.spine").items()},
+                phase={k: float(v) for k, v in _require(spine_raw, "phase", "binary.spine").items()},
+                offset={k: float(v) for k, v in _require(spine_raw, "offset", "binary.spine").items()},
+                period=float(_require(spine_raw, "period", "binary.spine")),
+            ),
+        )
+
+    return DeploymentConfig(
+        serial=serial,
+        joints=joints,
+        imu=imu,
+        control=control,
+        commands=commands,
+        binary=binary,
+        localization=localization,
+    )

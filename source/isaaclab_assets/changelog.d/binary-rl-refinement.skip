@@ -1,0 +1,4 @@
+Fork-only tuning: bumped ``HEXAPOD_CFG.soft_joint_pos_limit_factor`` from 0.9
+to 1.0 so the LiBR Hexapod legs expose their full range of motion (needed by
+the binary-contact continuous-SAC baseline, which scales actions by
+``robot.data.soft_joint_pos_limits``). No upstream asset changed.
