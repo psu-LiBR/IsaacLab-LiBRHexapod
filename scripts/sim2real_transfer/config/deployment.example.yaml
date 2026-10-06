@@ -15,7 +15,10 @@ serial:
   protocol_version: 2.0
 
 joints:
-  # Sim DOF order -- matches asset.data.joint_names / the RL policy's action order.
+  # Sim DOF order -- matches asset.data.joint_names / the RL policy's action order of the
+  # pre-HexapI USD (Hexapod_Flattened.usd) these velocity/goal policies were trained on. The
+  # HexapI USD (HexapiFlattened.usd) orders the joints differently: use the sim_order in
+  # deployment.binary.example.yaml for policies trained on it.
   sim_order:
     - BackLink
     - FrontLink
