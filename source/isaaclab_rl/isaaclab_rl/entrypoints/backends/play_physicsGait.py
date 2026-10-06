@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import csv
+import logging
 import os
 import sys
 import time
@@ -49,6 +50,8 @@ from ..common import (
 )
 from . import cli_args_rsl_rl as cli_args
 from .play_rsl_rl import _resolve_checkpoint
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -158,7 +161,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
         if hasattr(robot.data, "joint_names"):
             print("[INFO] robot joint names (first 8):", robot.data.joint_names[:8])
     except Exception as e:
-        print("[WARN] Couldn't print robot joint names:", e)
+        logger.warning("Couldn't print robot joint names: %s", e)
 
     # open file to track displacement
     disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_1-22-26_test.csv"
@@ -196,7 +199,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
         else:
             print("[INFO] action_dim:", int(env.action_space.shape[0]))
     except Exception as e:
-        print("[WARN] Couldn't print action dim:", e)
+        logger.warning("Couldn't print action dim: %s", e)
     # -----------------------
     # --------------------------------------------------------------------
 

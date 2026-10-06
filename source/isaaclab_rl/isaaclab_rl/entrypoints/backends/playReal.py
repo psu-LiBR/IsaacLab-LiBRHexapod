@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import csv
+import logging
 import os
 import sys
 import time
@@ -49,6 +50,8 @@ from ..common import (
 )
 from . import cli_args_rsl_rl as cli_args
 from .play_rsl_rl import _resolve_checkpoint
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -375,9 +378,9 @@ def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: st
             per_body = dict(zip(robot.data.body_names, [round(m, 4) for m in masses[0].tolist()]))
             print(f"[INFO] per-body masses (kg): {per_body}")
         except Exception as mass_err:
-            print(f"[WARN] Could not read robot masses: {mass_err}")
+            logger.warning("Could not read robot masses: %s", mass_err)
     except Exception as e:
-        print("[WARN] Couldn't print robot joint names:", e)
+        logger.warning("Couldn't print robot joint names: %s", e)
 
     # open file to track displacement
     disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_3-26-26_physicsSim.csv"
@@ -415,7 +418,7 @@ def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: st
         else:
             print("[INFO] action_dim:", int(env.action_space.shape[0]))
     except Exception as e:
-        print("[WARN] Couldn't print action dim:", e)
+        logger.warning("Couldn't print action dim: %s", e)
     # -----------------------
 
     # ---------- RL runner/policy only if NOT gait playback ----------

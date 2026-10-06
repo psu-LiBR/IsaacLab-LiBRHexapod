@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import csv
+import logging
 import os
 import sys
 import time
@@ -58,6 +59,8 @@ from ..common import (
 )
 from . import cli_args_rsl_rl as cli_args
 from .play_rsl_rl import _resolve_checkpoint
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -173,7 +176,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir:
         if hasattr(robot.data, "joint_names"):
             print("[INFO] robot joint names (first 8):", robot.data.joint_names[:8])
     except Exception as e:
-        print("[WARN] Couldn't print robot joint names:", e)
+        logger.warning("Couldn't print robot joint names: %s", e)
 
     # open file to track displacement
     disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_5-5-26_test.csv"
@@ -207,7 +210,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir:
         else:
             print("[INFO] action_dim:", int(env.action_space.shape[0]))
     except Exception as e:
-        print("[WARN] Couldn't print action dim:", e)
+        logger.warning("Couldn't print action dim: %s", e)
 
     reward_sum_per_env = torch.zeros(env.num_envs, device=device, dtype=torch.float32)
     rm = getattr(env.unwrapped, "reward_manager", None)
