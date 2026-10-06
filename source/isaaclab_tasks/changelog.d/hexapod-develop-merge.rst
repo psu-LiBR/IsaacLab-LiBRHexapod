@@ -12,3 +12,7 @@ Changed
   ``actor_obs_normalization`` / ``critic_obs_normalization`` became ``obs_normalization`` on each model and
   the ``obs_groups`` keys became ``actor`` / ``critic``. Update any script that read ``cfg.policy.*`` to
   read ``cfg.actor.*`` / ``cfg.critic.*`` instead.
+* Set ``use_newton_actuators=False`` on the hexapod simulation config so the ``DCMotorCfg`` actuators keep
+  using the Isaac Lab execution path the actuator tuning was validated on. Upstream now defaults this flag to
+  ``True`` (native Newton actuator adapter, also used under PhysX) and deprecates the old path; remove the
+  override once the two paths have been compared.

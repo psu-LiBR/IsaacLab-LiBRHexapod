@@ -44,7 +44,11 @@ class HexapodSceneCfg(MySceneCfg):
 
 @configclass
 class HexapodRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
-    sim: SimulationCfg = SimulationCfg(physics=HexapodPhysicsCfg())
+    # ``use_newton_actuators=False`` keeps the Isaac Lab DCMotor execution path the hexapod actuator tuning was
+    # validated on. Upstream's default (True) runs DCMotorCfg through the Newton actuator adapter instead, which
+    # has not been compared against the tuned behaviour yet (see compare_actuator_models.py). This flag is
+    # deprecated upstream; flip it once the two paths are shown to agree.
+    sim: SimulationCfg = SimulationCfg(physics=HexapodPhysicsCfg(), use_newton_actuators=False)
     scene: HexapodSceneCfg = HexapodSceneCfg(num_envs=4096, env_spacing=2.5)
 
     def __post_init__(self):
