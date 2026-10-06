@@ -24,8 +24,12 @@ REM    set RL_ITERS=2000          (only used in --two-phase mode)
 REM    set CSV_PATH=C:\path\to\ref.csv   (override reference gait CSV)
 REM
 REM  Requirements:
-REM    - isaaclab.bat must be on PATH or this script must be run from the
-REM      root of the Isaac Lab repository (where isaaclab.bat lives).
+REM    - The `isaaclab` command must be on PATH (activate the uv environment
+REM      first), or `uv` must be on PATH and this script must be run from the
+REM      root of the Isaac Lab repository (falls back to
+REM      `uv run --extra isaacsim isaaclab`).
+REM    - Hexapod tasks default to the PhysX backend (HexapodPhysicsCfg), so no
+REM      physics= override is needed.
 REM    - Hexapod USD and Isaac Sim must be configured (see CLAUDE.md).
 REM ============================================================================
 
@@ -37,12 +41,17 @@ if not defined MIMIC_ITERS set MIMIC_ITERS=3000
 if not defined RL_ITERS    set RL_ITERS=2000
 if not defined LOG_ROOT    set LOG_ROOT=logs\rsl_rl\hexapod_mimic
 
-REM Locate isaaclab.bat (try repo root, then PATH).
-set ISAACLAB=isaaclab.bat
-if not exist "%ISAACLAB%" (
-    echo [train_mimic] ERROR: isaaclab.bat not found. Run this script from the
-    echo               Isaac Lab repository root, or add it to PATH.
-    exit /b 1
+REM Locate the isaaclab CLI (activated environment first, then uv).
+set ISAACLAB=isaaclab
+where isaaclab >nul 2>nul
+if errorlevel 1 (
+    where uv >nul 2>nul
+    if errorlevel 1 (
+        echo [train_mimic] ERROR: neither `isaaclab` nor `uv` found on PATH. Activate
+        echo               the Isaac Lab uv environment, or install uv.
+        exit /b 1
+    )
+    set ISAACLAB=uv run --extra isaacsim isaaclab
 )
 
 REM ============================================================================
@@ -72,7 +81,7 @@ if /I not "%~1"=="--two-phase" (
     echo.
     echo [train_mimic] Training complete. Checkpoint saved under %LOG_ROOT%\.
     echo To evaluate:
-    echo   isaaclab.bat play --rl_library rsl_rl ^
+    echo   isaaclab play --rl_library rsl_rl ^
         --task Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0 --num_envs 1
     exit /b 0
 )
@@ -117,7 +126,7 @@ for /f "delims=" %%F in (
 if not defined LATEST_CKPT (
     echo [train_mimic] WARNING: Could not auto-locate checkpoint under %LOG_ROOT%.
     echo               Start Phase 2 manually:
-    echo   isaaclab.bat train --rl_library rsl_rl ^
+    echo   isaaclab train --rl_library rsl_rl ^
         --task Isaac-Velocity-Flat-Hexapod-v0 --checkpoint ^<path^>
     exit /b 1
 )

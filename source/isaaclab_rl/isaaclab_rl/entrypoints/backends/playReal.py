@@ -3,146 +3,119 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Script to play a checkpoint if an RL agent from RSL-RL OR drive the robot from a gait CSV."""
+"""Play a checkpoint of an RL agent from RSL-RL OR drive the robot from a gait CSV.
 
-"""Launch Isaac Sim Simulator first."""
+Fork-only backend with no ``--rl_library`` registration, so it is not reachable through the unified ``play``
+subcommand. Run it as a module, e.g.::
+
+    uv run python -m isaaclab_rl.entrypoints.backends.playReal --task Isaac-Velocity-Flat-Hexapod-Play-v0 \\
+        --num_envs 1 --gait_csv <path_to_csv> --gait_mode pos --gait_dt <seconds_per_row> --warmup_time 1.0
+"""
+
+from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
-import sys
-
-import numpy as np
-
-from isaaclab.app import AppLauncher
-
-# local imports
-from isaaclab_rl.entrypoints.backends import cli_args_rsl_rl as cli_args
-
-# add argparse arguments
-parser = argparse.ArgumentParser(description="Play an RL agent with RSL-RL, or play a gait from CSV.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during play.")
-parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
-parser.add_argument(
-    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
-)
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument(
-    "--agent", type=str, default="rsl_rl_cfg_entry_point", help="Name of the RL agent configuration entry point."
-)
-parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
-parser.add_argument(
-    "--use_pretrained_checkpoint",
-    action="store_true",
-    help="Use the pre-trained checkpoint from Nucleus.",
-)
-parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
-
-# ---------- NEW: gait CSV playback args ----------
-parser.add_argument(
-    "--gait_csv",
-    type=str,
-    default=None,
-    help="Path to CSV containing either joint position targets (rad) or raw normalized actions.",
-)
-parser.add_argument(
-    "--gait_mode",
-    type=str,
-    choices=["pos", "action"],
-    default="pos",
-    help="Interpret CSV as joint positions (rad) or as raw normalized actions.",
-)
-parser.add_argument(
-    "--gait_dt",
-    type=float,
-    default=None,
-    help="Seconds per row in the gait CSV. If provided, each row is held for round(gait_dt / sim_dt) sim steps.",
-)
-parser.add_argument(
-    "--gait_num_joints",
-    type=int,
-    default=8,
-    help="Number of joints provided in the CSV (columns).",
-)
-parser.add_argument(
-    "--warmup_time",
-    type=float,
-    default=0.0,
-    help="Seconds to hold a stand-still pose at the start so the robot can settle onto the ground.",
-)
-parser.add_argument(
-    "--warmup_steps",
-    type=int,
-    default=None,
-    help="If set, overrides warmup_time and uses an exact number of sim steps for warmup.",
-)
-parser.add_argument(
-    "--run_time",
-    type=float,
-    default=None,
-    help="Run duration in seconds. Stops automatically without requiring video mode.",
-)
-# ------------------------------------------------
-
-# append RSL-RL cli arguments
-cli_args.add_rsl_rl_args(parser)
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
-args_cli, hydra_args = parser.parse_known_args()
-
-# always enable cameras to record video
-if args_cli.video:
-    args_cli.enable_cameras = True
-
-# clear out sys.argv for Hydra
-sys.argv = [sys.argv[0]] + hydra_args
-
-# launch omniverse app
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
-
-"""Check for installed RSL-RL version."""
-
-import importlib.metadata as metadata
-
-from packaging import version
-
-installed_version = metadata.version("rsl-rl-lib")
-
-"""Rest everything follows."""
-
 import os
+import sys
 import time
 
-import gymnasium as gym
+import numpy as np
 import torch
 from rsl_rl.runners import DistillationRunner, OnPolicyRunner
 
-from isaaclab.envs import (
-    DirectMARLEnv,
-    DirectMARLEnvCfg,
-    DirectRLEnvCfg,
-    ManagerBasedRLEnvCfg,
-    multi_agent_to_single_agent,
-)
-from isaaclab.utils.assets import retrieve_file_path
-from isaaclab.utils.dict import print_dict
-
-from isaaclab_rl.rsl_rl import (
-    RslRlBaseRunnerCfg,
-    RslRlVecEnvWrapper,
-    export_policy_as_jit,
-    export_policy_as_onnx,
-    handle_deprecated_rsl_rl_cfg,
-)
-from isaaclab_rl.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
+from isaaclab.app import add_launcher_args, launch_simulation
+from isaaclab.envs import DirectMARLEnvCfg
+from isaaclab.utils import to_dict
+from isaaclab.utils.string import list_intersection
 
 import isaaclab_tasks  # noqa: F401
-from isaaclab_tasks.utils import get_checkpoint_path
-from isaaclab_tasks.utils.hydra import hydra_task_config
+from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
-# PLACEHOLDER: Extension template (do not remove this comment)
+from ...rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
+from ..common import (
+    add_common_play_args,
+    apply_env_overrides,
+    apply_video_recording,
+    close_env,
+    create_isaaclab_env,
+    enable_cameras_for_video,
+    pre_launch_video_config,
+    set_hydra_args,
+    show_run_summary,
+    startup_screen,
+    video_playback_steps,
+)
+from . import cli_args_rsl_rl as cli_args
+from .play_rsl_rl import _resolve_checkpoint
+
+
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse playback arguments (RSL-RL playback arguments plus the gait CSV options)."""
+    parser = argparse.ArgumentParser(description="Play an RL agent with RSL-RL, or play a gait from CSV.")
+    add_common_play_args(
+        parser,
+        agent_default="rsl_rl_cfg_entry_point",
+        agent_help="Name of the RL agent configuration entry point.",
+    )
+    parser.add_argument(
+        "--external_callback", default=None, help="Fully qualified path to an externally defined callback."
+    )
+
+    # ---------- gait CSV playback args ----------
+    parser.add_argument(
+        "--gait_csv",
+        type=str,
+        default=None,
+        help="Path to CSV containing either joint position targets (rad) or raw normalized actions.",
+    )
+    parser.add_argument(
+        "--gait_mode",
+        type=str,
+        choices=["pos", "action"],
+        default="pos",
+        help="Interpret CSV as joint positions (rad) or as raw normalized actions.",
+    )
+    parser.add_argument(
+        "--gait_dt",
+        type=float,
+        default=None,
+        help="Seconds per row in the gait CSV. If provided, each row is held for round(gait_dt / sim_dt) sim steps.",
+    )
+    parser.add_argument(
+        "--gait_num_joints",
+        type=int,
+        default=8,
+        help="Number of joints provided in the CSV (columns).",
+    )
+    parser.add_argument(
+        "--warmup_time",
+        type=float,
+        default=0.0,
+        help="Seconds to hold a stand-still pose at the start so the robot can settle onto the ground.",
+    )
+    parser.add_argument(
+        "--warmup_steps",
+        type=int,
+        default=None,
+        help="If set, overrides warmup_time and uses an exact number of sim steps for warmup.",
+    )
+    parser.add_argument(
+        "--run_time",
+        type=float,
+        default=None,
+        help="Run duration in seconds. Stops automatically without requiring video mode.",
+    )
+    # ------------------------------------------------
+
+    cli_args.add_rsl_rl_args(parser)
+    add_launcher_args(parser)
+    remaining_args_env_registration = cli_args.register_external_tasks(argv)
+    args_cli, remaining_args = setup_preset_cli(parser, argv)
+    enable_cameras_for_video(args_cli)
+    set_hydra_args(list_intersection(remaining_args, remaining_args_env_registration))
+    return args_cli
 
 
 def _load_gait_csv(csv_path: str) -> np.ndarray:
@@ -219,12 +192,12 @@ def _infer_joint_pos_offset_scale(unwrapped_env, num_joints: int, device: torch.
     return offset_t, scale_t
 
 
-def _load_policy_and_export(env, agent_cfg: RslRlBaseRunnerCfg, installed_version: str, resume_path: str):
+def _load_policy_and_export(env, agent_cfg: RslRlBaseRunnerCfg, resume_path: str):
     """Loads the RSL-RL runner checkpoint, exports the policy, and returns the inference policy."""
     if agent_cfg.class_name == "OnPolicyRunner":
-        runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        runner = OnPolicyRunner(env, to_dict(agent_cfg), log_dir=None, device=agent_cfg.device)
     elif agent_cfg.class_name == "DistillationRunner":
-        runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        runner = DistillationRunner(env, to_dict(agent_cfg), log_dir=None, device=agent_cfg.device)
     else:
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
     runner.load(resume_path)
@@ -232,26 +205,10 @@ def _load_policy_and_export(env, agent_cfg: RslRlBaseRunnerCfg, installed_versio
     # obtain the trained policy for inference
     policy = runner.get_inference_policy(device=env.unwrapped.device)
 
-    # export policy — version-conditional, matching play_rsl_rl.py
+    # export policy (rsl-rl >= 4 runners export themselves)
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    if version.parse(installed_version) >= version.parse("4.0.0"):
-        runner.export_policy_to_jit(path=export_model_dir, filename="policy.pt")  # type: ignore[union-attr]
-        runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")  # type: ignore[union-attr]
-    else:
-        if version.parse(installed_version) >= version.parse("2.3.0"):
-            policy_nn = runner.alg.policy
-        else:
-            policy_nn = runner.alg.actor_critic  # type: ignore[union-attr]
-
-        if hasattr(policy_nn, "actor_obs_normalizer"):
-            normalizer = policy_nn.actor_obs_normalizer
-        elif hasattr(policy_nn, "student_obs_normalizer"):
-            normalizer = policy_nn.student_obs_normalizer
-        else:
-            normalizer = None
-
-        export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt")
-        export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+    runner.export_policy_to_jit(path=export_model_dir, filename="policy.pt")
+    runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
 
     return policy
 
@@ -352,75 +309,58 @@ def _step_cycle_bookkeeping(timestep: int, warmup_steps: int, use_gait: bool, ga
     return step, active_step, cycle_num, cycle_step, gait_idx
 
 
-@hydra_task_config(args_cli.task, args_cli.agent)
-def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
-    """Play with RSL-RL agent OR play a gait from CSV."""
-    # grab task name for checkpoint path
-    task_name = args_cli.task.split(":")[-1]
-    train_task_name = task_name.replace("-Play", "")
-
-    # override configurations with non-hydra CLI arguments
-    agent_cfg: RslRlBaseRunnerCfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
-    env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
-
-    # handle deprecated configurations (strips params unsupported by installed rsl-rl version)
-    agent_cfg = handle_deprecated_rsl_rl_cfg(agent_cfg, installed_version)
-
-    # set the environment seed
-    env_cfg.seed = agent_cfg.seed
-    env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
-
-    # ---------- NEW: decide mode ----------
+def run(argv: list[str] | None = None) -> None:
+    """Play an RSL-RL agent, or replay a gait CSV, in the selected hexapod task."""
+    argv = sys.argv[1:] if argv is None else argv
+    args_cli = _parse_args(argv)
     use_gait = args_cli.gait_csv is not None
 
-    # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
-    log_root_path = os.path.abspath(log_root_path)
-    print(f"[INFO] Loading experiment from directory: {log_root_path}")
+    with startup_screen(args_cli, num_stages=3) as screen:
+        env_cfg, agent_cfg = resolve_task_config(args_cli.task, args_cli.agent, play_mode=not args_cli.train_env_cfg)
+        pre_launch_video_config(env_cfg, args_cli)
+        screen.stage("Launching simulation")
+        with launch_simulation(env_cfg, args_cli), contextlib.ExitStack() as cleanup:
+            show_run_summary(screen, args_cli, env_cfg, library="rsl_rl", action="play")
+            agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
+            apply_env_overrides(args_cli, env_cfg)
+            env_cfg.seed = agent_cfg.seed
 
-    if use_gait:
-        # No checkpoint required for gait playback
-        resume_path = None
-        log_dir = os.path.abspath(os.getcwd())
-        print(f"[INFO] Gait playback enabled. Using gait CSV: {args_cli.gait_csv}")
-    else:
-        if args_cli.use_pretrained_checkpoint:
-            resume_path = get_published_pretrained_checkpoint("rsl_rl", train_task_name)
-            if not resume_path:
-                print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
-                return
-        elif args_cli.checkpoint:
-            resume_path = retrieve_file_path(args_cli.checkpoint)
-        else:
-            resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+            log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
+            print(f"[INFO] Loading experiment from directory: {log_root_path}")
+            if use_gait:
+                # No checkpoint required for gait playback
+                resume_path = None
+                log_dir = os.path.abspath(os.getcwd())
+                print(f"[INFO] Gait playback enabled. Using gait CSV: {args_cli.gait_csv}")
+            else:
+                resume_path = _resolve_checkpoint(args_cli, agent_cfg, env_cfg, log_root_path)
+                if resume_path is None:
+                    return
+                log_dir = os.path.dirname(resume_path)
+                print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+            env_cfg.log_dir = log_dir
+            apply_video_recording(env_cfg, log_dir, args_cli, subdir="play", checkpoint_path=resume_path)
 
-        log_dir = os.path.dirname(resume_path)
-        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+            screen.stage("Creating environment")
+            env = create_isaaclab_env(
+                args_cli.task,
+                env_cfg,
+                args_cli,
+                convert_marl_to_single_agent=isinstance(env_cfg, DirectMARLEnvCfg),
+            )
+            cleanup.callback(lambda: close_env(env))
 
-    # set the log directory for the environment (works for all environment types)
-    env_cfg.log_dir = log_dir
+            screen.stage("Loading policy")
+            # wrap around environment for rsl-rl (still useful even for gait playback)
+            env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+            screen.close()
+            with contextlib.suppress(KeyboardInterrupt):
+                _play(env, env_cfg, args_cli, agent_cfg, resume_path)
 
-    # create isaac environment
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
-    # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv):
-        env = multi_agent_to_single_agent(env)
-
-    # wrap for video recording
-    if args_cli.video:
-        video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "play"),
-            "step_trigger": lambda step: step == 0,
-            "video_length": args_cli.video_length,
-            "disable_logger": True,
-        }
-        print("[INFO] Recording videos during play.")
-        print_dict(video_kwargs, nesting=4)
-        env = gym.wrappers.RecordVideo(env, **video_kwargs)
-
-    # wrap around environment for rsl-rl (still useful even for gait playback)
-    env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: str | None) -> None:
+    """Run the policy or gait CSV playback loop and print the reward summary."""
+    use_gait = args_cli.gait_csv is not None
 
     # ---- sanity prints ----
     print("[INFO] sim dt:", env.unwrapped.step_dt)
@@ -482,7 +422,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     policy = None
     if not use_gait:
         assert resume_path is not None
-        policy = _load_policy_and_export(env, agent_cfg, installed_version, resume_path)
+        policy = _load_policy_and_export(env, agent_cfg, resume_path)
     # ---------------------------------------------------------------
 
     dt = env.unwrapped.step_dt
@@ -530,6 +470,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         max_steps = int(round(float(args_cli.run_time) / float(dt)))
         max_steps = max(1, max_steps)
         print(f"[INFO] Fixed run_time enabled: {args_cli.run_time:.3f} s ({max_steps} steps)")
+    # --video plays until every video recorder has finished its first clip
+    video_steps = video_playback_steps(args_cli, env_cfg)
+    if video_steps is not None:
+        max_steps = video_steps if max_steps is None else min(max_steps, video_steps)
 
     # reset environment
     obs = env.get_observations()
@@ -547,7 +491,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     print("[INFO] reward terms:", term_names)
 
     # simulate environment
-    while simulation_app.is_running():
+    while max_steps is None or timestep < max_steps:
         start_time = time.time()
 
         # run everything in inference mode
@@ -654,12 +598,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         # ALWAYS increment timestep so CSV playback advances even without video
         timestep += 1
 
-        if args_cli.video:
-            # Exit the play loop after recording one video
-            if timestep == args_cli.video_length:
-                break
-        if max_steps is not None and timestep >= max_steps:
-            break
         # time delay for real-time evaluation
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
@@ -689,12 +627,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print("  avg_per_env:", avg_term_per_env.detach().cpu().numpy())
         print("  mean_all_trials:", mean_term_all_trials)
 
-    # close the simulator
-    env.close()
-
 
 if __name__ == "__main__":
-    # run the main function
-    main()
-    # close sim app
-    simulation_app.close()
+    run()

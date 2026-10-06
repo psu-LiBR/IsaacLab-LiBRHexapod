@@ -3,248 +3,173 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Script to play a checkpoint of an RL agent from RSL-RL and log per-frame body world
-poses (position + quaternion) to an .npz file for offline PyVista rendering.
+"""Play a checkpoint of an RL agent from RSL-RL and log per-frame body world poses (position + quaternion)
+to an .npz file for offline PyVista rendering.
 
-This is a fork of play_rsl_rl.py kept as a separate file so play_rsl_rl.py can stay
-close to the upstream Isaac Lab version and be updated/merged without conflicts.
-Differences from play_rsl_rl.py:
-  - Always logs body poses (no flag needed) to <log_dir>/body_pose_log/.
-  - Adds --num_steps to stop the play loop after a fixed number of steps instead of
-    running indefinitely (play_rsl_rl.py only stops early when --video is used).
+This is a fork of ``play_rsl_rl.py`` kept as a separate file so ``play_rsl_rl.py`` can stay close to the
+upstream Isaac Lab version and be updated/merged without conflicts. Differences from ``play_rsl_rl.py``:
+
+- Always logs body poses (no flag needed) to ``<log_dir>/body_pose_log/``.
+- Adds ``--num_steps`` to stop the play loop after a fixed number of steps instead of running indefinitely
+  (``play_rsl_rl.py`` only stops early when ``--video`` is used). Ctrl+C also ends the run, and the body pose
+  log is still written.
+
+Fork-only backend with no ``--rl_library`` registration, so it is not reachable through the unified ``play``
+subcommand. Run it as a module, e.g.::
+
+    uv run python -m isaaclab_rl.entrypoints.backends.playpyvista --task Isaac-Velocity-Flat-Hexapod-Play-v0 \\
+        --num_envs 1 --num_steps 500
 """
 
-"""Launch Isaac Sim Simulator first."""
+from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
-import sys
-
-import numpy as np
-
-from isaaclab.app import AppLauncher
-
-# local imports
-from isaaclab_rl.entrypoints.backends import cli_args_rsl_rl as cli_args
-
-# add argparse arguments
-parser = argparse.ArgumentParser(description="Play an RL agent with RSL-RL and log body poses for PyVista.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
-parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
-parser.add_argument(
-    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
-)
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument(
-    "--agent", type=str, default="rsl_rl_cfg_entry_point", help="Name of the RL agent configuration entry point."
-)
-parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
-parser.add_argument(
-    "--use_pretrained_checkpoint",
-    action="store_true",
-    help="Use the pre-trained checkpoint from Nucleus.",
-)
-parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
-parser.add_argument(
-    "--num_steps",
-    type=int,
-    default=None,
-    help=(
-        "Stop the play loop after this many env steps. If --video is also set, the video"
-        " still stops at --video_length steps; whichever limit is hit first ends the run."
-        " If omitted, the loop runs until the window is closed (same as play.py)."
-    ),
-)
-# append RSL-RL cli arguments
-cli_args.add_rsl_rl_args(parser)
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
-args_cli, hydra_args = parser.parse_known_args()
-# always enable cameras to record video
-if args_cli.video:
-    args_cli.enable_cameras = True
-
-# clear out sys.argv for Hydra
-sys.argv = [sys.argv[0]] + hydra_args
-
-# launch omniverse app
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
-
-"""Check for installed RSL-RL version."""
-
-import importlib.metadata as metadata
-
-from packaging import version
-
-installed_version = metadata.version("rsl-rl-lib")
-
-"""Rest everything follows."""
-
 import os
+import sys
 import time
 
-import gymnasium as gym
+import numpy as np
 import torch
 from rsl_rl.runners import DistillationRunner, OnPolicyRunner
 
-from isaaclab.envs import (
-    DirectMARLEnv,
-    DirectMARLEnvCfg,
-    DirectRLEnvCfg,
-    ManagerBasedRLEnvCfg,
-    multi_agent_to_single_agent,
-)
-from isaaclab.utils.assets import retrieve_file_path
-from isaaclab.utils.dict import print_dict
-
-from isaaclab_rl.rsl_rl import (
-    RslRlBaseRunnerCfg,
-    RslRlVecEnvWrapper,
-    export_policy_as_jit,
-    export_policy_as_onnx,
-    handle_deprecated_rsl_rl_cfg,
-    handle_deprecated_rsl_rl_checkpoint,
-)
-from isaaclab_rl.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
+from isaaclab.app import add_launcher_args, launch_simulation
+from isaaclab.envs import DirectMARLEnvCfg
+from isaaclab.utils import to_dict
+from isaaclab.utils.string import list_intersection
 
 import isaaclab_tasks  # noqa: F401
-from isaaclab_tasks.utils import get_checkpoint_path
-from isaaclab_tasks.utils.hydra import hydra_task_config
+from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
-# PLACEHOLDER: Extension template (do not remove this comment)
+from ...rsl_rl import RslRlVecEnvWrapper
+from ..common import (
+    add_common_play_args,
+    apply_env_overrides,
+    apply_video_recording,
+    close_env,
+    create_isaaclab_env,
+    enable_cameras_for_video,
+    pre_launch_video_config,
+    set_hydra_args,
+    show_run_summary,
+    startup_screen,
+    video_playback_steps,
+)
+from . import cli_args_rsl_rl as cli_args
+from .play_rsl_rl import _resolve_checkpoint
 
 
-@hydra_task_config(args_cli.task, args_cli.agent)
-def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
-    """Play with RSL-RL agent."""
-    # grab task name for checkpoint path
-    task_name = args_cli.task.split(":")[-1]
-    train_task_name = task_name.replace("-Play", "")
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse playback arguments (RSL-RL playback arguments plus ``--num_steps``)."""
+    parser = argparse.ArgumentParser(description="Play an RL agent with RSL-RL and log body poses for PyVista.")
+    add_common_play_args(
+        parser,
+        agent_default="rsl_rl_cfg_entry_point",
+        agent_help="Name of the RL agent configuration entry point.",
+    )
+    parser.add_argument(
+        "--external_callback", default=None, help="Fully qualified path to an externally defined callback."
+    )
+    parser.add_argument(
+        "--num_steps",
+        type=int,
+        default=None,
+        help=(
+            "Stop the play loop after this many env steps. If --video is also set, the video"
+            " still stops after its clip; whichever limit is hit first ends the run."
+            " If omitted, the loop runs until interrupted with Ctrl+C."
+        ),
+    )
+    cli_args.add_rsl_rl_args(parser)
+    add_launcher_args(parser)
+    remaining_args_env_registration = cli_args.register_external_tasks(argv)
+    args_cli, remaining_args = setup_preset_cli(parser, argv)
+    enable_cameras_for_video(args_cli)
+    set_hydra_args(list_intersection(remaining_args, remaining_args_env_registration))
+    return args_cli
 
-    # override configurations with non-hydra CLI arguments
-    agent_cfg: RslRlBaseRunnerCfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
-    env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
 
-    # handle deprecated configurations
-    agent_cfg = handle_deprecated_rsl_rl_cfg(agent_cfg, installed_version)
+def run(argv: list[str] | None = None) -> None:
+    """Play an RSL-RL checkpoint and save the per-frame body poses of env 0."""
+    argv = sys.argv[1:] if argv is None else argv
+    args_cli = _parse_args(argv)
 
-    # set the environment seed
-    # note: certain randomizations occur in the environment initialization so we set the seed here
-    env_cfg.seed = agent_cfg.seed
-    env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+    with startup_screen(args_cli, num_stages=3) as screen:
+        env_cfg, agent_cfg = resolve_task_config(args_cli.task, args_cli.agent, play_mode=not args_cli.train_env_cfg)
+        pre_launch_video_config(env_cfg, args_cli)
+        screen.stage("Launching simulation")
+        with launch_simulation(env_cfg, args_cli), contextlib.ExitStack() as cleanup:
+            show_run_summary(screen, args_cli, env_cfg, library="rsl_rl", action="play")
+            agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
+            apply_env_overrides(args_cli, env_cfg)
+            # certain randomizations occur in the environment initialization so we set the seed here
+            env_cfg.seed = agent_cfg.seed
 
-    # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
-    log_root_path = os.path.abspath(log_root_path)
-    print(f"[INFO] Loading experiment from directory: {log_root_path}")
-    if args_cli.use_pretrained_checkpoint:
-        resume_path = get_published_pretrained_checkpoint("rsl_rl", train_task_name)
-        if not resume_path:
-            print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
-            return
-    elif args_cli.checkpoint:
-        resume_path = retrieve_file_path(args_cli.checkpoint)
-    else:
-        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+            log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
+            print(f"[INFO] Loading experiment from directory: {log_root_path}")
+            resume_path = _resolve_checkpoint(args_cli, agent_cfg, env_cfg, log_root_path)
+            if resume_path is None:
+                return
+            log_dir = os.path.dirname(resume_path)
+            env_cfg.log_dir = log_dir
+            apply_video_recording(env_cfg, log_dir, args_cli, subdir="play", checkpoint_path=resume_path)
 
-    log_dir = os.path.dirname(resume_path)
+            # Body pose log setup (same level as videos/)
+            body_pose_log_dir = os.path.join(log_dir, "body_pose_log")
+            os.makedirs(body_pose_log_dir, exist_ok=True)
+            print(f"[INFO] Body pose logging enabled. Output: {body_pose_log_dir}")
 
-    # set the log directory for the environment (works for all environment types)
-    env_cfg.log_dir = log_dir
+            screen.stage("Creating environment")
+            env = create_isaaclab_env(
+                args_cli.task,
+                env_cfg,
+                args_cli,
+                convert_marl_to_single_agent=isinstance(env_cfg, DirectMARLEnvCfg),
+            )
+            cleanup.callback(lambda: close_env(env))
 
-    # Body pose log setup (same level as videos/)
-    body_pos_frames: list = []
-    body_quat_frames: list = []
-    body_pose_log_dir = os.path.join(log_dir, "body_pose_log")
-    os.makedirs(body_pose_log_dir, exist_ok=True)
-    print(f"[INFO] Body pose logging enabled. Output: {body_pose_log_dir}")
+            screen.stage("Loading policy")
+            env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+            print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+            if agent_cfg.class_name == "OnPolicyRunner":
+                runner = OnPolicyRunner(env, to_dict(agent_cfg), log_dir=None, device=agent_cfg.device)
+            elif agent_cfg.class_name == "DistillationRunner":
+                runner = DistillationRunner(env, to_dict(agent_cfg), log_dir=None, device=agent_cfg.device)
+            else:
+                raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
+            runner.load(resume_path)
+            policy = runner.get_inference_policy(device=env.unwrapped.device)
 
-    # create isaac environment
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+            # export the trained policy to JIT and ONNX formats
+            export_model_dir = os.path.join(log_dir, "exported")
+            runner.export_policy_to_jit(path=export_model_dir, filename="policy.pt")
+            runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
 
-    # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv):
-        env = multi_agent_to_single_agent(env)
+            screen.close()
+            _play(env, env_cfg, policy, args_cli, body_pose_log_dir)
 
-    # wrap for video recording
-    if args_cli.video:
-        video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "play"),
-            "step_trigger": lambda step: step == 0,
-            "video_length": args_cli.video_length,
-            "disable_logger": True,
-        }
-        print("[INFO] Recording videos during training.")
-        print_dict(video_kwargs, nesting=4)
-        env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-    # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
-
-    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-    # load previously trained model
-    if agent_cfg.class_name == "OnPolicyRunner":
-        runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    elif agent_cfg.class_name == "DistillationRunner":
-        runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    else:
-        raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
-    # convert pre-5.0 published checkpoints to the layout expected by rsl-rl >= 5.0 (no-op otherwise)
-    resume_path = handle_deprecated_rsl_rl_checkpoint(resume_path, installed_version)
-    runner.load(resume_path)
-
-    # obtain the trained policy for inference
-    policy = runner.get_inference_policy(device=env.unwrapped.device)
-
-    # export the trained policy to JIT and ONNX formats
-    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-
-    if version.parse(installed_version) >= version.parse("4.0.0"):
-        # use the new export functions for rsl-rl >= 4.0.0
-        runner.export_policy_to_jit(path=export_model_dir, filename="policy.pt")
-        runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
-    else:
-        # extract the neural network for rsl-rl < 4.0.0
-        if version.parse(installed_version) >= version.parse("2.3.0"):
-            policy_nn = runner.alg.policy
-        else:
-            policy_nn = runner.alg.actor_critic
-
-        # extract the normalizer
-        if hasattr(policy_nn, "actor_obs_normalizer"):
-            normalizer = policy_nn.actor_obs_normalizer
-        elif hasattr(policy_nn, "student_obs_normalizer"):
-            normalizer = policy_nn.student_obs_normalizer
-        else:
-            normalizer = None
-
-        # export to JIT and ONNX
-        export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt")
-        export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
-
+def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir: str) -> None:
+    """Step the policy, log joint positions, displacement and body poses, then save the pose log."""
     dt = env.unwrapped.step_dt
     device = env.unwrapped.device
 
-    # ---------- NEW: setup for saving joint positions (radians) ----------
+    # ---------- setup for saving joint positions (radians) ----------
     # File where we'll store joint positions (not raw actions)
-    actionFileName = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_5-3-26_actiontest.csv"
+    action_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_5-3-26_actiontest.csv"
     # Number of joints we care about (first 8 from env 0)
     num_joints = 8
 
     # Create/overwrite file and write header once
-    os.makedirs(os.path.dirname(actionFileName), exist_ok=True)
-    with open(actionFileName, "w", newline="") as f:
-        writer = csv.writer(f)
-        header = [f"joint_{i}_pos_rad" for i in range(num_joints)]
-        writer.writerow(header)
+    os.makedirs(os.path.dirname(action_log_path), exist_ok=True)
+    with open(action_log_path, "w", newline="") as f:
+        csv.writer(f).writerow([f"joint_{i}_pos_rad" for i in range(num_joints)])
 
     # ---- sanity prints ----
-    print("[INFO] sim dt:", env.unwrapped.step_dt)
+    print("[INFO] sim dt:", dt)
+    robot = env.unwrapped.scene["robot"]
     try:
-        robot = env.unwrapped.scene["robot"]
         if hasattr(robot.data, "joint_names"):
             print("[INFO] robot joint names (first 8):", robot.data.joint_names[:8])
     except Exception as e:
@@ -253,10 +178,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # open file to track displacement
     disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_5-5-26_test.csv"
     os.makedirs(os.path.dirname(disp_log_path), exist_ok=True)
-
-    with open(disp_log_path, "w", newline="") as d:
-        w = csv.writer(d)
-        w.writerow(
+    with open(disp_log_path, "w", newline="") as f:
+        csv.writer(f).writerow(
             [
                 "step",
                 "t_s",
@@ -273,9 +196,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             ]
         )
 
-    # reset environment
     obs = env.get_observations()
-    timestep = 0
 
     # capture initial base position for env 0
     start_pos = robot.data.root_pos_w.clone()  # [num_envs, 3]
@@ -287,104 +208,63 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             print("[INFO] action_dim:", int(env.action_space.shape[0]))
     except Exception as e:
         print("[WARN] Couldn't print action dim:", e)
-    # -----------------------
 
     reward_sum_per_env = torch.zeros(env.num_envs, device=device, dtype=torch.float32)
-
     rm = getattr(env.unwrapped, "reward_manager", None)
     term_names = list(rm.active_terms) if rm is not None else []
     reward_term_sums = {name: torch.zeros(env.num_envs, device=device, dtype=torch.float32) for name in term_names}
 
-    # reset environment
-    obs = env.get_observations()
+    body_pos_frames: list = []
+    body_quat_frames: list = []
+
+    # step budget: --num_steps and the --video clip length, whichever comes first
+    limits = [n for n in (args_cli.num_steps, video_playback_steps(args_cli, env_cfg)) if n is not None]
+    max_steps = min(limits) if limits else None
+
     timestep = 0
-    # simulate environment
-    while simulation_app.is_running():
-        start_time = time.time()
-        # run everything in inference mode
-        with torch.inference_mode():
-            # agent stepping
-            actions = policy(obs)
+    # simulate environment (Ctrl+C ends the loop; the summary and pose log below are still written)
+    with contextlib.suppress(KeyboardInterrupt):
+        while max_steps is None or timestep < max_steps:
+            start_time = time.time()
+            # run everything in inference mode
+            with torch.inference_mode():
+                # agent stepping
+                actions = policy(obs)
 
-            # env stepping
-            obs, rew, dones, _ = env.step(actions)
-            # reset recurrent states for episodes that have terminated
-            if version.parse(installed_version) >= version.parse("4.0.0"):
+                # env stepping
+                obs, rew, dones, _ = env.step(actions)
+                # reset recurrent states for episodes that have terminated
                 policy.reset(dones)
-            else:
-                policy_nn.reset(dones)
 
-            # Access the underlying robot in the scene
-            robot = env.unwrapped.scene["robot"]  # adjust name if needed
+                reward_sum_per_env += rew
+                if rm is not None:
+                    step_reward_terms = rm._step_reward  # [num_envs, num_terms]
+                    for term_idx, name in enumerate(term_names):
+                        reward_term_sums[name] += step_reward_terms[:, term_idx] * dt
 
-            reward_sum_per_env += rew
+                # actual joint positions (env 0, first 8)
+                joint_positions_list = robot.data.joint_pos[0, :num_joints].detach().cpu().numpy().tolist()
+                with open(action_log_path, "a", newline="") as f:
+                    csv.writer(f).writerow(joint_positions_list)
 
-            rm = getattr(env.unwrapped, "reward_manager", None)
-            if rm is not None:
-                step_reward_terms = rm._step_reward  # [num_envs, num_terms]
+                # Body pose logging (env 0 only)
+                body_pos_frames.append(robot.data.body_pos_w[0].detach().cpu().numpy())
+                body_quat_frames.append(robot.data.body_quat_w[0].detach().cpu().numpy())
 
-                for term_idx, name in enumerate(term_names):
-                    reward_term_sums[name] += step_reward_terms[:, term_idx] * dt
+                # displacement of env 0 relative to its start-of-play position
+                pos = robot.data.root_pos_w
+                dpos = pos - start_pos
+                x, y, z = pos[0].detach().cpu().numpy().tolist()
+                dx, dy, dz = dpos[0].detach().cpu().numpy().tolist()
+                with open(disp_log_path, "a", newline="") as f:
+                    csv.writer(f).writerow([timestep, timestep * dt, "", "", "", x, y, z, dx, dy, dz, dx])
 
-            # actual joint positions (env 0, first 8)
-            joint_positions = robot.data.joint_pos[0, :num_joints]
-            joint_positions_list = joint_positions.detach().cpu().numpy().tolist()
+            timestep += 1
 
-            with open(actionFileName, "a", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(joint_positions_list)
-
-            # Body pose logging (env 0 only)
-            body_pos_frames.append(robot.data.body_pos_w[0].detach().cpu().numpy())
-            body_quat_frames.append(robot.data.body_quat_w[0].detach().cpu().numpy())
-
-            # -----Added to track the displacement of robot --------------
-            # ---- step / cycle bookkeeping (warmup-aware) ----
-            step = timestep  # raw sim step (includes warmup)
-
-            cycle_num = ""
-            cycle_step = ""
-            gait_idx = ""
-            # current base position in world
-            t_s = step * dt
-
-            pos = robot.data.root_pos_w
-            dpos = pos - start_pos
-
-            x, y, z = pos[0].detach().cpu().numpy().tolist()
-            dx, dy, dz = dpos[0].detach().cpu().numpy().tolist()
-            forward_disp_x = dx
-
-            with open(disp_log_path, "a", newline="") as d:
-                w = csv.writer(d)
-                w.writerow(
-                    [
-                        step,
-                        t_s,
-                        cycle_num,
-                        cycle_step,
-                        gait_idx,
-                        x,
-                        y,
-                        z,
-                        dx,
-                        dy,
-                        dz,
-                        forward_disp_x,
-                    ]
-                )
-
-        # advance the step counter once per loop iteration (covers video and num_steps limits)
-        timestep += 1
-        if args_cli.video and timestep == args_cli.video_length:
-            break
-        if args_cli.num_steps is not None and timestep >= args_cli.num_steps:
-            break
-
-        # time delay for real-time evaluation
-        sleep_time = dt - (time.time() - start_time)
-        if args_cli.real_time and sleep_time > 0:
-            time.sleep(sleep_time)
+            # time delay for real-time evaluation
+            sleep_time = dt - (time.time() - start_time)
+            if args_cli.real_time and sleep_time > 0:
+                time.sleep(sleep_time)
 
     print("\n===== REWARD SUMMARY =====")
     print("reward_sum_per_env:", reward_sum_per_env.detach().cpu().numpy())
@@ -406,12 +286,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         )
         print(f"[INFO] Body pose log saved: {npz_path}  ({len(body_pos_frames)} frames)")
 
-    # close the simulator
-    env.close()
-
 
 if __name__ == "__main__":
-    # run the main function
-    main()
-    # close sim app
-    simulation_app.close()
+    run()
