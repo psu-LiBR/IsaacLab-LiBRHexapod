@@ -5,80 +5,121 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 @AGENTS.md
 
 The import above pulls in the repo-wide Isaac Lab guidelines (API design conventions, dependency policy,
-`./isaaclab.sh -p` tooling usage, changelog-fragment workflow, commit/PR conventions). It is generic and
+`isaaclab` CLI tooling usage, changelog-fragment workflow, commit/PR conventions). It is generic and
 does not conflict with the hexapod-specific guidance below — treat both as in effect.
 
 ## Project Overview
 
-Isaac Lab (v3.0) is a GPU-accelerated robotics simulation framework built on NVIDIA Isaac Sim (6.0+ — the
-exact supported point-release range was not fully confirmed during the 2.3.2 -> 3.0 migration; verify
-against `docs/source/setup/installation/` before relying on a specific patch version). This fork adds a
-6-legged robot (LiBR Hexapod) with flat-terrain RL training configurations including an imitation-learning
-warm-up system.
+Isaac Lab (v3.0, upstream `develop`) is a GPU-accelerated robotics simulation framework built on NVIDIA
+Isaac Sim 6.1. This fork adds a 6-legged robot (LiBR Hexapod) with flat-terrain RL training configurations
+including an imitation-learning warm-up system.
 
-**Key runtime requirements:**
+**Key runtime requirements** (pinned in `pyproject.toml`; install with `uv sync --extra isaacsim`, see
+`docs/source/setup/installation/`):
 
-- Isaac Sim 6.0+ installed and on PATH (or at `_isaac_sim` symlink)
-- Python 3.11, PyTorch 2.7.0 + CUDA 12.8
+- Isaac Sim **6.1.0.0** (pip package `isaacsim[all,extscache]==6.1.0.0`; the `_isaac_sim` symlink is only used
+  for source builds). Isaac Sim 6.0 environments are **not** compatible with this branch.
+- Python 3.12 (`>=3.12,<3.13`), torch 2.12.0 / torchvision 0.27.0 / torchaudio 2.11.0 with CUDA 13.0 (the
+  `pytorch-cu130` index), `warp-lang==1.17.0`, `newton[sim]==1.6.1`, `rsl-rl-lib==5.5.1`
+- NVIDIA driver 581.42 or newer on Windows (CUDA 13)
+- `git lfs` installed (the hexapod USD/OBJ assets are LFS objects)
 - Hexapod USD model at `hexapod-assets/USD/HexapiFlattened.usd` (repo-relative; a `Hexapod_Flattened.usd` path is commented out just above it in `hexapod.py`)
 - Data output directory at `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/`
+
+## Branch Status: upstream `develop` merge (2026-10-06)
+
+This branch (`jacksonhab/merge-develop-20261006`) merges `isaac-sim/IsaacLab` `develop` (32a1f330511) into the
+fork's `upgrade/isaaclab-3.0-develop` line and ports the hexapod code to it. It has **not yet been validated
+under Isaac Sim 6.1** — it needs an environment with the dependencies above. It is not backwards compatible with
+an Isaac Sim 6.0 / rsl-rl 5.4 / torch 2.11 environment; keep such an environment pointed at the pre-merge branch.
+
+What the port changed (details in the `hexapod-develop-merge.rst` changelog fragments):
+
+- **Physics backend:** upstream defaults the velocity task family to Newton MJWarp. All hexapod tasks pin
+  PhysX through `HexapodPhysicsCfg` (`rough_env_cfg.py`, `default = isaacsim_physx`) because the DCMotor
+  tuning and friction calibration were done on PhysX. Newton is intentionally not offered yet.
+- **Actuator execution path:** upstream defaults `SimulationCfg.use_newton_actuators=True` (DCMotor runs through
+  the Newton actuator adapter even under PhysX). The hexapod sets it to `False` to keep the validated Isaac Lab
+  path; this flag is deprecated upstream. Compare the two (see `scripts/reinforcement_learning/binary_rl/compare_actuator_models.py`
+  if present locally) before removing the override.
+- **Env configs:** `scene.contact_forces` and `events.base_com` are plain configs upstream, so the hexapod code
+  uses `.prim_path` / `.params[...]` directly (no `.default` / `.physx`).
+- **PPO configs:** `RslRlPpoActorCriticCfg` and the deprecation shim are gone; every hexapod runner cfg defines
+  `actor` / `critic` `RslRlMLPModelCfg`s, `obs_normalization`, and `obs_groups` keys `actor` / `critic`.
+- **Scripts:** `play_rsl_rl.py` is rebuilt on upstream's `run(argv)` with the hexapod logging re-added;
+  `playReal`, `playpyvista`, `playTracking`, `play_physicsGait` are run as modules; `binary_rl` video replay
+  records through `VideoRecorderCfg`; `train_mimic.bat` calls `isaaclab`/`uv run`.
+
+Validation checklist for the first run on a 6.1 environment:
+
+1. `isaaclab -p -m pytest source/isaaclab_tasks/test/test_hexapod_goal_mdp.py source/isaaclab_tasks/test/test_hexapod_reward_shaping.py`
+   (`test_phase_one_source_configuration` already failed before the merge: it asserts old reward weights).
+2. `isaaclab list_envs` shows the hexapod `Isaac-*` task IDs.
+3. A short flat run: `isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 256 --max_iterations 5`
+   (check the log says PhysX, and that the `actor`/`critic` obs groups resolve under rsl-rl 5.5.1).
+4. `playReal` open-loop gait replay and a DCMotor tracking check against a pre-merge result.
+5. Goal and binary tasks, then `play_discrete_closeup.py --gait_npz tripod` to confirm the MP4 is written.
+6. Load an old checkpoint (not verified to load under rsl-rl 5.5.1).
+
+Known pre-existing issue: the classic `Isaac-HexapodC-*` task imports the removed
+`isaaclab_tasks.manager_based.classic.humanoid.mdp` and uses `sim.physx`; it does not work.
 
 ## Common Commands
 
 Isaac Lab 3.0 replaced the old per-library `scripts/reinforcement_learning/<library>/train.py` / `play.py`
-scripts with a unified CLI subcommand dispatched through `isaaclab.bat` (confirmed by reading
-`isaaclab.bat` and `source/isaaclab/isaaclab/cli/__init__.py`: `isaaclab.bat train ...` / `isaaclab.bat play ...`
-run `scripts/reinforcement_learning/train.py` / `play.py`, which call
-`isaaclab_rl.entrypoints.run_train_cli` / `run_play_cli`; those dispatch to a backend module in
-`source/isaaclab_rl/isaaclab_rl/entrypoints/backends/` selected by `--rl_library`). All scripts must be run
-via Isaac Sim's bundled Python (not system Python):
+scripts with a unified `isaaclab` CLI (installed into the uv environment; `isaaclab.bat` / `isaaclab.sh` no
+longer exist). `isaaclab train ...` / `isaaclab play ...` call `isaaclab_rl.entrypoints.run_train_cli` /
+`run_play_cli`, which dispatch to a backend module in `source/isaaclab_rl/isaaclab_rl/entrypoints/backends/`
+selected by `--rl_library`. `isaaclab -p <script>` runs a Python script in the active environment (plain
+`python <script>` is equivalent when Isaac Sim is pip-installed). Without an activated environment, prefix
+commands with `uv run --extra isaacsim`. Hexapod tasks default to PhysX; no `physics=` override is needed.
 
 ```bat
 :: Train hexapod on flat terrain
-isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 4096
+isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 4096
 
 :: Resume training from checkpoint
-isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --resume
+isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --checkpoint latest
 
 :: Play/evaluate a checkpoint (logs joint positions to CSV)
-isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1
+isaaclab play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1
 
 :: Train hexapod with imitation warm-up then RL (two-phase, single run)
-isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-v0 --num_envs 4096
+isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-v0 --num_envs 4096
 
 :: Play/evaluate a mimic checkpoint
-isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0 --num_envs 1
+isaaclab play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0 --num_envs 1
 
 :: Fine-tune a mimic checkpoint under the flat RL env (compatible observation space)
-isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --checkpoint <path/to/mimic/model.pt>
+isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --checkpoint <path/to/mimic/model.pt>
 
-:: Play open-loop gait from CSV (compare against RL policy rewards) -- playReal.py is a fork-only
-:: script with no --rl_library backend registration, so it is run directly by module path, not through
-:: the unified play subcommand
-isaaclab.bat -p source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --gait_csv <path_to_csv> --gait_mode pos --gait_dt <seconds_per_row> --warmup_time 1.0
+:: Play open-loop gait from CSV (compare against RL policy rewards) -- playReal is a fork-only
+:: backend with no --rl_library registration, so it is run as a module, not through the unified
+:: play subcommand
+isaaclab -p -m isaaclab_rl.entrypoints.backends.playReal --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --gait_csv <path_to_csv> --gait_mode pos --gait_dt <seconds_per_row> --warmup_time 1.0
 
 :: Train the goal-reaching curriculum (reach a fixed forward distance as fast as possible)
-isaaclab.bat train --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096
+isaaclab train --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096
 
 :: Play/evaluate a goal-reaching checkpoint
-isaaclab.bat play --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-Play-v0 --num_envs 1
+isaaclab play --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-Play-v0 --num_envs 1
 
 :: Train the binary contact-bit goal env (fork-only scripts, no --rl_library; e.g. categorical PPO).
 :: Also: train_discrete.py (DQN/DDQN), train_sac_d.py, run_discrete_pipeline.py -- see binary_rl/README_binary_rl.md
-isaaclab.bat -p scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py --num_envs 4096 --timesteps 100000 --seed 42 --experiment_name ppo_s42
+isaaclab -p scripts/reinforcement_learning/binary_rl/train_discrete_ppo.py --num_envs 4096 --timesteps 100000 --seed 42 --experiment_name ppo_s42
 
 :: List all registered environments
-isaaclab.bat -p scripts/environments/list_envs.py
+isaaclab list_envs
 
 :: Run with a specific checkpoint
-isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --checkpoint <path>
+isaaclab play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --checkpoint <path>
 
 :: Periodically record training videos (progress checks without a manual play run). --video_interval is in
 :: env *steps*, not PPO iterations -- multiply the desired iteration interval by the task's num_steps_per_env
 :: (48 for flat/rough/mimic tasks, 96 for the goal task) to get the --video_interval value. --video auto-enables
 :: camera rendering. MP4s land in logs/rsl_rl/<experiment_name>/<timestamp>/videos/train/.
 :: Example: every 250 iterations on the goal task (num_steps_per_env=96 -> 250*96=24000):
-isaaclab.bat train --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096 --video --video_interval 24000 --video_length 200
+isaaclab train --rl_library rsl_rl --task Isaac-Goal-Flat-Hexapod-v0 --num_envs 4096 --video --video_interval 24000 --video_length 200
 ```
 
 ```bat
@@ -92,10 +133,10 @@ ruff format source/
 
 ```bat
 :: Run tests (requires Isaac Sim Python)
-isaaclab.bat -p -m pytest source/ -m "not isaacsim_ci"
+isaaclab -p -m pytest source/ -m "not isaacsim_ci"
 
 :: Run a single test file
-isaaclab.bat -p -m pytest source/isaaclab_tasks/test/test_hexapod_goal_mdp.py -v
+isaaclab -p -m pytest source/isaaclab_tasks/test/test_hexapod_goal_mdp.py -v
 ```
 
 `test_hexapod_goal_mdp.py` loads `hexapod_goal_rewards.py`/`hexapod_goal_curriculum.py` directly via `importlib` (not through the `isaaclab_tasks` package) and only depends on `torch`, so — unlike most tests here — it can also run under plain system Python: `python -m pytest source/isaaclab_tasks/test/test_hexapod_goal_mdp.py`.
@@ -124,9 +165,10 @@ source/
   isaaclab_tasks/    # Task definitions: reward/obs/termination/event MDP terms
   isaaclab_rl/       # RL-specific wrappers (RslRlVecEnvWrapper, export utilities)
     isaaclab_rl/entrypoints/backends/  # rsl_rl backend (train_rsl_rl.py, play_rsl_rl.py,
-                                        # cli_args_rsl_rl.py) dispatched via `isaaclab.bat
+                                        # cli_args_rsl_rl.py) dispatched via `isaaclab
                                         # train/play --rl_library rsl_rl`, plus fork-only
-                                        # direct-invoke scripts with no --rl_library entry:
+                                        # module-invoked scripts with no --rl_library entry
+                                        # (`isaaclab -p -m isaaclab_rl.entrypoints.backends.<name>`):
                                         # playReal.py, playTracking.py, play_physicsGait.py,
                                         # playpyvista.py, render_pyvista.py, train_mimic.bat
   isaaclab_mimic/    # Imitation learning support
@@ -232,7 +274,7 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
   mimic-play, and the core `(0.8, 0.8)/(0.6, 0.6)` default the rough config fell through to). See
   `source/isaaclab_tasks/changelog.d/hexapod-friction-calibration.rst`.
 - Asymmetric actor-critic observations: actor sees proprioceptive-only (hardware-available), critic adds ground-truth base_lin_vel during training
-- `obs_groups = {"policy": ["policy"], "critic": ["critic"]}` routes groups to actor/critic in PPO runner
+- `obs_groups = {"actor": ["policy"], "critic": ["critic"]}` routes groups to actor/critic in PPO runner
 - Action scale effectively 0.5: `q = q_default + 0.5 * action`
 - `q_default` for legs: currently +0.47 rad (matches `init_state`'s active "For HEXAPI Implementation" block; the -0.47 convention used elsewhere in this doc is unreconciled — see the Robot asset note above); spine joints: 0.0 rad
 - `track_ang_vel_z_exp` uses EMA (exponential moving average, alpha=0.98, ~33-step window) rather than instantaneous yaw rate — sinusoidal undulation produces zero net drift so the EMA reward stays near 1.0, while sustained turning shifts the mean and gets penalized
@@ -303,7 +345,7 @@ PPO tuning for mimic: `init_noise_std`/`entropy_coef` are intentionally left at 
 - **Curriculum** (`goal_distance_curriculum`): state lives as ad hoc attributes on the shared `env` object (`_goal_curriculum_stage`, `_goal_curriculum_episodes`, `_goal_curriculum_successes`, `_goal_curriculum_falls`, `_goal_curriculum_last_rate`) — **global counters shared across all parallel envs, not per-env**. Each call filters `env_ids` to those with `episode_length_buf > 0` (skips the initial scene-setup call), and tallies `reach_goal` successes / `base_contact` falls from the termination manager; episodes that time out without either count toward the window denominator but neither the success nor fail numerator. Window size is **per-stage** (`window_sizes[stage]`, a tuple the same length as `distances`) rather than one hardcoded constant — `hexapod_goal_env_cfg.py` computes it as `max(1, round(scene.num_envs * CURRICULUM_WINDOW_FRACTIONS[stage]))` (fractions currently `(1.0, 1.0, 1.0, 1.0)` — freely tunable, so easier early stages *could* advance on less data) so window cost tracks `num_envs` instead of silently decoupling from it. Once the active stage's window closes, it computes `success_rate = successes/episodes`, advances one stage if `success_rate >= success_threshold` (0.7, inclusive) and not already at the last stage, **demotes one stage** if `demotion_threshold` is set (default `CURRICULUM_DEMOTION_THRESHOLD = 0.4`) and `success_rate` falls below it and the stage is not already the first, then unconditionally zeros the window counters either way — i.e. strictly non-overlapping windows. At the final stage (now 2.0 m) the stage index still clamps against advancing further (demotion can still bring it back down); the command distance updates every call, and success rate is still tracked/reported.
 - `HexapodGoalEnvCfg_PLAY` fixes distance at the final curriculum stage (now 2.0 m), disables the curriculum, actor obs corruption and domain-randomization events (`base_external_force_torque`, `push_robot`), pins eval friction to `(0.21, 0.21)`, and sets a fixed-world camera (`viewer.eye=(-1.0,-3.0,1.5)`, `viewer.lookat=(2.5,0.0,0.2)`, `viewer.origin_type="world"`) across 16 envs (`scene.num_envs=16`, `env_spacing=8.0`).
 - **`HexapodGoalBigStep*`/`Minimal` variants** (`hexapod_goal_tuned_env_cfg.py`, layered on top of `HexapodGoalEnvCfg`, not the flat baseline): `HexapodGoalBigStepEnvCfg` sets `action_rate_l2.weight = -0.03` and rebuilds `feet_air_time` at `weight=2.5`, `threshold=0.16 s` (both retargeted to `command_name="pose_command"`, mirroring `flat_env_cfg_rshape.py`'s shaping). `Slide06`/`Slide035` add a `feet_slide` penalty (`-0.6` / `-0.35`) on top of `BigStep`. `Minimal` inherits `HexapodGoalEnvCfg` directly (not `BigStep`) and only rebuilds `feet_air_time` (weight 2.5 @ 0.16 s). **Dependency caveats** (from the module docstring, both still apply): (1) these variants were trained against the goal-env revision on the `sihan-physical-goal-training` branch (a distance-proportional goal command) — recorded training results correspond to that earlier revision, not necessarily current behavior; (2) `feet_slide` was ported without the friction increase `flat_env_cfg_rshape.py`'s own docstring says is required for the penalty to be meaningful against physically-forced slip, so it risks penalizing forced slip rather than policy quality. (The base `HexapodGoalEnvCfg` now carries its *own* much smaller `feet_slide` at `-0.1`, deliberately kept low for exactly this reason — see the Rewards list above.)
-- **PPO tuning** (`rsl_rl_ppo_goal_cfg.py`, `HexapodGoalPPORunnerCfg(HexapodRoughPPORunnerCfg)`): `max_iterations=3000`, **`num_steps_per_env=96`** (2x the `48` used by flat/rough/mimic — see iteration-time note below), `gamma=0.9995` (vs. parent 0.99; raised from an earlier 0.999), `lam=0.97` (vs. parent 0.95, explicit override added), `entropy_coef=0.003` (vs. parent 0.01 — kept *below* the parent baseline: raising it to 0.01 caused runaway action std >10, since the entropy term pulls std up every step and the only counterweight, the surrogate loss, is unusually noisy here given the sparse terminal rewards and the raised gamma/lam), `actor_hidden_dims=critic_hidden_dims=[128,128,128]` (smaller than the parent's `[512,256,128]`), `actor_obs_normalization=critic_obs_normalization=True` (parent leaves both `False`), `obs_groups={"policy": ["policy"], "critic": ["critic"]}`. Logs to `logs/rsl_rl/hexapod_goal/`. `gamma`/`lam` were raised together because the terminal `reach_bonus`/`fall_penalty` are larger than any per-step term and, at the prior `gamma=0.999`, were already discounted heavily by early-episode states over the ~1250-step, 25 s episode — pushing both further out extends the horizon over which that terminal credit propagates back. (The in-file comment still cites the old `0.999**2250` / 45 s episode figures — stale; the discount reasoning is unchanged.) `num_steps_per_env` was deliberately left at 96 (not lowered for iteration-time reasons, see below, and not yet raised toward ~150-192 as GAE-horizon coverage would suggest — an open question, not settled).
+- **PPO tuning** (`rsl_rl_ppo_goal_cfg.py`, `HexapodGoalPPORunnerCfg(HexapodRoughPPORunnerCfg)`): `max_iterations=3000`, **`num_steps_per_env=96`** (2x the `48` used by flat/rough/mimic — see iteration-time note below), `gamma=0.9995` (vs. parent 0.99; raised from an earlier 0.999), `lam=0.97` (vs. parent 0.95, explicit override added), `entropy_coef=0.003` (vs. parent 0.01 — kept *below* the parent baseline: raising it to 0.01 caused runaway action std >10, since the entropy term pulls std up every step and the only counterweight, the surrogate loss, is unusually noisy here given the sparse terminal rewards and the raised gamma/lam), `actor.hidden_dims=critic.hidden_dims=[128,128,128]` (smaller than the parent's `[512,256,128]`), `actor.obs_normalization=critic.obs_normalization=True` (parent leaves both `False`), `obs_groups={"actor": ["policy"], "critic": ["critic"]}`. Logs to `logs/rsl_rl/hexapod_goal/`. `gamma`/`lam` were raised together because the terminal `reach_bonus`/`fall_penalty` are larger than any per-step term and, at the prior `gamma=0.999`, were already discounted heavily by early-episode states over the ~1250-step, 25 s episode — pushing both further out extends the horizon over which that terminal credit propagates back. (The in-file comment still cites the old `0.999**2250` / 45 s episode figures — stale; the discount reasoning is unchanged.) `num_steps_per_env` was deliberately left at 96 (not lowered for iteration-time reasons, see below, and not yet raised toward ~150-192 as GAE-horizon coverage would suggest — an open question, not settled).
 - **Iteration-time driver**: `num_steps_per_env=96` vs. `48` for every other hexapod task variant is the single clearest, directly-attributable ~2x multiplier on both rollout collection and the PPO update pass per iteration, holding `num_envs=4096` (default, unset by this task), `sim.dt=0.005` (200 Hz physics), `decimation=4` (50 Hz control), network size, and `num_learning_epochs=5`/`num_mini_batches=4` all constant vs. the flat/rough baseline. `episode_length_s=25.0` (vs. 20.0 for flat/rough) does **not** by itself add per-iteration cost — it only changes episode/curriculum cadence, not the fixed `num_steps_per_env` rollout length. Contact-sensor and IMU update at the full 200 Hz physics rate (`update_period=self.sim.dt`) and the robot has `enabled_self_collisions=True`, `solver_position_iteration_count=4` — both are baseline hexapod-sim costs shared identically by flat/rough/goal, not goal-specific. `height_scanner=None` for both flat and goal, so it is not a differentiator. No wall-clock/sec-per-iteration baseline is recorded anywhere in this repo for comparison.
 
 **Binary-Contact RL System** (`hexapod_binary_env_cfg.py`, `hexapod_binary_actions.py`; training/eval scripts in `scripts/reinforcement_learning/binary_rl/`, see `README_binary_rl.md`):
@@ -318,11 +360,12 @@ PPO tuning for mimic: `init_noise_std`/`entropy_coef` are intentionally left at 
   - **Breaking**: existing `Isaac-Goal-Flat-Hexapod-Binary-*` checkpoints must be retrained — the spine trajectory changed (was a per-joint sinusoid fitted to `tripod_B11BL0_sim.csv`'s spine columns, DOF-index-swapped and globally sign-flipped). Changelog fragment: `source/isaaclab_tasks/changelog.d/hexapod-binary-spine-wave.rst`.
 - **Reward rebalance**: `__post_init__` calls `_rebalance_binary_rewards(self.rewards)` (identically for the train and play variants), which mutates six inherited goal reward weights (feet_slide, dof_acc_l2, feet_air_time, progress, undesired_contacts, time_penalty) for the discrete per-leg-bit action space. See `_rebalance_binary_rewards` in `hexapod_binary_env_cfg.py` for the current corrections and rationale (this file is under active tuning, like the actuator file — the docstring carries the `eval_protocol.py` evidence). The continuous `Isaac-Goal-Flat-Hexapod-v0` reward weights are untouched. Changelog fragment: `source/isaaclab_tasks/changelog.d/hexapod-binary-reward-rebalance.rst`.
 
-The `binary_rl/` scripts are **fork-only, no `--rl_library` registration** — run directly, e.g. `isaaclab.bat -p scripts/reinforcement_learning/binary_rl/<script>.py ...`. Set: `train_discrete.py` (DQN / Double DQN), `train_discrete_ppo.py` (categorical PPO; `--mask` for masked-categorical PPO), `train_sac_d.py` (discrete SAC), `train_sac_continuous.py` (continuous SAC baseline on the 8-DOF `Isaac-Goal-Flat-Hexapod-v0`, *outside* the contact-bit space), `eval_protocol.py` (shared eval harness — all reported numbers come from it), `run_discrete_pipeline.py` (one-shot train→eval→rank→export pipeline), `export_binary_onnx.py` (ONNX export for sim2real). Runs land in `runs_binary/` (gitignored). A matching `binary` profile exists in `scripts/sim2real_transfer/` (its own `deployment.binary.example.yaml`).
+The `binary_rl/` scripts are **fork-only, no `--rl_library` registration** — run directly, e.g. `isaaclab -p scripts/reinforcement_learning/binary_rl/<script>.py ...` (the trainers/eval/sweep still use the deprecated `AppLauncher`, which works with a warning; `play_discrete*.py` use `launch_simulation` and record video via `VideoRecorderCfg` on the `viz:kit` source). Set: `train_discrete.py` (DQN / Double DQN), `train_discrete_ppo.py` (categorical PPO; `--mask` for masked-categorical PPO), `train_sac_d.py` (discrete SAC), `train_sac_continuous.py` (continuous SAC baseline on the 8-DOF `Isaac-Goal-Flat-Hexapod-v0`, *outside* the contact-bit space), `eval_protocol.py` (shared eval harness — all reported numbers come from it), `run_discrete_pipeline.py` (one-shot train→eval→rank→export pipeline), `export_binary_onnx.py` (ONNX export for sim2real). Runs land in `runs_binary/` (gitignored). A matching `binary` profile exists in `scripts/sim2real_transfer/` (its own `deployment.binary.example.yaml`).
 
-**playReal.py** (`source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py`; run directly via
-`isaaclab.bat -p <path> --task ...` — it has no `--rl_library` backend registration, so it is not
-reachable through the unified `play` subcommand):
+**playReal.py** (`source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py`; run as a module via
+`isaaclab -p -m isaaclab_rl.entrypoints.backends.playReal --task ...` — it has no `--rl_library` backend
+registration, so it is not reachable through the unified `play` subcommand; it is built on
+`play_rsl_rl.run()` helpers, use `--checkpoint pretrained` instead of `--use_pretrained_checkpoint`):
 
 - Extends play_rsl_rl.py to support open-loop gait CSV playback for sim-to-real comparison
 - Key args: `--gait_csv`, `--gait_mode pos`, `--gait_dt <sec/row>`, `--warmup_time`, `--run_time`
@@ -353,7 +396,7 @@ Distinct from `scripts/sim2real_transfer/` (see below): `playReal.py` replays a 
 
 **Note:** this pipeline was originally built to work around a GPU driver bug (driver 596.36 causing RTX
 scenedb crashes in Isaac Sim's normal rendering path). That issue does not apply to the current setup —
-Isaac Sim 6.0's normal RTX rendering path (`--video` / `--enable_cameras`) works fine on this machine. The
+Isaac Sim 6.1's normal RTX rendering path (`--video` / `--enable_cameras`) works fine on this machine. The
 pipeline below is kept as an optional CPU-only alternative (e.g. for headless/no-GPU-for-rendering
 scenarios), not as the required path for viewing training results.
 
@@ -365,9 +408,9 @@ The offline rendering pipeline bypasses Isaac Sim's RTX renderer entirely by log
 
 ```bat
 :: Runs the RL policy for N steps and saves body_poses_<timestamp>.npz alongside the checkpoint
-:: playpyvista.py has no --rl_library backend registration, so run it directly by module path
-:: (not through the unified play subcommand)
-isaaclab.bat -p source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playpyvista.py ^
+:: playpyvista has no --rl_library backend registration, so run it as a module
+:: (not through the unified play subcommand); Ctrl+C also ends the run and still writes the npz
+isaaclab -p -m isaaclab_rl.entrypoints.backends.playpyvista ^
     --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --num_steps 500
 ```
 
@@ -481,28 +524,22 @@ Key tuning insights from this project:
 
 ## RSL-RL Compatibility
 
-The repo pins **`rsl-rl-lib==5.4.1`** (`pyproject.toml`, core deps — the earlier "< 4.0.0" note
-was stale). `handle_deprecated_rsl_rl_cfg(agent_cfg, installed_version)` in
-`source/isaaclab_rl/isaaclab_rl/rsl_rl/utils.py` is a version-spanning shim the rsl_rl
-train/play backends call with the actually-installed version
-(`importlib.metadata.version("rsl-rl-lib")`); it mutates `agent_cfg` to bridge API changes:
+The repo pins **`rsl-rl-lib==5.5.1`** (`pyproject.toml`, core deps). Upstream removed the legacy
+`RslRlPpoActorCriticCfg` / `policy` block, `handle_deprecated_rsl_rl_cfg`, `handle_deprecated_rsl_rl_checkpoint`
+and `export_policy_as_jit/onnx` (this fork's `rsl_rl/utils.py` and its test were deleted in the develop merge).
+Runner configs define the networks explicitly, as in `agents/rsl_rl_ppo_cfg.py`:
 
-- **< 4.0.0**: legacy `policy` is required; strips `optimizer` / `share_cnn_encoders`; clears
-  the newer `actor` / `critic` / `student` / `teacher` model configs.
-- **>= 4.0.0** (the pinned line): a legacy `policy = RslRlPpoActorCriticCfg(...)` block is
-  deprecated — the shim infers `actor` + `critic` `RslRlMLPModelCfg`s from it, prints
-  `[WARNING]` lines, then clears `policy`.
-- **>= 5.0.0** (the pinned line): legacy stochastic params (`init_noise_std`,
-  `noise_std_type`, …) are migrated into `distribution_cfg`.
+```python
+actor = RslRlMLPModelCfg(hidden_dims=[512, 256, 128], activation="elu", obs_normalization=False,
+                         distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0, std_type="scalar"))
+critic = RslRlMLPModelCfg(hidden_dims=[512, 256, 128], activation="elu", obs_normalization=False)
+```
 
-Every hexapod PPO runner cfg (`HexapodRoughPPORunnerCfg` and its flat/goal/mimic subclasses in
-`agents/rsl_rl_ppo_cfg.py`) still defines the network with the deprecated
-`policy = RslRlPpoActorCriticCfg(...)` form, so each hexapod `train` / `play` run prints those
-deprecation `[WARNING]`s on startup — harmless (the shim converts them); porting each cfg to
-explicit `actor` / `critic` model configs would silence them.
-
-`HexapodFlatPPORunnerCfg` also sets `obs_groups = {"policy": ["policy"], "critic": ["critic"]}` to
-route asymmetric observation groups to actor and critic networks respectively.
+Subclasses edit `self.actor.hidden_dims` / `self.critic.hidden_dims` / `self.actor.obs_normalization`
+(the old `self.policy.actor_*` names no longer exist). Policy export is done by the runner
+(`runner.export_policy_to_jit/onnx`). Flat/goal/mimic runners set
+`obs_groups = {"actor": ["policy"], "critic": ["critic"]}` to route asymmetric observation groups to the actor
+and critic networks; the rough runner uses `{"actor": ["policy"], "critic": ["policy"]}`.
 
 ## MDP Terms Location
 
@@ -517,7 +554,7 @@ When a config references e.g. `mdp.feet_air_time`, look in the locomotion mdp di
 ## Code Style
 
 - Line length: 120 characters (ruff enforced)
-- Python 3.11 type annotations (pyright strict mode)
+- Python 3.12 type annotations (pyright strict mode)
 - Pre-commit hooks: ruff lint + ruff-format + trailing whitespace
 - No mock databases in tests; integration tests use live Isaac Sim physics
 

@@ -41,6 +41,31 @@ A detailed description of Isaac Lab can be found in our [arXiv paper](https://ar
 
 This fork adds a 6-legged robot (LiBR Hexapod) with flat-terrain reinforcement learning configurations, including an optional imitation-learning warm-up phase that seeds the policy from a reference gait CSV before transitioning to standard RL.
 
+> **Branch status:** this branch merges Isaac Lab `develop` (Isaac Sim 6.1) and ports the hexapod code to it. It has not yet been validated on Isaac Sim 6.1 and is **not compatible with Isaac Sim 6.0 / rsl-rl 5.4 / torch 2.11 environments**. See *Setup* and *Validation status* below.
+
+### Setup
+
+Requirements (pinned in `pyproject.toml`): Isaac Sim 6.1.0.0, Python 3.12, torch 2.12.0 with CUDA 13.0, `warp-lang` 1.17.0, `newton[sim]` 1.6.1, `rsl-rl-lib` 5.5.1, NVIDIA driver 581.42+ on Windows, and `git lfs` (the hexapod USD/OBJ assets are LFS objects).
+
+```bat
+git lfs install
+git clone <this fork> && cd <repo>
+git checkout <this branch>
+git lfs pull
+
+:: creates the uv environment with Isaac Sim 6.1 and every pinned dependency
+uv sync --extra isaacsim
+```
+
+Use a **separate environment** for this branch; do not upgrade an environment you still need for the pre-merge (Isaac Sim 6.0) branch. The `isaaclab` command is installed into the environment; `isaaclab.bat` / `isaaclab.sh` no longer exist. Without an activated environment, prefix commands with `uv run --extra isaacsim`. See the [installation docs](docs/source/setup/installation/) for details.
+
+### Validation status
+
+- Hexapod tasks default to **PhysX** (`HexapodPhysicsCfg`), not upstream's Newton MJWarp default, because the actuator and friction tuning was done on PhysX. Newton is not offered for the hexapod yet.
+- `use_newton_actuators` is pinned to `False` so the DCMotor model keeps the validated execution path.
+- Not yet verified under Isaac Sim 6.1: training and play runs, DCMotor gait tracking, video recording in `binary_rl/play_discrete*.py`, loading old checkpoints under rsl-rl 5.5.1. The classic `Isaac-HexapodC-*` task was already broken before the merge.
+- A suggested first-run checklist is in [`CLAUDE.md`](CLAUDE.md) under *Branch Status*.
+
 ### Custom Files
 
 | File | Purpose |
@@ -61,12 +86,12 @@ This fork adds a 6-legged robot (LiBR Hexapod) with flat-terrain reinforcement l
 
 ### Robot: 8 Joints, Two Actuator Groups
 
-The hexapod has a serpentine 3-segment body (CenterLink–BackLink–FrontLink) plus 6 leg joints. Joints are split into two `ImplicitActuatorCfg` groups because the spine and legs face very different loading profiles:
+The hexapod has a serpentine 3-segment body (CenterLink–BackLink–FrontLink) plus 6 leg joints. Joints are split into two `DCMotorCfg` groups (Dynamixel XL430-W250-T torque-speed model: 1.4 N·m stall torque, 5.97 rad/s no-load speed) because the spine and legs face different loading profiles:
 
-- **`body_joints`** (`FrontLink`, `BackLink`): stiffness=40, damping=0.4, velocity_limit=15.0 rad/s — lower stiffness and higher velocity cap to handle sinusoidal body undulation without torque saturation
-- **`leg_joints`** (`MiddleLeft/Right`, `BackLeft/Right`, `FrontLeft/Right`): stiffness=80, damping=0.9, velocity_limit=6.0 rad/s — stiffer for ground contact precision
+- **`body_joints`** (`FrontLink`, `BackLink`): stiffness=10, damping=0.35 — soft, because the sinusoidal body undulation is smooth and lightly loaded
+- **`leg_joints`** (`MiddleLeft/Right`, `BackLeft/Right`, `FrontLeft/Right`): stiffness=50, damping=0.35 — stiffer for ground contact precision
 
-Init pose: spine joints at 0.0 rad, all leg joints at −0.47 rad. Physical hardware: Dynamixel XL430-W250-T servos.
+Both groups share `armature=1.3e-3`, geartrain friction 0.04 / 0.03 N·m and the torque-speed curve, so the simulated servos cannot perfectly track an aggressive open-loop gait (as on the real hardware). The tuned values live in `hexapod.py` and may still change. Init pose: spine joints at 0.0 rad, all leg joints at +0.47 rad (the active "HEXAPI" block in `hexapod.py`). Physical hardware: Dynamixel XL430-W250-T servos.
 
 ### Registered Gym Environments
 
@@ -85,13 +110,13 @@ See [`source/isaaclab_tasks/.../config/hexapod/README.md`](source/isaaclab_tasks
 
 ```bat
 :: Two-phase imitation + RL (recommended starting point)
-isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-v0 --num_envs 4096
+isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Mimic-v0 --num_envs 4096
 
 :: Standard flat RL (or fine-tune a mimic checkpoint via --checkpoint)
-isaaclab.bat train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 4096
+isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-v0 --num_envs 4096
 
 :: Evaluate a checkpoint
-isaaclab.bat play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --checkpoint <path>
+isaaclab play --rl_library rsl_rl --task Isaac-Velocity-Flat-Hexapod-Play-v0 --num_envs 1 --checkpoint <path>
 ```
 
 The mimic task falls back to a built-in sinusoidal tripod gait if `hexapod-assets/Sim Gaits/forward3_lleg30_amp65_sim.csv` is absent — no CSV is required to start training.

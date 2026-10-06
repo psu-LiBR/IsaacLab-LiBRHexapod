@@ -47,17 +47,17 @@ recorded training results correspond to that earlier revision, not necessarily c
 ## Running them
 
 ```bash
-# train
-./isaaclab.sh train --rl_library rsl_rl \
-    --task Isaac-Velocity-Flat-Hexapod-Rshape-v0 --headless
+# train (headless unless you pass --viz kit; PhysX is the hexapod default backend)
+isaaclab train --rl_library rsl_rl \
+    --task Isaac-Velocity-Flat-Hexapod-Rshape-v0
 
 # evaluate a checkpoint
-./isaaclab.sh play --rl_library rsl_rl \
+isaaclab play --rl_library rsl_rl \
     --task Isaac-Velocity-Flat-Hexapod-Rshape-Play-v0 --num_envs 1 --checkpoint <path>
 
-# replay an open-loop gait CSV (joint angles in radians) -- playReal.py has no
-# --rl_library backend registration, so it is run directly by module path
-./isaaclab.sh -p source/isaaclab_rl/isaaclab_rl/entrypoints/backends/playReal.py \
+# replay an open-loop gait CSV (joint angles in radians) -- playReal has no
+# --rl_library backend registration, so it is run as a module
+isaaclab -p -m isaaclab_rl.entrypoints.backends.playReal \
     --task Isaac-Velocity-Flat-Hexapod-Rshape-Play-v0 --num_envs 1 \
     --gait_csv <path> --gait_mode pos --gait_dt <seconds_per_row> --warmup_time 2.0
 ```

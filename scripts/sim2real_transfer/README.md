@@ -1,6 +1,6 @@
 # sim2real_transfer
 
-Runs a trained hexapod RL policy (exported to ONNX by `isaaclab.bat play`, or `binary_rl/export_binary_onnx.py` for the binary profile) on the real
+Runs a trained hexapod RL policy (exported to ONNX by `isaaclab play`, or `binary_rl/export_binary_onnx.py` for the binary profile) on the real
 robot: real IMU (via ROS2 `/imu`) + real Dynamixel servos + a Raspberry Pi,
 completely wirelessly. See `CLAUDE.md`'s sim2real plan for the full design
 rationale, key facts (obs layout, DOF ordering, motor IDs, control rate), and
@@ -123,7 +123,7 @@ profile (`velocity`, `goal`, or `binary`).
 - `tools/validate_onnx.py` -- offline sim-vs-onnx trace validation; run before
   ever touching hardware. Direct mode needs only a CSV with `obs_*`/`action_*`
   columns; pipeline mode additionally needs the raw fields that
-  `isaaclab.bat play --rl_library rsl_rl ... --dump_obs_action_csv <path>`
+  `isaaclab play --rl_library rsl_rl ... --dump_obs_action_csv <path>`
   produces.
 - `tools/calibrate_encoders.py`, `tools/check_body_alignment.py`,
   `tools/log_imu_rotation_test.py`, `tools/log_imu_axis_alignment_test.py` --
