@@ -153,6 +153,12 @@ For +-1 bits the two carry the same signal, so tune the multiplier first. `train
 multiplier. The resolved weights are saved in `run_meta.json`. `REWARDS_A2_RECORD.md` maps the sweep's strengths to
 these flags.
 
+`eval_protocol.py` measures the result: every policy it evaluates (baselines included) gets a `switch_metrics` block
+with the commanded-bit switches per leg per complete 50-step gait cycle, the fraction of leg-cycles within
+`--max_switches_per_leg_cycle` (default 5), frozen legs (flagged, not failed), dwell times and single-step pulses, and a
+`basic_screen_pass`. It counts the commanded bits, not measured foot contact, and needs `--warmup >= 1` so that no
+measured step sits at phase 0.
+
 Quick wiring check (a couple of minutes, no GPU-heavy load):
 
 ```bat

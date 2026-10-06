@@ -213,3 +213,70 @@ def summarize(
         "lateral_max_bl": {str(x): bool(np.abs(lateral).max() / body_length <= x) for x in [0.1, 0.2, 0.3, 0.5]},
     }
     return out
+
+
+BULKY_KEYS = (
+    "cycle_env_and_index",
+    "per_leg_per_cycle",
+    "per_cycle_six_leg_mean",
+    "whole_command_events_per_cycle",
+    "per_env_forward_m",
+    "complete_cycles_per_env",
+    "preview_env0",
+)
+"""Per-cycle and per-step lists that :func:`summarize` returns but that are too long for a results table."""
+
+
+def compact(summary):
+    """Drop the long per-cycle and per-step lists from a :func:`summarize` result, keeping the scalar metrics."""
+    return {k: v for k, v in summary.items() if k not in BULKY_KEYS}
+
+
+def _numpy(x):
+    """Copy a torch tensor (any device) or array-like to numpy, so later in-place updates to ``x`` do not leak in."""
+    if hasattr(x, "detach"):
+        x = x.detach().cpu().numpy()
+    return np.array(x)
+
+
+class SwitchRecorder:
+    """Collects one fixed-window rollout step by step and summarizes it with :func:`summarize`.
+
+    Per step, ``action`` and ``phase`` are the values *before* ``env.step`` (the commanded bits and the
+    ``episode_length_buf`` the spine wave is driven from); ``position``, ``quaternion``, ``failure`` and ``torso``
+    are read *after* it. Tensors are copied to numpy as they are recorded.
+
+    Args:
+        initial_position: Base position at the start of the window, in the env frame [m], shape [E, 3].
+        initial_quaternion: Base orientation at the start of the window (xyzw), shape [E, 4].
+        previous_action: Action index applied just before the window (the last warm-up action), shape [E]. If
+            None, the first recorded action counts as no switch.
+    """
+
+    def __init__(self, initial_position, initial_quaternion, previous_action=None):
+        self.initial_position = _numpy(initial_position)
+        self.initial_quaternion = _numpy(initial_quaternion)
+        self.previous_action = None if previous_action is None else _numpy(previous_action)
+        self._steps = {k: [] for k in ("action", "phase", "position", "quaternion", "failure", "torso")}
+
+    def record(self, action, phase, position, quaternion, failure, torso):
+        """Append one step: ``action`` and ``phase`` [E] before the step, the rest after it (see class docs)."""
+        for key, value in zip(self._steps, (action, phase, position, quaternion, failure, torso)):
+            self._steps[key].append(_numpy(value))
+
+    def summarize(self, **kwargs):
+        """Run :func:`summarize` on the recorded window. ``kwargs`` are ``dt``, ``period``, ``body_length``, etc."""
+        steps = {k: np.stack(v) for k, v in self._steps.items()}
+        actions = steps["action"]
+        return summarize(
+            actions=actions,
+            previous=actions[0] if self.previous_action is None else self.previous_action,
+            phase_steps=steps["phase"],
+            trajectory=steps["position"] - self.initial_position[None],
+            initial_q=self.initial_quaternion,
+            quaternions=steps["quaternion"],
+            heights=steps["position"][..., 2],
+            failures=steps["failure"],
+            torso=steps["torso"],
+            **kwargs,
+        )

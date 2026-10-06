@@ -35,6 +35,10 @@ Reported per policy
     net_displacement_m    straight-line distance travelled in the window
     x_displacement_m      component along the goal direction (+x)
     path_length_m         integrated travel (vibrating in place shows up here)
+    switch_metrics        per-leg contact-command switches per complete gait cycle (one spine period =
+                          50 control steps), frozen legs, dwell times and a pass/fail screen against
+                          ``--max_switches_per_leg_cycle``; see ``switch_metrics.py``. Counted on the
+                          commanded bits, not on measured foot contact
     straightness          net / path
     action_entropy_nats   did the policy collapse onto one pattern
     mean_stance_legs      mean popcount of the 6-bit action = feet on the ground
@@ -264,6 +268,8 @@ import sys
 # allow running from any CWD (e.g. the repo root, so relative asset paths resolve)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from switch_metrics import DEFAULT_MAX_SWITCHES_PER_LEG_CYCLE, SwitchRecorder, compact  # noqa: E402
+
 from isaaclab.app import AppLauncher  # noqa: E402
 
 parser = argparse.ArgumentParser()
@@ -372,6 +378,13 @@ parser.add_argument(
     "sign from the cfg default, A_SPINE from hexapod_binary_env_cfg). Default None = use "
     "the cfg's TRIPOD_SPINE_* (equivalent to --tripod_spine_phase_deg -45). Only affects "
     "BASE_tripod_csv_bits.",
+)
+parser.add_argument(
+    "--max_switches_per_leg_cycle",
+    type=int,
+    default=DEFAULT_MAX_SWITCHES_PER_LEG_CYCLE,
+    help="switch_metrics screen: a complete gait cycle in which any leg's commanded contact bit flips more "
+    "often than this fails basic_screen_pass (flips are counted on both edges)",
 )
 parser.add_argument("--out", default="eval_protocol_results.json")
 AppLauncher.add_app_launcher_args(parser)
@@ -654,6 +667,34 @@ def fallen_now():
     )
 
 
+# Torso contact for switch_metrics: the links the env's own ``undesired_contacts`` reward watches.
+_torso_sensor = None
+_torso_body_ids = None
+_torso_threshold = args.fall_threshold
+try:
+    _uc = base.cfg.rewards.undesired_contacts
+    _torso_sensor = base.scene.sensors[_uc.params["sensor_cfg"].name]
+    _torso_names = _uc.params["sensor_cfg"].body_names
+    _torso_body_ids = _torso_sensor.find_bodies(_torso_names)[0]
+    _torso_threshold = float(_uc.params.get("threshold", args.fall_threshold))
+    print(
+        f"[protocol] torso judge: sensor='{_uc.params['sensor_cfg'].name}' bodies={_torso_names} "
+        f"ids={_torso_body_ids} threshold={_torso_threshold} N",
+        flush=True,
+    )
+except Exception as _exc:  # pragma: no cover
+    print(f"[protocol] WARNING: torso judge unavailable ({_exc}); torso contact will not be screened", flush=True)
+
+
+def torso_now():
+    """[N] bool: any torso link above the undesired-contact threshold, or None if the judge is unavailable."""
+    if _torso_sensor is None:
+        return None
+    f = _torso_sensor.data.net_forces_w_history
+    f = f.torch if hasattr(f, "torch") else f
+    return torch.any(torch.max(torch.linalg.norm(f[:, :, _torso_body_ids], dim=-1), dim=1)[0] > _torso_threshold, dim=1)
+
+
 @torch.no_grad()
 def run(policy_fn, label, meta=None):
     """One fixed-window rollout. policy_fn(obs, t) -> int64 actions [N]."""
@@ -681,11 +722,17 @@ def run(policy_fn, label, meta=None):
         )
 
     # opening transient: take --warmup steps before the measurement window opens
+    last_a = None
     for t in range(args.warmup):
-        obs, _, _, _, _ = env.step(policy_fn(o, t))
+        last_a = policy_fn(o, t)
+        obs, _, _, _, _ = env.step(last_a)
         o = obs["policy"]
 
     start = root_rel()
+    # Per-leg switch counting needs the action applied just before the window (last warm-up action) so the
+    # first measured step is compared against something real; with --warmup 0 there is none.
+    recorder = SwitchRecorder(start, robot.data.root_quat_w, previous_action=last_a)
+    no_flag = torch.zeros(N, dtype=torch.bool, device=device)
     prev = start.clone()
     tot_r = 0.0
     # Per-term reward breakdown: accumulated for EVERY policy (baselines included) so the
@@ -717,6 +764,7 @@ def run(policy_fn, label, meta=None):
         if prev_stance is not None:
             leg_transitions += (stance & ~prev_stance).float()
         prev_stance = stance
+        phase = base.episode_length_buf.clone()  # the t the spine wave is driven from for this step
         obs, rew, terminated, truncated, _ = env.step(a)
         o = obs["policy"]
         cur = root_rel()
@@ -735,6 +783,15 @@ def run(policy_fn, label, meta=None):
         if fl is not None:
             fall_steps += fl.float()
             first_fall = torch.where(fl & torch.isnan(first_fall), torch.full_like(first_fall, float(t)), first_fall)
+        torso = torso_now()
+        recorder.record(
+            a,
+            phase,
+            cur,
+            robot.data.root_quat_w,
+            fl if fl is not None else no_flag,
+            torso if torso is not None else no_flag,
+        )
     end = root_rel()
     net_v = (end - start)[:, :2]
     net = torch.linalg.norm(net_v, dim=1)
@@ -802,6 +859,21 @@ def run(policy_fn, label, meta=None):
                 "window_s": round(args.steps * base.step_dt, 2),
             }
         )
+    try:
+        res["switch_metrics"] = {
+            **compact(
+                recorder.summarize(
+                    dt=float(base.step_dt),
+                    period=args.gait_period_s,
+                    body_length=args.body_length_m,
+                    max_switches_per_leg_cycle=args.max_switches_per_leg_cycle,
+                )
+            ),
+            "fall_judge_available": _fall_sensor is not None,
+            "torso_judge_available": _torso_sensor is not None,
+        }
+    except ValueError as exc:  # e.g. --gait_period_s is not a whole number of control steps
+        res["switch_metrics"] = {"error": str(exc)}
     if meta:
         res.update(meta)
     print("[protocol] " + json.dumps(res), flush=True)

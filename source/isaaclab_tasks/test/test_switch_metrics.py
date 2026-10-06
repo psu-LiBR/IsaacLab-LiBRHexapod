@@ -150,3 +150,92 @@ def test_defaults_match_the_binary_env_timing():
     assert period == pytest.approx(switch_metrics.DEFAULT_PERIOD_S)
     assert decimation * sim_dt == pytest.approx(switch_metrics.DEFAULT_CONTROL_DT)
     assert round(period / (decimation * sim_dt)) == 50
+
+
+def _record(recorder, actions, phase, positions, quaternion):
+    for t in range(len(actions)):
+        no_flag = np.zeros(actions.shape[1], dtype=bool)
+        recorder.record(actions[t], phase[t], positions[t], quaternion, no_flag, no_flag)
+
+
+def _rollout(steps, envs, start_phase=1, offset=(2.0, -1.0, 0.1)):
+    """A forward walk in an env whose origin is not at zero, with leg 0 toggling every 25 steps."""
+    phase = np.tile(np.arange(start_phase, start_phase + steps)[:, None], (1, envs))
+    actions = ((phase // 25) % 2).astype(np.int64)
+    positions = np.zeros((steps, envs, 3))
+    positions[:, :, 0] = np.linspace(0.0, 1.0, steps)[:, None]
+    positions += np.asarray(offset)
+    quaternion = np.tile(np.array([0.0, 0.0, 0.0, 1.0]), (envs, 1))
+    return actions, phase, positions, quaternion
+
+
+def test_recorder_matches_summarize_on_displacement_from_the_window_start():
+    actions, phase, positions, quaternion = _rollout(300, 2)
+    recorder = switch_metrics.SwitchRecorder(np.asarray((2.0, -1.0, 0.1)) * np.ones((2, 1)), quaternion)
+    _record(recorder, actions, phase, positions, quaternion)
+    got = recorder.summarize()
+    expected = summarize(
+        actions,
+        actions[0],
+        phase,
+        positions - np.asarray((2.0, -1.0, 0.1)),
+        quaternion,
+        np.tile(quaternion, (300, 1, 1)),
+        positions[..., 2],
+        np.zeros((300, 2), dtype=bool),
+        np.zeros((300, 2), dtype=bool),
+    )
+    assert got == expected
+    assert got["per_env_forward_m"] == pytest.approx([1.0, 1.0])  # displacement, not the env-frame x of 3.0
+    assert got["height_min_m"] == pytest.approx(0.1)
+
+
+def test_recorder_counts_a_flip_on_the_first_step_against_the_last_warmup_action():
+    actions, phase, positions, quaternion = _rollout(100, 1, start_phase=50)
+    actions[:] = 1  # leg 0 held in stance for the whole window
+    start = positions[0] * 0
+    kwargs = dict(initial_position=start, initial_quaternion=quaternion)
+    with_warmup = switch_metrics.SwitchRecorder(**kwargs, previous_action=np.zeros(1, dtype=np.int64))
+    without = switch_metrics.SwitchRecorder(**kwargs)
+    for recorder in (with_warmup, without):
+        _record(recorder, actions, phase, positions, quaternion)
+    # Phase 50 starts a complete cycle at the first measured step, so a warm-up action of 0 -> 1 is one switch in it.
+    assert with_warmup.summarize()["per_leg_max"][0] == 1
+    assert without.summarize()["per_leg_max"][0] == 0
+
+
+def test_recorder_copies_tensors_so_in_place_updates_do_not_change_the_record():
+    torch = pytest.importorskip("torch")
+    actions, phase, positions, quaternion = _rollout(100, 1, start_phase=50)
+    buffer = torch.zeros(1, 3)
+    recorder = switch_metrics.SwitchRecorder(torch.zeros(1, 3), torch.tensor(quaternion))
+    no_flag = torch.zeros(1, dtype=torch.bool)
+    for t in range(100):
+        buffer.copy_(torch.tensor(positions[t]))  # the sim reuses one buffer for every step
+        recorder.record(
+            torch.tensor(actions[t]), torch.tensor(phase[t]), buffer, torch.tensor(quaternion), no_flag, no_flag
+        )
+    assert recorder.summarize()["per_env_forward_m"] == pytest.approx([positions[-1, 0, 0]])
+
+
+def test_compact_drops_the_per_cycle_lists_and_stays_json_serializable():
+    import json
+
+    actions, phase, positions, quaternion = _rollout(300, 2)
+    recorder = switch_metrics.SwitchRecorder(positions[0] * 0, quaternion)
+    _record(recorder, actions, phase, positions, quaternion)
+    summary = recorder.summarize()
+    small = switch_metrics.compact(summary)
+    assert set(summary) - set(small) == set(switch_metrics.BULKY_KEYS)
+    assert small["worst_leg_cycle"] == summary["worst_leg_cycle"]
+    json.dumps(small)
+
+
+def test_eval_protocol_records_the_phase_before_the_step_and_reports_the_metrics():
+    source = (SCRIPTS / "eval_protocol.py").read_text()
+    run = source[source.index("def run(policy_fn") : source.index("def build_mlp")]
+    # The spine wave is driven by episode_length_buf as it is when the action is applied, i.e. before env.step.
+    assert run.index("phase = base.episode_length_buf.clone()") < run.index("env.step(a)")
+    assert run.index("recorder.record(") > run.index("env.step(a)")
+    assert 'res["switch_metrics"]' in run
+    assert "SwitchRecorder(start, robot.data.root_quat_w, previous_action=last_a)" in run
