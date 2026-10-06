@@ -101,6 +101,8 @@ env = build_env(
     action_rate_multiplier=args.action_rate_multiplier,
     action_switch_penalty=args.action_switch_penalty,
 )
+# Read the resolved reward weights now: later code re-wraps `env`, and the raw env config is only reachable here.
+switch_meta = switch_penalty_meta(env, args)
 env = wrap_env(env, wrapper="isaaclab-single-agent")
 device = env.device
 n_actions = int(env.action_space.n)
@@ -210,7 +212,7 @@ write_run_meta(
     num_envs=args.num_envs,
     timesteps=args.timesteps,
     asymmetric_critic=env.state_space is not None,
-    **switch_penalty_meta(env, args),
+    **switch_meta,
     **extra_meta,
 )
 

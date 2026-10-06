@@ -31,6 +31,30 @@ def _cfg(action_rate_weight=CURRENT_ACTION_RATE_WEIGHT):
     return SimpleNamespace(rewards=SimpleNamespace(action_rate_l2=term))
 
 
+def _discrete_env(cfg):
+    """The real ``DiscreteBitsActionWrapper`` around a fake base env, as ``build_env`` returns it.
+
+    ``DiscreteBitsActionWrapper.unwrapped`` is the wrapper itself (skrl needs that), so the env config is only
+    reachable through ``base_env``.
+    """
+    import gymnasium as gym
+    import torch
+    from discrete_action_wrapper import DiscreteBitsActionWrapper
+
+    class FakeBase(gym.Env):
+        device = torch.device("cpu")
+        num_envs = 2
+        single_observation_space = gym.spaces.Box(-1.0, 1.0, (32,))
+        observation_space = gym.spaces.Box(-1.0, 1.0, (2, 32))
+
+        def __init__(self):
+            self.cfg = cfg
+
+    wrapper = DiscreteBitsActionWrapper(FakeBase())
+    assert not hasattr(wrapper.unwrapped, "cfg") or wrapper.unwrapped is wrapper
+    return wrapper
+
+
 def _args(argv=()):
     parser = argparse.ArgumentParser()
     bc.add_common_cli(parser)
@@ -78,12 +102,23 @@ def test_run_meta_records_the_resolved_weights():
     args = _args(["--action_rate_multiplier", "100", "--action_switch_penalty", "0.004"])
     bc.scale_action_rate_weight(cfg, args.action_rate_multiplier)
     bc.add_action_switch_penalty(cfg, args.action_switch_penalty)
-    env = SimpleNamespace(unwrapped=SimpleNamespace(cfg=cfg))
-    meta = bc.switch_penalty_meta(env, args)
+    meta = bc.switch_penalty_meta(_discrete_env(cfg), args)
     assert meta["action_rate_l2_weight"] == pytest.approx(-0.05)
     assert meta["action_switch_count_weight"] == pytest.approx(-0.004)
     assert meta["action_rate_multiplier"] == 100.0
     assert meta["action_switch_penalty"] == 0.004
+
+
+def test_run_meta_reads_a_plain_gym_env_too():
+    cfg = _cfg()
+    args = _args()
+
+    class Plain:
+        unwrapped = SimpleNamespace(cfg=cfg)
+
+    meta = bc.switch_penalty_meta(Plain(), args)
+    assert meta["action_rate_l2_weight"] == CURRENT_ACTION_RATE_WEIGHT
+    assert meta["action_switch_count_weight"] is None
 
 
 @pytest.mark.parametrize("script", ["train_discrete.py", "train_discrete_ppo.py", "train_sac_d.py"])
@@ -92,7 +127,11 @@ def test_discrete_training_scripts_forward_both_flags_to_build_env(script):
     call = re.search(r"env = build_env\((.*?)\n\)", source, re.S).group(1)
     assert "action_rate_multiplier=args.action_rate_multiplier" in call
     assert "action_switch_penalty=args.action_switch_penalty" in call
-    assert "**switch_penalty_meta(env, args)" in source
+    # The raw env config is only reachable before skrl re-wraps `env`, so the meta is read right after build_env.
+    meta_at = source.index("switch_meta = switch_penalty_meta(env, args)")
+    wrap_at = source.find("env = wrap_env(env")
+    assert wrap_at == -1 or meta_at < wrap_at
+    assert "**switch_meta" in source
 
 
 def test_continuous_sac_applies_the_multiplier_and_rejects_the_switch_penalty():

@@ -138,8 +138,15 @@ def add_action_switch_penalty(env_cfg: Any, penalty: float) -> None:
 
 
 def switch_penalty_meta(env: Any, args: argparse.Namespace) -> dict[str, Any]:
-    """Record the contact-switch penalty settings and the reward weights they resolved to, for ``run_meta.json``."""
-    rewards = env.unwrapped.cfg.rewards
+    """Record the contact-switch penalty settings and the reward weights they resolved to, for ``run_meta.json``.
+
+    Args:
+        env: Either a ``DiscreteBitsActionWrapper`` (whose ``unwrapped`` is the wrapper itself, so the raw env is
+            read from ``base_env``) or a plain gym env.
+        args: The parsed CLI namespace holding the two switch-penalty flags.
+    """
+    base = getattr(env, "base_env", None) or env.unwrapped
+    rewards = base.cfg.rewards
     action_rate = getattr(rewards, "action_rate_l2", None)
     switch_count = getattr(rewards, "action_switch_count", None)
     return {
