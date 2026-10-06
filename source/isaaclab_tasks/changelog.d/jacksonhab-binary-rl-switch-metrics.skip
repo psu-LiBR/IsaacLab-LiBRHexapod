@@ -1,0 +1,7 @@
+Test-only package change: added source/isaaclab_tasks/test/test_switch_metrics.py,
+test_switch_command_reward.py, test_eval_protocol_metadata.py and
+test_binary_switch_penalty_flags.py, and extended test_binary_onnx_export.py, covering
+the binary-contact RL scripts in scripts/reinforcement_learning/binary_rl/ (contact-switch
+metric, optional switch-penalty reward, action-rate multiplier flag, ONNX export
+action-mask handling). The scripts live outside this package and the env config and
+reward definitions are unchanged, so no isaaclab_tasks runtime API or version change.
