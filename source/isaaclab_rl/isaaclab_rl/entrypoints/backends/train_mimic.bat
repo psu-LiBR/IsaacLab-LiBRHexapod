@@ -21,7 +21,9 @@ REM  Common overrides:
 REM    set NUM_ENVS=2048          (default: 4096)
 REM    set MIMIC_ITERS=600        (default: 3000, covers both phases)
 REM    set RL_ITERS=2000          (only used in --two-phase mode)
-REM    set CSV_PATH=C:\path\to\ref.csv   (override reference gait CSV)
+REM
+REM  The reference gait CSV is not an environment variable: edit MIMIC_CSV_PATH in
+REM  hexapod_mimic_env_cfg.py (relative paths resolve against the working directory).
 REM
 REM  Requirements:
 REM    - The `isaaclab` command must be on PATH (activate the uv environment

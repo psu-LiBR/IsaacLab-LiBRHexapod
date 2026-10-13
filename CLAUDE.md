@@ -23,8 +23,10 @@ including an imitation-learning warm-up system.
   `pytorch-cu130` index), `warp-lang==1.17.0`, `newton[sim]==1.6.1`, `rsl-rl-lib==5.5.1`
 - NVIDIA driver 581.42 or newer on Windows (CUDA 13)
 - `git lfs` installed (the hexapod USD/OBJ assets are LFS objects)
-- Hexapod USD model at `hexapod-assets/USD/HexapiFlattened.usd` (repo-relative; a `Hexapod_Flattened.usd` path is commented out just above it in `hexapod.py`)
-- Data output directory at `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/`
+- Hexapod USD model at `hexapod-assets/USD/HexapiFlattened.usd` (repo-relative, so run from the repo root; the
+  older `Hexapod_Flattened.usd` is kept next to it for reference and is commented out just above in `hexapod.py`)
+- No machine-specific directories: the play scripts' optional CSV logs (`--save_play_logs` /
+  `--play_log_dir <dir>`, off by default) and every other output path are repo-, checkpoint- or CLI-relative
 
 ## Branch Status: upstream `develop` merge (2026-10-06)
 
@@ -151,14 +153,15 @@ Training logs save to `logs/rsl_rl/<experiment_name>/<timestamp>/`.
 
 ```text
 hexapod-assets/              # Hexapod USD model, OBJ meshes, and reference gait CSVs (repo-tracked)
-  USD/Hexapod_Flattened.usd
+  USD/HexapiFlattened.usd       # active robot asset (HexapI joint conventions)
+  USD/Hexapod_Flattened.usd     # older asset (legacy joint signs, no "_Joint" suffix), reference only
   OBJ/                         # Per-link OBJ meshes for offline PyVista rendering
     CenterLink.obj  BackLink.obj  FrontLink.obj
     MiddleLeft.obj  MiddleRight.obj
     BackLeft.obj  BackRight.obj  FrontLeft.obj  FrontRight.obj
     local_fix.json               # Blender world-rotation matrices (generated; not needed for current pipeline)
     extract_blender_rotations.py # Blender scripting-tab helper to regenerate local_fix.json
-  Sim Gaits/forward3_lleg30_amp65_sim.csv
+  Sim Gaits/*.csv               # reference gaits, in the legacy (negative-leg) joint convention
 source/
   isaaclab/          # Core framework: env managers, sensors, controllers, terrain
   isaaclab_assets/   # Robot and sensor config dataclasses (ArticulationCfg)
@@ -244,9 +247,10 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - Init pose: spine joints (`FrontLink_Joint`, `BackLink_Joint`) at 0.0 rad. Leg joints are **currently
   +0.47 rad** under a `# For HEXAPI Implementation` block in `init_state.joint_pos`; an older
   `# For Trad Hexapod Implementation` block using **-0.47 rad** is present but commented out directly
-  above it. Other parts of this doc (mimic gait tripod references, `playReal.py`'s `q_default_list`, the
-  MATLAB conversion notes) still assume the -0.47 rad convention — reconcile the authoritative sign
-  against `hexapod.py` directly before cross-referencing those sections.
+  above it. `HexapiFlattened.usd` is the **positive-leg convention** (leg limits -5..110 deg, stance +0.46 /
+  lift +1.18 rad); the committed `Sim Gaits/*.csv` files and the MATLAB conversion notes below are in the
+  **legacy** negative-leg convention (stance -0.46 / lift -1.18), i.e. every leg column is negated relative to
+  HexapI (the spine carries the HexapI global sign flip). See **Known issues: legacy-convention gait CSVs**.
 
 **Gym registration:** `source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/__init__.py`
 
@@ -286,7 +290,7 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
   - `feet_air_time_per_leg`: per-leg duty-cycle aware air time (kept for reference; reverted to fixed-threshold `feet_air_time` in the active config because it produced too weak a signal)
   - `track_ang_vel_z_exp_ema`: EMA-smoothed yaw tracking reward (currently active)
 - `hexapod_mimic_env_cfg.py` — `HexapodMimicEnvCfg` and `HexapodMimicEnvCfg_PLAY`; see **Mimic System** below
-- `hexapod_mimic_rewards.py` — `joint_pos_imitation` and `spine_pos_imitation` reward functions; `MotionReference` is built lazily and cached in a module-level dict keyed by `(csv_path, gait_period, col_order)` so it is only constructed once across all envs
+- `hexapod_mimic_rewards.py` — `joint_pos_imitation` and `spine_pos_imitation` reward functions; `MotionReference` is built lazily and cached in a module-level dict keyed by `(csv_path, gait_period, col_order, csv_convention)` so it is only constructed once across all envs
 - `hexapod_mimic_motion.py` — `MotionReference` class: loads a reference gait from CSV (headerless or headered) or falls back to a built-in sinusoidal tripod gait; resamples to a 200-point uniform phase grid; transfers to GPU lazily on first `get_reference()` call
 - `agents/rsl_rl_ppo_mimic_cfg.py` — `HexapodMimicPPORunnerCfg`: 3000 total iterations, `init_noise_std`/`entropy_coef` left at the inherited flat/rough defaults (1.0 / 0.01) to match the May 2026 working run configuration, logs to `logs/rsl_rl/hexapod_mimic/`
 - `hexapod_goal_env_cfg.py` — `HexapodGoalEnvCfg` and `HexapodGoalEnvCfg_PLAY`; see **Goal-Reaching System** below
@@ -320,7 +324,7 @@ On first call, `joint_pos_imitation` validates that `asset.data.joint_names` mat
 Tripod A (swing first half-cycle): indices 3, 4, 6 (MiddleRight, BackLeft, FrontLeft).
 Tripod B (swing second half-cycle): indices 2, 5, 7 (MiddleLeft, BackRight, FrontRight).
 
-`MIMIC_CSV_PATH` defaults to `hexapod-assets/Sim Gaits/forward3_lleg30_amp65_sim.csv`. If the file is absent, the built-in sinusoidal tripod gait is used automatically — no CSV needed to start training.
+`MIMIC_CSV_PATH` defaults to `hexapod-assets/Sim Gaits/forward3_lleg35_amp65_sim.csv` (a path relative to the working directory, so run from the repo root; if the file cannot be found the built-in gait is used silently). If the file is absent, the built-in sinusoidal tripod gait is used automatically — no CSV needed to start training. The committed CSVs are in the legacy negative-leg convention and are negated to the HexapI convention on load (`MIMIC_CSV_CONVENTION = "legacy"`); the built-in gait is generated directly in the HexapI convention (`LEG_OFFSET = +0.47`). See **Known issues: legacy-convention gait CSVs**.
 
 PPO tuning for mimic: `init_noise_std`/`entropy_coef` are intentionally left at the inherited flat/rough defaults (1.0 / 0.01, see `rsl_rl_ppo_cfg.py`) rather than lowered, per the May 2026 working run configuration.
 
@@ -369,10 +373,9 @@ registration, so it is not reachable through the unified `play` subcommand; it i
 
 - Extends play_rsl_rl.py to support open-loop gait CSV playback for sim-to-real comparison
 - Key args: `--gait_csv`, `--gait_mode pos`, `--gait_dt <sec/row>`, `--warmup_time`, `--run_time`
-- In `pos` mode: CSV values are absolute joint positions (rad); converted to actions via `(pos - default) / scale` where default comes from `robot.data.default_joint_pos`
-- `q_default_list` in script: `[0.0, 0.0, -0.47, -0.47, -0.47, -0.47, -0.47, -0.47]`
+- In `pos` mode: CSV values are absolute joint positions (rad), in the robot's own joint convention; converted to actions via `(pos - offset) / scale`, where `offset`/`scale` are read from the env's joint-position action term and fall back to `robot.data.default_joint_pos` (no hardcoded default list). The committed `Sim Gaits/*.csv` are in the legacy convention and are replayed unconverted — see **Known issues: legacy-convention gait CSVs**
 - Prints applied torques (N·m) and base velocity (body frame, vx/vy/vz + yaw_rate) every 20 steps
-- Logs joint positions to CSV and displacement tracking per step
+- Optionally logs joint positions and displacement tracking per step to CSV (`--save_play_logs` / `--play_log_dir`, see **Play-script CSV logging** below)
 - Reward breakdown printed at end of episode
 
 Distinct from `scripts/sim2real_transfer/` (see below): `playReal.py` replays a CSV gait open-loop *inside Isaac Sim* for reward comparison; `sim2real_transfer` runs a trained policy closed-loop on the *actual robot*.
@@ -384,13 +387,36 @@ Distinct from `scripts/sim2real_transfer/` (see below): `playReal.py` replays a 
 - Reorder: `newOrder = [2 1 6 5 8 7 4 3]`
 - Leg correction: `position_legs_rad = position_legs_rad * -1 + pi`
 - Body corrections: BackLink unchanged, FrontLink negated (`*-1`)
-- Ground contact encoder → rad: `val1 = (4096/2 + 300) → 2348 → 3.601 rad → -0.459 rad` (matches init_state -0.47)
+- Ground contact encoder → rad: `val1 = (4096/2 + 300) → 2348 → 3.601 rad → -0.459 rad` (the **legacy** convention; the active HexapI `init_state` uses +0.47, i.e. the negation)
 
-**play_rsl_rl.py data logging:**
+**Play-script CSV logging** (optional, **off by default**; shared helper `hexapod_play_logs.py` in the backends folder):
 
-- Joint positions (rad) → `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_*.csv`
-- Displacement tracking → `sim_displacement_log_*.csv`
-- Reward breakdown printed at end of episode
+- `--save_play_logs` enables the per-step CSV logs; they go to `<checkpoint_dir>/play_logs/`
+- `--play_log_dir <dir>` writes them to `<dir>` instead (and also enables them); a new timestamped file set is written per run
+- `play_rsl_rl.py` / `playpyvista.py` / `play_physicsGait.py`: joint positions of env 0 (rad) → `HexapodRL_Rad_<timestamp>.csv`, displacement tracking → `sim_displacement_log_<timestamp>.csv`
+- `playReal.py`: `HexapodReal_unscaled_Rad_<timestamp>.csv` + `sim_displacement_log_<timestamp>.csv` (gait-CSV replay has no checkpoint, so the default directory is `logs/rsl_rl/<experiment>/gait_playback/play_logs/`)
+- `playTracking.py`: `Hexapod_cmdvsact_<timestamp>.csv`
+- A log that cannot be written prints a warning and is skipped; it never stops the play run. No script in the repo reads these CSVs; they are for offline analysis (e.g. MATLAB sim-vs-real comparison)
+- The per-term reward breakdown is printed at the end of the episode regardless of this flag
+
+## Known issues: legacy-convention gait CSVs, stale newton experiments
+
+`HexapiFlattened.usd` mirrors every joint relative to the old `Hexapod_Flattened.usd` (positive-leg convention, limits
+-5..110 deg), but the committed `hexapod-assets/Sim Gaits/*.csv` are still in the legacy negative-leg convention.
+The mimic imitation reward converts them: `MotionReference(csv_convention="legacy")` (default, `MIMIC_CSV_CONVENTION`
+in `hexapod_mimic_env_cfg.py`) negates all eight columns on load, `"hexapi"` uses a CSV as is (e.g. a play-script
+`HexapodRL_Rad_*.csv`), and the built-in gait stands at +0.47. The spine negation follows the documented HexapI
+global sign flip but has **not been checked in simulation** — watch the spine in the first mimic play video.
+`playReal.py --gait_csv` replay is **not yet converted**: it feeds the legacy CSVs to the HexapI robot unchanged, so
+pass a HexapI-convention CSV (or convert first). Existing mimic checkpoints predate the fix and should be retrained.
+
+`scripts/newton_experiments/mpm_hexapod_test.py` and `mpm_hexapod_twoway.py` (standalone Newton + implicit-MPM
+sand experiments, not part of the Isaac Lab pipeline) are **stale and currently do not run against the active
+asset**: they target the old `Hexapod_Flattened.usd` (joint names without/with a `_Joint` suffix that no longer
+match, legacy -0.47 leg pose, de-instancing/collision fix-ups specific to that file). Porting them to
+`HexapiFlattened.usd` needs at least: in-memory removal of the degenerate `IMUSensor` mass spec (`centerOfMass`
+`-inf`, which NaNs Newton), `skip_mesh_approximation=True`, `JointTargetMode.POSITION` on the actuated joints,
+the +0.47 leg pose, a legacy-to-HexapI gait sign conversion, and re-tuned PD gains. Deferred.
 
 ## Offline PyVista Rendering Pipeline
 
@@ -449,7 +475,7 @@ Key `render_pyvista.py` arguments:
 
 **playpyvista.py vs play_rsl_rl.py:**
 
-`playpyvista.py` is a fork of `play_rsl_rl.py` kept as a separate file so `play_rsl_rl.py` can be merged from upstream cleanly. Differences: always logs body poses (no flag), adds `--num_steps` to stop after a fixed count. The hardcoded output paths in `play_rsl_rl.py`/`playpyvista.py` (CSV joint log, displacement log) still point to `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/` and must be updated if the machine changes.
+`playpyvista.py` is a fork of `play_rsl_rl.py` kept as a separate file so `play_rsl_rl.py` can be merged from upstream cleanly. Differences: always logs body poses (no flag), adds `--num_steps` to stop after a fixed count. Both take the same optional `--save_play_logs` / `--play_log_dir` CSV logging, see **Play-script CSV logging** above.
 
 ## Sim-to-Real Deployment (`scripts/sim2real_transfer/`)
 
