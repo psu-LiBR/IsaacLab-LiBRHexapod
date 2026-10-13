@@ -26,7 +26,7 @@ from isaaclab.managers import SceneEntityCfg
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
-# Module-level cache: built once per unique (csv_path, gait_period, col_order).
+# Module-level cache: built once per unique (csv_path, gait_period, col_order, convention).
 _MOTION_REF_CACHE: dict = {}
 
 # Per-asset joint reorder index cache.
@@ -36,16 +36,24 @@ _MOTION_REF_CACHE: dict = {}
 _JOINT_IDX_CACHE: dict[int, torch.Tensor | None] = {}
 
 
-def _get_motion_ref(csv_path: str | None, gait_period: float, csv_col_order: list[int] | None):
+def _get_motion_ref(
+    csv_path: str | None, gait_period: float, csv_col_order: list[int] | None, csv_convention: str = "legacy"
+):
     """Return a cached MotionReference, constructing it on first call."""
     from .hexapod_mimic_motion import MotionReference
 
-    cache_key = (csv_path, gait_period, tuple(csv_col_order) if csv_col_order is not None else None)
+    cache_key = (
+        csv_path,
+        gait_period,
+        tuple(csv_col_order) if csv_col_order is not None else None,
+        csv_convention,
+    )
     if cache_key not in _MOTION_REF_CACHE:
         _MOTION_REF_CACHE[cache_key] = MotionReference(
             csv_path=csv_path,
             gait_period=gait_period,
             csv_col_order=list(csv_col_order) if csv_col_order is not None else None,
+            csv_convention=csv_convention,
         )
     return _MOTION_REF_CACHE[cache_key]
 
@@ -95,6 +103,7 @@ def joint_pos_imitation(
     csv_path: str | None = None,
     gait_period: float = 0.5,
     csv_col_order: list[int] | None = None,
+    csv_convention: str = "legacy",
     joint_sigma: float = 0.25,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
@@ -121,10 +130,12 @@ def joint_pos_imitation(
         csv_col_order: Integer list to reorder CSV columns to Isaac Lab's
                        alphabetical joint order.  Pass SIM_DOF_TO_ALPHA if the
                        CSV was produced by play.py / playReal.py.
+        csv_convention: Joint-sign convention of the CSV: "legacy" (committed Sim Gaits CSVs, negated to the HexapI
+                       convention on load) or "hexapi" (already in the current robot's convention).
         joint_sigma:   Gaussian width in radians.  Smaller -> stricter tracking.
         asset_cfg:     Scene entity config for the robot articulation.
     """
-    motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order)
+    motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order, csv_convention)
 
     asset = env.scene[asset_cfg.name]
 
@@ -151,6 +162,7 @@ def spine_pos_imitation(
     csv_path: str | None = None,
     gait_period: float = 0.5,
     csv_col_order: list[int] | None = None,
+    csv_convention: str = "legacy",
     spine_sigma: float = 0.15,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
@@ -160,7 +172,7 @@ def spine_pos_imitation(
     """
     SPINE_COLS_SIM_DOF = [0, 1]  # BackLink_Joint, FrontLink_Joint in Sim DOF order
 
-    motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order)
+    motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order, csv_convention)
 
     asset = env.scene[asset_cfg.name]
 

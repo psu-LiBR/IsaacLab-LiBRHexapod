@@ -26,8 +26,10 @@ After the full run the checkpoint is compatible with Isaac-Velocity-Flat-Hexapod
         --checkpoint <path/to/mimic/model.pt>
 
 Reference CSV:
-    Point MIMIC_CSV_PATH at a CSV produced by play.py (HexapodRL_Rad_*.csv) or
-    at a hand-crafted gait file.  If the file is absent the built-in sinusoidal
+    Point MIMIC_CSV_PATH at a CSV produced by the play scripts (HexapodRL_Rad_*.csv, written with
+    --save_play_logs; set MIMIC_CSV_CONVENTION = "hexapi") or at a hand-crafted gait file.  The committed
+    Sim Gaits CSVs use the legacy joint signs (MIMIC_CSV_CONVENTION = "legacy", the default).
+    If the file is absent the built-in sinusoidal
     tripod gait is used automatically — no CSV required to get started.
 
 Tuning guidance:
@@ -55,6 +57,10 @@ from .hexapod_mimic_rewards import joint_pos_imitation
 
 # Path to a reference gait CSV.  Set to None to use the generated tripod gait.
 MIMIC_CSV_PATH: str | None = "hexapod-assets/Sim Gaits/forward3_lleg35_amp65_sim.csv"
+# Joint-sign convention of MIMIC_CSV_PATH: "legacy" for the committed hexapod-assets/Sim Gaits CSVs (written for the
+# old Hexapod_Flattened.usd; negated to the HexapiFlattened.usd convention on load) or "hexapi" for a CSV already in
+# the current robot's convention (e.g. a play-script HexapodRL_Rad_*.csv log).
+MIMIC_CSV_CONVENTION: str = "legacy"
 # Duration of one gait cycle in the reference (seconds).  Overridden by CSV
 # if the CSV contains a "time" column spanning exactly one cycle.
 MIMIC_GAIT_PERIOD: float = 0.5  # seconds
@@ -131,6 +137,7 @@ class HexapodMimicEnvCfg(HexapodFlatEnvCfg):
                 "csv_path": MIMIC_CSV_PATH,
                 "gait_period": MIMIC_GAIT_PERIOD,
                 "csv_col_order": None,  # CSV and asset.data.joint_pos share Sim DOF order
+                "csv_convention": MIMIC_CSV_CONVENTION,
                 "joint_sigma": MIMIC_JOINT_SIGMA,
             },
         )

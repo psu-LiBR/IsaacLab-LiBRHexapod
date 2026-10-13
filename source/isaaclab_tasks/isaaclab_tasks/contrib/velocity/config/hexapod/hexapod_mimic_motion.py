@@ -19,14 +19,21 @@ robot as confirmed by playReal.py (Sim DOF order, determined by the USD articula
     0 BackLink_Joint   1 FrontLink_Joint   2 MiddleLeft_Joint  3 MiddleRight_Joint
     4 BackLeft_Joint   5 BackRight_Joint   6 FrontLeft_Joint   7 FrontRight_Joint
 
-CSV format (headerless, Sim DOF order — matches play.py / playReal.py logs):
+CSV format (headerless, Sim DOF order). The committed ``hexapod-assets/Sim Gaits`` files are in the
+**legacy** joint convention of the old Hexapod_Flattened.usd (legs stance -0.46 / lift -1.18 rad), e.g.:
+
     -0.702,-0.687,-0.7,-0.460,-0.460,-0.460,-0.7,-0.460
     ...
+
+The active HexapiFlattened.usd mirrors every joint (legs stance +0.46 / lift +1.18 rad, spine sign-flipped), so
+``MotionReference`` negates all eight columns of a ``csv_convention="legacy"`` CSV on load. CSVs recorded from the
+current robot (play-script ``HexapodRL_Rad_*.csv`` logs) are already in the HexapI convention: load them with
+``csv_convention="hexapi"``.
 
 CSV format (with header, any column order — columns matched by name):
     time,BackLink_Joint,FrontLink_Joint,MiddleLeft_Joint,MiddleRight_Joint,BackLeft_Joint,
         BackRight_Joint,FrontLeft_Joint,FrontRight_Joint
-    0.00,0.0,0.0,-0.47,-0.47,-0.47,-0.47,-0.47,-0.47
+    0.00,0.0,0.0,0.47,0.47,0.47,0.47,0.47,0.47
 
 A leading "time" column is optional; if omitted, rows are assumed equally spaced over
 one gait period.
@@ -65,6 +72,11 @@ TRIPOD_A: list[int] = [3, 4, 6]  # MiddleRight_Joint, BackLeft_Joint, FrontLeft_
 TRIPOD_B: list[int] = [2, 5, 7]  # MiddleLeft_Joint,  BackRight_Joint, FrontRight_Joint
 SPINE_IDX: list[int] = [0, 1]  # BackLink_Joint, FrontLink_Joint
 
+# Joint-sign conventions a reference CSV can be written in (see MotionReference).
+#   "legacy": old Hexapod_Flattened.usd (committed Sim Gaits CSVs); negated to the HexapI convention on load.
+#   "hexapi": current HexapiFlattened.usd (play-script joint logs); used as is.
+CSV_CONVENTIONS: tuple[str, ...] = ("legacy", "hexapi")
+
 # SIM_DOF_TO_ALPHA is kept for reference but NOT used — asset.data.joint_pos
 # already matches the CSV column order (both are Sim DOF order).
 SIM_DOF_TO_ALPHA: list[int] = [4, 0, 5, 6, 1, 7, 2, 3]
@@ -92,6 +104,7 @@ class MotionReference:
         gait_period: float = 0.5,
         num_interp_points: int = 200,
         csv_col_order: list[int] | None = None,
+        csv_convention: str = "legacy",
     ) -> None:
         """
         Args:
@@ -104,7 +117,14 @@ class MotionReference:
                             Use SIM_DOF_TO_ALPHA if the CSV was produced by
                             play.py / playReal.py or is a sim gait CSV.
                             Example: csv_col_order=SIM_DOF_TO_ALPHA
+            csv_convention: Joint-sign convention of the CSV: ``"legacy"`` (the committed Sim Gaits CSVs, written
+                            for the old USD; all eight columns are negated to match HexapiFlattened.usd) or
+                            ``"hexapi"`` (already in the robot's current convention, used as is). Ignored for the
+                            built-in gait, which is generated directly in the HexapI convention.
         """
+        if csv_convention not in CSV_CONVENTIONS:
+            raise ValueError(f"csv_convention must be one of {CSV_CONVENTIONS}, got '{csv_convention}'.")
+        self.csv_convention = csv_convention
         self.gait_period = gait_period
         self._n = num_interp_points
         self._csv_col_order = csv_col_order
@@ -209,6 +229,11 @@ class MotionReference:
         if self._csv_col_order is not None:
             data = data[:, self._csv_col_order]
 
+        # HexapiFlattened.usd mirrors every joint of the old USD (legs: stance -0.46 -> +0.46 rad, lift -1.18 -> +1.18
+        # rad; spine: the HexapI global sign flip), so a legacy CSV is the negation of the HexapI trajectory.
+        if self.csv_convention == "legacy":
+            data = -data
+
         # Resample to uniform phase grid via linear interpolation.
         grid = np.linspace(0.0, 1.0, self._n, endpoint=False)
         resampled = np.zeros((self._n, NUM_JOINTS), dtype=np.float32)
@@ -236,7 +261,7 @@ class MotionReference:
         phase = np.linspace(0.0, 1.0, self._n, endpoint=False)
         omega = 2.0 * np.pi * phase
 
-        LEG_OFFSET: float = -0.47  # rad  nominal standing pose for all leg joints
+        LEG_OFFSET: float = 0.47  # rad  nominal standing pose for all leg joints (HexapI positive-leg convention)
         LEG_AMP: float = 0.30  # rad  peak swing amplitude above standing
         SPINE_AMP: float = 0.10  # rad  lateral spine oscillation
 
