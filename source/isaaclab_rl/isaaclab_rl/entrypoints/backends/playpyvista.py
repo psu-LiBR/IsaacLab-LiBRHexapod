@@ -9,7 +9,8 @@ to an .npz file for offline PyVista rendering.
 This is a fork of ``play_rsl_rl.py`` kept as a separate file so ``play_rsl_rl.py`` can stay close to the
 upstream Isaac Lab version and be updated/merged without conflicts. Differences from ``play_rsl_rl.py``:
 
-- Always logs body poses (no flag needed) to ``<log_dir>/body_pose_log/``.
+- Always logs body poses (no flag needed) to ``<log_dir>/body_pose_log/``. The joint-position and
+  displacement CSVs are opt-in (``--save_play_logs`` / ``--play_log_dir``), as in ``play_rsl_rl.py``.
 - Adds ``--num_steps`` to stop the play loop after a fixed number of steps instead of running indefinitely
   (``play_rsl_rl.py`` only stops early when ``--video`` is used). Ctrl+C also ends the run, and the body pose
   log is still written.
@@ -25,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import csv
 import logging
 import os
 import sys
@@ -58,6 +58,14 @@ from ..common import (
     video_playback_steps,
 )
 from . import cli_args_rsl_rl as cli_args
+from .hexapod_play_logs import (
+    DISPLACEMENT_HEADER,
+    PlayCsvLog,
+    add_play_log_dir_arg,
+    joint_pos_header,
+    resolve_play_log_dir,
+    run_timestamp,
+)
 from .play_rsl_rl import _resolve_checkpoint
 
 logger = logging.getLogger(__name__)
@@ -84,6 +92,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             " If omitted, the loop runs until interrupted with Ctrl+C."
         ),
     )
+    add_play_log_dir_arg(parser)
     cli_args.add_rsl_rl_args(parser)
     add_launcher_args(parser)
     remaining_args_env_registration = cli_args.register_external_tasks(argv)
@@ -150,24 +159,20 @@ def run(argv: list[str] | None = None) -> None:
             runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
 
             screen.close()
-            _play(env, env_cfg, policy, args_cli, body_pose_log_dir)
+            _play(env, env_cfg, policy, args_cli, body_pose_log_dir, resolve_play_log_dir(args_cli, log_dir))
 
 
-def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir: str) -> None:
+def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir: str, play_log_dir: str | None) -> None:
     """Step the policy, log joint positions, displacement and body poses, then save the pose log."""
     dt = env.unwrapped.step_dt
     device = env.unwrapped.device
 
     # ---------- setup for saving joint positions (radians) ----------
-    # File where we'll store joint positions (not raw actions)
-    action_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_5-3-26_actiontest.csv"
     # Number of joints we care about (first 8 from env 0)
     num_joints = 8
-
-    # Create/overwrite file and write header once
-    os.makedirs(os.path.dirname(action_log_path), exist_ok=True)
-    with open(action_log_path, "w", newline="") as f:
-        csv.writer(f).writerow([f"joint_{i}_pos_rad" for i in range(num_joints)])
+    log_stamp = run_timestamp()
+    # joint positions (not raw actions) of env 0
+    joint_log = PlayCsvLog(play_log_dir, "HexapodRL_Rad", joint_pos_header(num_joints), log_stamp)
 
     # ---- sanity prints ----
     print("[INFO] sim dt:", dt)
@@ -179,25 +184,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir:
         logger.warning("Couldn't print robot joint names: %s", e)
 
     # open file to track displacement
-    disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_5-5-26_test.csv"
-    os.makedirs(os.path.dirname(disp_log_path), exist_ok=True)
-    with open(disp_log_path, "w", newline="") as f:
-        csv.writer(f).writerow(
-            [
-                "step",
-                "t_s",
-                "cycle_num",
-                "cycle_step",
-                "gait_idx",
-                "x_w",
-                "y_w",
-                "z_w",
-                "dx",
-                "dy",
-                "dz",
-                "forward_disp_x",
-            ]
-        )
+    disp_log = PlayCsvLog(play_log_dir, "sim_displacement_log", DISPLACEMENT_HEADER, log_stamp)
 
     obs = env.get_observations()
 
@@ -246,9 +233,8 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir:
                         reward_term_sums[name] += step_reward_terms[:, term_idx] * dt
 
                 # actual joint positions (env 0, first 8)
-                joint_positions_list = robot.data.joint_pos[0, :num_joints].detach().cpu().numpy().tolist()
-                with open(action_log_path, "a", newline="") as f:
-                    csv.writer(f).writerow(joint_positions_list)
+                if joint_log.enabled:
+                    joint_log.writerow(robot.data.joint_pos[0, :num_joints].detach().cpu().numpy().tolist())
 
                 # Body pose logging (env 0 only)
                 body_pos_frames.append(robot.data.body_pos_w[0].detach().cpu().numpy())
@@ -259,8 +245,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir:
                 dpos = pos - start_pos
                 x, y, z = pos[0].detach().cpu().numpy().tolist()
                 dx, dy, dz = dpos[0].detach().cpu().numpy().tolist()
-                with open(disp_log_path, "a", newline="") as f:
-                    csv.writer(f).writerow([timestep, timestep * dt, "", "", "", x, y, z, dx, dy, dz, dx])
+                disp_log.writerow([timestep, timestep * dt, "", "", "", x, y, z, dx, dy, dz, dx])
 
             timestep += 1
 
@@ -268,6 +253,9 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace, body_pose_log_dir:
             sleep_time = dt - (time.time() - start_time)
             if args_cli.real_time and sleep_time > 0:
                 time.sleep(sleep_time)
+
+    joint_log.close()
+    disp_log.close()
 
     print("\n===== REWARD SUMMARY =====")
     print("reward_sum_per_env:", reward_sum_per_env.detach().cpu().numpy())

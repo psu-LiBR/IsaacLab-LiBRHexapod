@@ -46,6 +46,14 @@ from ..common import (
     startup_screen,
 )
 from . import cli_args_rsl_rl as cli_args
+from .hexapod_play_logs import (
+    DISPLACEMENT_HEADER,
+    PlayCsvLog,
+    add_play_log_dir_arg,
+    joint_pos_header,
+    resolve_play_log_dir,
+    run_timestamp,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +86,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "baked into obs_N -- validate_onnx.py's pipeline mode subtracts q_default_sim "
         "itself to reconstruct joint_pos_rel from these.",
     )
+    add_play_log_dir_arg(parser)
     cli_args.add_rsl_rl_args(parser)
     add_launcher_args(parser)
     remaining_args_env_registration = cli_args.register_external_tasks(argv)
@@ -170,31 +179,12 @@ def run(argv: list[str]) -> None:
 
             # ---------- hexapod fork: joint-position (rad) + displacement logging ----------
             num_joints = 8
-            action_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_5-3-26_actiontest.csv"
-            disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_5-5-26_test.csv"
-
-            os.makedirs(os.path.dirname(action_log_path), exist_ok=True)
-            with open(action_log_path, "w", newline="") as f:
-                csv.writer(f).writerow([f"joint_{i}_pos_rad" for i in range(num_joints)])
-
-            os.makedirs(os.path.dirname(disp_log_path), exist_ok=True)
-            with open(disp_log_path, "w", newline="") as f:
-                csv.writer(f).writerow(
-                    [
-                        "step",
-                        "t_s",
-                        "cycle_num",
-                        "cycle_step",
-                        "gait_idx",
-                        "x_w",
-                        "y_w",
-                        "z_w",
-                        "dx",
-                        "dy",
-                        "dz",
-                        "forward_disp_x",
-                    ]
-                )
+            play_log_dir = resolve_play_log_dir(args_cli, log_dir)
+            log_stamp = run_timestamp()
+            joint_log = PlayCsvLog(play_log_dir, "HexapodRL_Rad", joint_pos_header(num_joints), log_stamp)
+            cleanup.callback(joint_log.close)
+            disp_log = PlayCsvLog(play_log_dir, "sim_displacement_log", DISPLACEMENT_HEADER, log_stamp)
+            cleanup.callback(disp_log.close)
 
             robot = env.unwrapped.scene["robot"]
             start_pos = robot.data.root_pos_w.clone()  # [num_envs, 3]
@@ -273,17 +263,16 @@ def run(argv: list[str]) -> None:
                         reward_term_sums[name] += step_reward_terms[:, term_idx] * dt
 
                 # actual joint positions (env 0, first num_joints)
-                joint_positions_list = robot.data.joint_pos[0, :num_joints].detach().cpu().numpy().tolist()
-                with open(action_log_path, "a", newline="") as f:
-                    csv.writer(f).writerow(joint_positions_list)
+                if joint_log.enabled:
+                    joint_log.writerow(robot.data.joint_pos[0, :num_joints].detach().cpu().numpy().tolist())
 
                 # displacement of env 0 relative to its start-of-play position
-                pos = robot.data.root_pos_w
-                dpos = pos - start_pos
-                x, y, z = pos[0].detach().cpu().numpy().tolist()
-                dx, dy, dz = dpos[0].detach().cpu().numpy().tolist()
-                with open(disp_log_path, "a", newline="") as f:
-                    csv.writer(f).writerow([timestep, timestep * dt, "", "", "", x, y, z, dx, dy, dz, dx])
+                if disp_log.enabled:
+                    pos = robot.data.root_pos_w
+                    dpos = pos - start_pos
+                    x, y, z = pos[0].detach().cpu().numpy().tolist()
+                    dx, dy, dz = dpos[0].detach().cpu().numpy().tolist()
+                    disp_log.writerow([timestep, timestep * dt, "", "", "", x, y, z, dx, dy, dz, dx])
                 timestep += 1
 
             screen.close()

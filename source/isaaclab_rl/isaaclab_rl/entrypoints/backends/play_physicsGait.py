@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import csv
 import logging
 import os
 import sys
@@ -49,6 +48,14 @@ from ..common import (
     video_playback_steps,
 )
 from . import cli_args_rsl_rl as cli_args
+from .hexapod_play_logs import (
+    DISPLACEMENT_HEADER,
+    PlayCsvLog,
+    add_play_log_dir_arg,
+    joint_pos_header,
+    resolve_play_log_dir,
+    run_timestamp,
+)
 from .play_rsl_rl import _resolve_checkpoint
 
 logger = logging.getLogger(__name__)
@@ -65,6 +72,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--external_callback", default=None, help="Fully qualified path to an externally defined callback."
     )
+    add_play_log_dir_arg(parser)
     cli_args.add_rsl_rl_args(parser)
     add_launcher_args(parser)
     remaining_args_env_registration = cli_args.register_external_tasks(argv)
@@ -127,32 +135,20 @@ def run(argv: list[str] | None = None) -> None:
             runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
 
             screen.close()
+            play_log_dir = resolve_play_log_dir(args_cli, log_dir)
             with contextlib.suppress(KeyboardInterrupt):
-                _play(env, env_cfg, policy, args_cli)
+                _play(env, env_cfg, policy, args_cli, play_log_dir)
 
 
-def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
+def _play(env, env_cfg, policy, args_cli: argparse.Namespace, play_log_dir: str | None) -> None:
     """Run the playback loop."""
     dt = env.unwrapped.step_dt
 
-    # ---------- NEW: setup for saving joint positions (radians) ----------
-    # File where we'll store joint positions (not raw actions)
-    actionFileName = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_1-15-26_test.csv"
+    # ---------- setup for saving joint position targets (radians) ----------
     # Number of joints we care about (first 8 from env 0)
     num_joints = 8
-
-    # Create/overwrite file and write header once
-    os.makedirs(os.path.dirname(actionFileName), exist_ok=True)
-    with open(actionFileName, "w", newline="") as f:
-        writer = csv.writer(f)
-        header = [f"joint_{i}_pos_rad" for i in range(num_joints)]
-        writer.writerow(header)
-
-    # os.makedirs(os.path.dirname(commandFileName), exist_ok=True)
-    # with open(commandFileName, "w", newline="") as f:
-    #    writer = csv.writer(f)
-    #    header = [f"joint_{i}_pos_rad" for i in range(num_joints)]
-    #    writer.writerow(header)
+    log_stamp = run_timestamp()
+    joint_log = PlayCsvLog(play_log_dir, "HexapodRL_Rad", joint_pos_header(num_joints), log_stamp)
 
     # ---- sanity prints ----
     print("[INFO] sim dt:", env.unwrapped.step_dt)
@@ -164,27 +160,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
         logger.warning("Couldn't print robot joint names: %s", e)
 
     # open file to track displacement
-    disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_1-22-26_test.csv"
-    os.makedirs(os.path.dirname(disp_log_path), exist_ok=True)
-
-    with open(disp_log_path, "w", newline="") as d:
-        w = csv.writer(d)
-        w.writerow(
-            [
-                "step",
-                "t_s",
-                "cycle_num",
-                "cycle_step",
-                "gait_idx",
-                "x_w",
-                "y_w",
-                "z_w",
-                "dx",
-                "dy",
-                "dz",
-                "forward_disp_x",
-            ]
-        )
+    disp_log = PlayCsvLog(play_log_dir, "sim_displacement_log", DISPLACEMENT_HEADER, log_stamp)
 
     # reset environment
     obs = env.get_observations()
@@ -201,39 +177,6 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
     except Exception as e:
         logger.warning("Couldn't print action dim: %s", e)
     # -----------------------
-    # --------------------------------------------------------------------
-
-    """
-    # ---------- Logging setup ----------
-    logFileName = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/Hexapod_sin_cmd_vs_actual_stiff20.19_12-17-25.csv"
-    num_joints = 8
-
-    q_default_list = [0.0, 0.0] + [0.35] * (num_joints - 2)
-    q_default = torch.tensor(q_default_list, device=env.device, dtype=torch.float32)
-
-    os.makedirs(os.path.dirname(logFileName), exist_ok=True)
-    with open(logFileName, "w", newline="") as f:
-        writer = csv.writer(f)
-        header = ["t_s"]
-        header += [f"cmd_j{i}_rad" for i in range(num_joints)]
-        header += [f"act_j{i}_rad" for i in range(num_joints)]
-        writer.writerow(header)
-    # -----------------------------------
-
-    # ---------- Sine command parameters ----------
-    A = 0.3          # amplitude in radians (keep <= your joint limits!)
-    freq_hz = 1.0    # sine frequency (Hz)
-    phase = 0.0       # phase (rad)
-    action_scale = 0.5  # from your comment: q = q_default + 0.5 * action
-    t = 0.0
-    # which joints to excite (example: first motor only)
-    excite = torch.zeros(num_joints, device=env.device, dtype=torch.float32)
-    excite[[1, 2, 5]] = 1.0 # set to 1.0 for joints you want to move
-    # e.g., excite[:] = 1.0 to move all first 8 joints
-    # --------------------------------------------
-    log_f = open(logFileName, "a", newline="")
-    writer = csv.writer(log_f)
-    """
 
     # reset environment
     obs = env.get_observations()
@@ -288,11 +231,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
             # This is a tensor of shape [num_envs, num_joints]
             joint_targets = robot.data.joint_pos_target[0, :8]  # env 0, first 8 joints
 
-            joint_positions_list = [float(x.item()) for x in joint_targets]
-
-            with open(actionFileName, "a", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(joint_positions_list)
+            joint_log.writerow([float(x.item()) for x in joint_targets])
 
             # -----Added to track the displacement of robot --------------
             # ---- step / cycle bookkeeping (warmup-aware) ----
@@ -311,24 +250,22 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
             dx, dy, dz = dpos[0].detach().cpu().numpy().tolist()
             forward_disp_x = dx
 
-            with open(disp_log_path, "a", newline="") as d:
-                w = csv.writer(d)
-                w.writerow(
-                    [
-                        step,
-                        t_s,
-                        cycle_num,
-                        cycle_step,
-                        gait_idx,
-                        x,
-                        y,
-                        z,
-                        dx,
-                        dy,
-                        dz,
-                        forward_disp_x,
-                    ]
-                )
+            disp_log.writerow(
+                [
+                    step,
+                    t_s,
+                    cycle_num,
+                    cycle_step,
+                    gait_idx,
+                    x,
+                    y,
+                    z,
+                    dx,
+                    dy,
+                    dz,
+                    forward_disp_x,
+                ]
+            )
 
         timestep += 1
 
@@ -338,6 +275,9 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
+
+    joint_log.close()
+    disp_log.close()
 
 
 if __name__ == "__main__":

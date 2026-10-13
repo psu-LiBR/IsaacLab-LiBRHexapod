@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import csv
 import os
 import sys
 import time
@@ -48,6 +47,7 @@ from ..common import (
     video_playback_steps,
 )
 from . import cli_args_rsl_rl as cli_args
+from .hexapod_play_logs import PlayCsvLog, add_play_log_dir_arg, resolve_play_log_dir, run_timestamp
 from .play_rsl_rl import _resolve_checkpoint
 
 
@@ -62,6 +62,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--external_callback", default=None, help="Fully qualified path to an externally defined callback."
     )
+    add_play_log_dir_arg(parser)
     cli_args.add_rsl_rl_args(parser)
     add_launcher_args(parser)
     remaining_args_env_registration = cli_args.register_external_tasks(argv)
@@ -124,58 +125,25 @@ def run(argv: list[str] | None = None) -> None:
             runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
 
             screen.close()
+            play_log_dir = resolve_play_log_dir(args_cli, log_dir)
             with contextlib.suppress(KeyboardInterrupt):
-                _play(env, env_cfg, policy, args_cli)
+                _play(env, env_cfg, policy, args_cli, play_log_dir)
 
 
-def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
+def _play(env, env_cfg, policy, args_cli: argparse.Namespace, play_log_dir: str | None) -> None:
     """Run the playback loop."""
     dt = env.unwrapped.step_dt
 
-    """
-    # ---------- NEW: setup for saving joint positions (radians) ----------
-    # File where we'll store joint positions (not raw actions)
-    actionFileName = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_Rad_12-17-25.csv"
-    commandFileName = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodRL_command_12-17-25.csv"
-    # Number of joints we care about (first 8 from env 0)
-    num_joints = 8
-
-    # Default joint positions in radians:
-    # joint 0,1 -> 0.0 rad; joints 2..7 -> 0.35 rad
-    # This will be used as q_default in: q = q_default + 0.5 * action
-    q_default_list = [0.0, 0.0] + [0.35] * (num_joints - 2)
-
-    # Create/overwrite file and write header once
-    os.makedirs(os.path.dirname(actionFileName), exist_ok=True)
-    with open(actionFileName, "w", newline="") as f:
-        writer = csv.writer(f)
-        header = [f"joint_{i}_pos_rad" for i in range(num_joints)]
-        writer.writerow(header)
-
-    os.makedirs(os.path.dirname(commandFileName), exist_ok=True)
-    with open(commandFileName, "w", newline="") as f:
-        writer = csv.writer(f)
-        header = [f"joint_{i}_pos_rad" for i in range(num_joints)]
-        writer.writerow(header)
-    # --------------------------------------------------------------------
-    """
-
     # ---------- Logging setup ----------
-    logFileName = (
-        "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/Hexapod_sin_cmdvsact_stiff37_damp.32_step_amp0.3_1-9-26.csv"
-    )
     num_joints = 8
 
     q_default_list = [0.0, 0.0] + [0.35] * (num_joints - 2)
     q_default = torch.tensor(q_default_list, device=env.device, dtype=torch.float32)
 
-    os.makedirs(os.path.dirname(logFileName), exist_ok=True)
-    with open(logFileName, "w", newline="") as f:
-        writer = csv.writer(f)
-        header = ["t_s"]
-        header += [f"cmd_j{i}_rad" for i in range(num_joints)]
-        header += [f"act_j{i}_rad" for i in range(num_joints)]
-        writer.writerow(header)
+    header = ["t_s"]
+    header += [f"cmd_j{i}_rad" for i in range(num_joints)]
+    header += [f"act_j{i}_rad" for i in range(num_joints)]
+    track_log = PlayCsvLog(play_log_dir, "Hexapod_cmdvsact", header, run_timestamp())
     # -----------------------------------
 
     # ---------- Sine command parameters ----------
@@ -187,8 +155,6 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
     excite[[1, 3, 6]] = 1.0  # set to 1.0 for joints you want to move
     # e.g., excite[:] = 1.0 to move all first 8 joints
     # --------------------------------------------
-    log_f = open(logFileName, "a", newline="")  # noqa: SIM115 -- lives across the sim step loop, closed at exit
-    writer = csv.writer(log_f)
 
     # reset environment
     obs = env.get_observations()
@@ -250,10 +216,7 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
             else:
                 cmd = q_cmd.detach().cpu().numpy().tolist()
 
-            writer.writerow([t] + cmd + act)
-            # optional: flush occasionally so you don't lose data on crash
-            if timestep % 20 == 0:
-                log_f.flush()
+            track_log.writerow([t] + cmd + act)
 
         timestep += 1
 
@@ -263,6 +226,8 @@ def _play(env, env_cfg, policy, args_cli: argparse.Namespace) -> None:
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
+
+    track_log.close()
 
 
 if __name__ == "__main__":

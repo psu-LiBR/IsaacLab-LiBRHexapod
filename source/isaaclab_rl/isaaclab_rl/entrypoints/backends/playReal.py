@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import csv
 import logging
 import os
 import sys
@@ -49,6 +48,14 @@ from ..common import (
     video_playback_steps,
 )
 from . import cli_args_rsl_rl as cli_args
+from .hexapod_play_logs import (
+    DISPLACEMENT_HEADER,
+    PlayCsvLog,
+    add_play_log_dir_arg,
+    joint_pos_header,
+    resolve_play_log_dir,
+    run_timestamp,
+)
 from .play_rsl_rl import _resolve_checkpoint
 
 logger = logging.getLogger(__name__)
@@ -112,6 +119,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     )
     # ------------------------------------------------
 
+    add_play_log_dir_arg(parser)
     cli_args.add_rsl_rl_args(parser)
     add_launcher_args(parser)
     remaining_args_env_registration = cli_args.register_external_tasks(argv)
@@ -334,12 +342,15 @@ def run(argv: list[str] | None = None) -> None:
                 # No checkpoint required for gait playback
                 resume_path = None
                 log_dir = os.path.abspath(os.getcwd())
+                # CSV logs go under the experiment's log root (gitignored), not the current directory
+                play_log_dir = resolve_play_log_dir(args_cli, os.path.join(log_root_path, "gait_playback"))
                 print(f"[INFO] Gait playback enabled. Using gait CSV: {args_cli.gait_csv}")
             else:
                 resume_path = _resolve_checkpoint(args_cli, agent_cfg, env_cfg, log_root_path)
                 if resume_path is None:
                     return
                 log_dir = os.path.dirname(resume_path)
+                play_log_dir = resolve_play_log_dir(args_cli, log_dir)
                 print(f"[INFO]: Loading model checkpoint from: {resume_path}")
             env_cfg.log_dir = log_dir
             apply_video_recording(env_cfg, log_dir, args_cli, subdir="play", checkpoint_path=resume_path)
@@ -358,10 +369,12 @@ def run(argv: list[str] | None = None) -> None:
             env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
             screen.close()
             with contextlib.suppress(KeyboardInterrupt):
-                _play(env, env_cfg, args_cli, agent_cfg, resume_path)
+                _play(env, env_cfg, args_cli, agent_cfg, resume_path, play_log_dir)
 
 
-def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: str | None) -> None:
+def _play(
+    env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: str | None, play_log_dir: str | None
+) -> None:
     """Run the policy or gait CSV playback loop and print the reward summary."""
     use_gait = args_cli.gait_csv is not None
 
@@ -383,27 +396,8 @@ def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: st
         logger.warning("Couldn't print robot joint names: %s", e)
 
     # open file to track displacement
-    disp_log_path = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/sim_displacement_log_3-26-26_physicsSim.csv"
-    os.makedirs(os.path.dirname(disp_log_path), exist_ok=True)
-
-    with open(disp_log_path, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(
-            [
-                "step",
-                "t_s",
-                "cycle_num",
-                "cycle_step",
-                "gait_idx",
-                "x_w",
-                "y_w",
-                "z_w",
-                "dx",
-                "dy",
-                "dz",
-                "forward_disp_x",
-            ]
-        )
+    log_stamp = run_timestamp()
+    disp_log = PlayCsvLog(play_log_dir, "sim_displacement_log", DISPLACEMENT_HEADER, log_stamp)
 
     # reset environment
     obs = env.get_observations()
@@ -431,18 +425,10 @@ def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: st
     dt = env.unwrapped.step_dt
     device = env.unwrapped.device
 
-    # ---------- NEW: setup for saving joint positions (radians) ----------
-    # File where we'll store joint positions (not raw actions)
-    actionFileName = "C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/HexapodReal_unscaled_Rad_3-27-26_randtest.csv"
+    # ---------- setup for saving joint positions (radians, not raw actions) ----------
     # Number of joints we care about (first 8 from env 0)
     num_joints = 8
-
-    # Create/overwrite file and write header once
-    os.makedirs(os.path.dirname(actionFileName), exist_ok=True)
-    with open(actionFileName, "w", newline="") as f:
-        writer = csv.writer(f)
-        header = [f"joint_{i}_pos_rad" for i in range(num_joints)]
-        writer.writerow(header)
+    joint_log = PlayCsvLog(play_log_dir, "HexapodReal_unscaled_Rad", joint_pos_header(num_joints), log_stamp)
 
     # --- warmup / settle ---
     if args_cli.warmup_steps is not None:
@@ -528,12 +514,7 @@ def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: st
             obs, rew, dones, infos = env.step(actions)
 
             # actual joint positions (env 0, first 8)
-            joint_positions = robot.data.joint_pos[0, :num_joints]
-            joint_positions_list = joint_positions.detach().cpu().numpy().tolist()
-
-            with open(actionFileName, "a", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(joint_positions_list)
+            joint_log.writerow(robot.data.joint_pos[0, :num_joints].detach().cpu().numpy().tolist())
 
             # print applied torques and base velocity every 20 steps
             if timestep % 20 == 0:
@@ -579,24 +560,22 @@ def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: st
             dx, dy, dz = dpos[0].detach().cpu().numpy().tolist()
             forward_disp_x = dx
 
-            with open(disp_log_path, "a", newline="") as f:
-                w = csv.writer(f)
-                w.writerow(
-                    [
-                        step,
-                        t_s,
-                        cycle_num,
-                        cycle_step,
-                        gait_idx,
-                        x,
-                        y,
-                        z,
-                        dx,
-                        dy,
-                        dz,
-                        forward_disp_x,
-                    ]
-                )
+            disp_log.writerow(
+                [
+                    step,
+                    t_s,
+                    cycle_num,
+                    cycle_step,
+                    gait_idx,
+                    x,
+                    y,
+                    z,
+                    dx,
+                    dy,
+                    dz,
+                    forward_disp_x,
+                ]
+            )
 
         # ALWAYS increment timestep so CSV playback advances even without video
         timestep += 1
@@ -605,6 +584,9 @@ def _play(env, env_cfg, args_cli, agent_cfg: RslRlBaseRunnerCfg, resume_path: st
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
+
+    joint_log.close()
+    disp_log.close()
 
     valid_mask = reward_step_count_per_env > 0
 
