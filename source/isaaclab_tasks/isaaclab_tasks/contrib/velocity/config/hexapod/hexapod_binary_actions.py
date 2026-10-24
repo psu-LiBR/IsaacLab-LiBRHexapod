@@ -5,34 +5,18 @@
 
 """Scripted (non-RL) spine action term for the hexapod binary-gait environment.
 
-The binary-gait task hands the six leg joints to RL as one contact bit per leg
-(:class:`isaaclab.envs.mdp.BinaryJointPositionActionCfg` terms) while the two spine
-joints follow a fixed open-loop waveform.  :class:`SpineSineAction` is that term: a
-zero-width :class:`ActionTerm` (``action_dim == 0``) so the spine consumes no slot in
-the RL action vector but still drives its joints every step through the action pipeline
-(same PD-target path as every other joint target in this project).
+In the binary-gait task RL controls the six leg joints (one contact bit each) while the two spine joints
+follow a fixed open-loop wave. :class:`SpineSineAction` is a zero-width :class:`ActionTerm` (``action_dim == 0``)
+that drives them every step without taking a slot in the policy action vector. :meth:`set_waveform` swaps in
+another wave at runtime (used for the tripod baseline).
 
-During ``Isaac-Goal-Flat-Hexapod-Binary-v0`` training (and ``-Play-v0``) the term plays
-an **analytic traveling body wave**: ``FrontLink_Joint`` a pure sine and
-``BackLink_Joint`` the same sine shifted +90 deg (a cosine), with a shared magnitude
-(``A_SPINE = deg2rad(70) * 12/16 = deg2rad(52.5) = 0.9162978573`` rad, the exact
-open-loop gait-generator value) carried with the HexapI global spine-joint-sign flip
-(``sin_coef`` / ``cos_coef`` hold ``-A_SPINE``) and offset -- a quarter-cycle wave that
-travels down the body.  It is not fitted to any CSV.
-``eval_protocol.py``'s reference-tripod baseline instead swaps in an analytic *anti-phase*
-body wave regenerated from the MATLAB gait generator -- ``BackLink_Joint = -FrontLink_Joint``,
-``FrontLink_Joint(t) = -A_SPINE*sin(2*pi*t - pi/4)`` -- via :meth:`set_waveform`, not a CSV fit.
-
-The waveform is a truncated Fourier series with period :attr:`SpineSineActionCfg.period`
-(one gait cycle)::
+The wave is a truncated Fourier series with period :attr:`SpineSineActionCfg.period`::
 
     q(t) = offset + sum_k [ sin_coef[k] * sin((k + 1) * w * t) + cos_coef[k] * cos((k + 1) * w * t) ]
 
-with ``w = 2 * pi / period``, ``k`` the 0-based harmonic index (``k = 0`` is the
-fundamental), and ``t`` the elapsed episode time (``env.episode_length_buf *
-env.step_dt``), so the wave restarts from phase 0 at every episode reset.  The canonical
-coefficient values for both waves live in :mod:`.hexapod_binary_env_cfg`
-("CANONICAL SPINE-WAVE DEFINITION" block).
+with ``w = 2 * pi / period``, ``k`` the 0-based harmonic and ``t = env.episode_length_buf * env.step_dt``, so it
+restarts at phase 0 on every reset. The coefficients live in :mod:`.hexapod_binary_env_cfg` ("CANONICAL
+SPINE-WAVE DEFINITION").
 """
 
 from __future__ import annotations

@@ -8,10 +8,8 @@ from isaaclab.utils.configclass import configclass
 
 from isaaclab_tasks.core.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg, MySceneCfg
 
-##
-# Pre-defined configs
-##
 from isaaclab_assets import HEXAPOD_CFG  # isort: skip
+from isaaclab_assets.robots.hexapod_actuators import with_fixed_actuator_delay  # isort: skip
 
 
 @configclass
@@ -26,45 +24,32 @@ class HexapodRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
     scene: HexapodSceneCfg = HexapodSceneCfg(num_envs=4096, env_spacing=2.5)
 
     def __post_init__(self):
-        # post init of parent
         super().__post_init__()
-        # switch robot to hexapod
         self.scene.robot = HEXAPOD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        # parent class's height scanner targets "base", which anymal/a1/go1 have but hexapod does not.
-        # The link prims live under a "Geometry" Scope in this USD (verified against the actual stage:
-        # CenterLink etc. are rigid bodies at Robot/Geometry/<name>, not directly under Robot).
+        # The link prims live under a "Geometry" scope in this USD (Robot/Geometry/<name>), not under "base".
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/Geometry/CenterLink"
 
-        # IMU sensor at the physical mount location baked into the USD (rigid body, fixed-jointed to
-        # CenterLink via IMUSensor_Joint). update_period=self.sim.dt matches contact_forces below --
-        # freshest possible reading every physics step, same as the other ground-truth-adjacent sensors.
+        # IMU rigid body at the physical mount (fixed to CenterLink), read every physics step.
         self.scene.imu = ImuCfg(
             prim_path="{ENV_REGEX_NS}/Robot/Geometry/IMUSensor",
             update_period=self.sim.dt,
         )
 
-        # parent class's contact sensor prim_path ("Robot/.*") matches every direct child of Robot,
-        # including the "Physics" Scope prim that groups the hexapod's physics joints. PhysX then
-        # recurses into that scope trying (and failing) to enable contact reporting on each joint
-        # prim underneath, logging a "Failed to find contact report API at .../joints/<name>"
-        # warning per environment per joint. Restrict the match to the actual rigid-body link names,
-        # scoped under "Geometry" (where they actually live in this USD), so "Physics" is never matched.
+        # Match only the link bodies: the parent's "Robot/.*" also matches the "Physics" joint scope, which
+        # logs a contact-report warning per joint per env.
         _body_link_names = (
             "CenterLink|BackLink|FrontLink|MiddleLeft|MiddleRight|BackLeft|BackRight|FrontLeft|FrontRight"
         )
         self.scene.contact_forces.default.prim_path = f"{{ENV_REGEX_NS}}/Robot/Geometry/({_body_link_names})"
         self.scene.contact_forces.physx.prim_path = f"{{ENV_REGEX_NS}}/Robot/Geometry/({_body_link_names})"
 
-        # parent class's events/terminations also target "base"; hexapod's root body is CenterLink.
-        # These are articulation body names (asset.data.body_names), matched via re.fullmatch against
-        # the rigid-body link names -- NOT USD prim paths -- so no "Geometry" segment here.
+        # The root body is CenterLink (articulation body names, so no "Geometry" segment).
         self.events.add_base_mass.params["asset_cfg"].body_names = "CenterLink"
         self.events.base_com.default.params["asset_cfg"].body_names = "CenterLink"
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "CenterLink"
         self.terminations.base_contact.params["sensor_cfg"].body_names = "CenterLink"
 
-        # parent class's reward sensors target generic quadruped naming (".*FOOT", ".*THIGH"),
-        # which hexapod's six leg bodies and three body-segment links don't match
+        # The parent's quadruped body names (".*FOOT", ".*THIGH") do not match the hexapod.
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = [
             "MiddleLeft",
             "MiddleRight",
@@ -75,10 +60,7 @@ class HexapodRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         ]
         self.rewards.undesired_contacts.params["sensor_cfg"].body_names = ["CenterLink", "BackLink", "FrontLink"]
 
-        # 2026-09 real-robot friction sweep calibration: training randomizes the effective
-        # ground friction over 0.18-0.25 (robot-side material; terrain stays mu=1.0 with
-        # friction_combine_mode="multiply", so multiply(robot_mu, 1.0) == robot_mu). Set here
-        # at the shared hexapod base so every training cfg inherits it; PLAY cfgs pin 0.21.
+        # Real-robot friction calibration (2026-09), inherited by every training cfg; PLAY cfgs pin 0.21.
         self.events.physics_material.params["static_friction_range"] = (0.18, 0.25)
         self.events.physics_material.params["dynamic_friction_range"] = (0.18, 0.25)
 
@@ -86,27 +68,23 @@ class HexapodRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 @configclass
 class HexapodRoughEnvCfg_PLAY(HexapodRoughEnvCfg):
     def __post_init__(self):
-        # post init of parent
         super().__post_init__()
 
-        # make a smaller scene for play
         self.scene.num_envs = 50
         self.scene.env_spacing = 2.5
-        # spawn the robot randomly in the grid (instead of their terrain levels)
+        # spawn randomly in the grid instead of by terrain level, on a smaller terrain
         self.scene.terrain.max_init_terrain_level = None
-        # reduce the number of terrains to save memory
         if self.scene.terrain.terrain_generator is not None:
             self.scene.terrain.terrain_generator.num_rows = 5
             self.scene.terrain.terrain_generator.num_cols = 5
             self.scene.terrain.terrain_generator.curriculum = False
 
-        # disable randomization for play
         self.observations.policy.enable_corruption = False
-        # remove random pushing event
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+        # same servo lag in every rollout (the robot asset draws it randomly for training)
+        self.scene.robot.actuators = with_fixed_actuator_delay(self.scene.robot.actuators)
 
-        # 2026-09 real-robot friction sweep calibration: eval/PLAY pins the effective
-        # ground friction to the single best sweep row (mu = 0.21).
+        # eval pins friction to the best real-robot sweep row (mu = 0.21)
         self.events.physics_material.params["static_friction_range"] = (0.21, 0.21)
         self.events.physics_material.params["dynamic_friction_range"] = (0.21, 0.21)

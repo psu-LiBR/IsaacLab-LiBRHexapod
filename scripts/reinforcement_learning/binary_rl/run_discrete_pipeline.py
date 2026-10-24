@@ -502,6 +502,18 @@ def record_videos(args: argparse.Namespace, rows: list[dict], best: dict | None,
                 shutil.copy2(gait_csv_path, gait_dest)
                 made.append(gait_dest)
                 print(f"[pipeline] gait csv: {gait_dest}")
+                actual_src = gait_csv_path.with_name(gait_csv_path.stem + "_actual.csv")
+                if actual_src.exists():
+                    actual_dest = bundle / f"{prefix}{tag}_gait_actual.csv"
+                    shutil.copy2(actual_src, actual_dest)
+                    made.append(actual_dest)
+                    print(f"[pipeline] gait csv (actual positions): {actual_dest}")
+                robot_src = gait_csv_path.with_name(gait_csv_path.stem + "_robot.csv")
+                if robot_src.exists():
+                    robot_dest = bundle / f"{prefix}{tag}_gait_robot.csv"
+                    shutil.copy2(robot_src, robot_dest)
+                    made.append(robot_dest)
+                    print(f"[pipeline] gait csv (robot-ready, for run_opt_gait.py): {robot_dest}")
             else:
                 print(f"[pipeline] gait csv: missing for {r['policy']} (rc={rc}); see {vids / (tag + '.log')}")
     return made

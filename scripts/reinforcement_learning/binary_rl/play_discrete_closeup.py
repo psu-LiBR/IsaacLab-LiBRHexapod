@@ -3,132 +3,73 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Replay a discrete policy OR an open-loop gait on the binary hexapod env and record a CLOSEUP video.
+"""Replay a discrete policy OR an open-loop gait on the binary hexapod env and record a closeup video.
 
-Identical to play_discrete.py except the recording camera is repositioned by hand every
-step (play_openloop_closeup.py's ``_follow_cam``): headless rendering never fires Isaac's
-own asset-root tracking callback, so ``viewer.origin_type = "asset_root"`` silently leaves
-the camera fixed and the robot walks out of frame.  Same env, same render pipeline, same
-RecordVideo wrapper -- only the camera placement differs.
+Same as play_discrete.py except the camera is repositioned by hand every step (``_follow_cam``): headless
+rendering never fires Isaac's asset-root tracking callback, so the robot would otherwise walk out of frame.
 
-Four action sources are supported (pass exactly one):
+Pass exactly one action source:
 
-  * ``--checkpoint <agent_*.pt>`` -- a trained skrl checkpoint; runs the greedy policy
-    (argmax Q / categorical logits, no exploration).
-  * ``--gait_npz tripod`` -- the committed ``tripod_bit_demos.npz`` next to this script;
-    ``--gait_npz <path.npz>`` for any table from ``extract_bit_demos.py``.
-  * ``--gait_csv <path.csv>`` -- a Sim-DOF gait CSV whose leg columns are thresholded to
-    contact *bits* on the fly (same rule as ``extract_bit_demos.py``).  Drives the binary
-    env's 6-bit contact table.  Note: this path holds any *frozen* (constant) leg column
-    at LIFT, so raw baseline gaits with intentionally-frozen stance legs shuffle in place
-    rather than walk -- use ``--gait_csv_pos`` for those.
-  * ``--gait_csv_pos <path.csv>`` -- replays a raw old-convention baseline gait CSV
-    (e.g. ``hexapod-assets/Sim Gaits/forward3_lleg*_sim.csv``) as literal per-joint
-    *position targets* that WALK, matching what ``playReal.py``'s replay does.  Because
-    the binary env cannot accept 8 continuous joint targets, this path forces ``--task``
-    to ``Isaac-Velocity-Flat-Hexapod-Play-v0`` (the same continuous-JointPositionAction
-    env ``playReal.py`` uses) unless ``--task`` was given explicitly.
+  * ``--checkpoint <agent_*.pt>``: a trained skrl checkpoint, run greedily (argmax Q / categorical logits).
+  * ``--gait_npz tripod``: the ``tripod_bit_demos.npz`` next to this script, or ``--gait_npz <path.npz>`` for
+    any table from ``extract_bit_demos.py``.
+  * ``--gait_csv <path.csv>``: a sim-DOF gait CSV whose leg columns are thresholded to contact bits (same rule
+    as ``extract_bit_demos.py``). A frozen (constant) leg column is held at LIFT, so gaits with intentionally
+    frozen stance legs shuffle in place; use ``--gait_csv_pos`` for those.
+  * ``--gait_csv_pos <path.csv>``: a raw baseline gait CSV (e.g. ``hexapod-assets/Sim Gaits/forward3_lleg*_sim.csv``)
+    replayed as literal per-joint position targets, like ``playReal.py``. The binary env cannot take 8 continuous
+    targets, so this forces ``--task Isaac-Velocity-Flat-Hexapod-Play-v0`` unless ``--task`` is given.
 
-Raw-CSV convention and conversion (``--gait_csv_pos``)
-----------------------------------------------------
-Raw CSV: N rows x 8 cols, no header, radians, OLD pre-HexapI Sim-DOF column order
-``[0 BackLink, 1 FrontLink, 2 MiddleLeft, 3 MiddleRight, 4 BackLeft, 5 BackRight,
-6 FrontLeft, 7 FrontRight]`` in the old joint convention (leg stance ~= -0.4602,
-lift ~= -1.1804; spine a +-~0.98 rad sinusoid).  Constants (``STANCE_POS``,
-``LIFT_POS``, ``GAIT_PERIOD_S``, ``SPINE_AMPLITUDE/PHASE/OFFSET``) live in
-``source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/hexapod_binary_env_cfg.py``
-and are mirrored below.  Conversion to per-joint position targets:
+``--gait_csv_pos`` conversion
+-----------------------------
+The raw CSV has N rows x 8 columns, no header, radians, in the old pre-HexapI sim-DOF order ``[BackLink,
+FrontLink, MiddleLeft, MiddleRight, BackLeft, BackRight, FrontLeft, FrontRight]`` and the old (negative) leg
+convention. The constants mirror ``hexapod_binary_env_cfg.py``.
 
-  * Legs: ``v = -raw_value``; snap to the nearer of ``{STANCE_POS, LIFT_POS}``
-    (threshold-free -- this is the fix; the ``--gait_csv`` midpoint threshold mishandles
-    frozen columns).  Author leg columns are routed by joint NAME (col 2 -> MiddleLeft,
-    3 -> MiddleRight, 4 -> BackLeft, 5 -> BackRight, 6 -> FrontLeft, 7 -> FrontRight).
-  * Spine (BackLink, FrontLink): the raw CSV spine columns are DISCARDED and regenerated
-    as ``q(t) = OFFSET[j] + AMPLITUDE[j] * sin(2*pi*t / GAIT_PERIOD_S + PHASE[j])`` with
-    ``t = row_index * gait_dt`` -- identical to the binary env's ``SpineSineAction``.
-  * Targets are emitted in the CURRENT runtime articulation DOF order, resolved by name
-    from the live ``robot.data.joint_names`` (never a hardcoded permutation), then mapped
-    to env actions via ``action = (target - default_joint_pos) / scale`` (scale ~= 0.5,
-    read from the JointPositionAction term; mirrors ``playReal.py``).
+  * Legs: ``v = -raw``, snapped to the nearer of ``STANCE_POS`` / ``LIFT_POS``, routed by joint name.
+  * Spine: the CSV columns are discarded and regenerated as the env's Wave 1 (``SpineSineAction``).
+  * Targets are emitted in the live articulation DOF order (resolved by name from ``robot.data.joint_names``)
+    and mapped to env actions via ``action = (target - default_joint_pos) / scale``.
 
-The gait-bits path drives the exact same env and bit->angle decode that
-``eval_protocol.py``'s ``BASE_tripod_csv_bits`` baseline uses, so the video is a faithful
-visual check that the binary-env setup is wired correctly.  For the reference tripod
-replay (``--gait_npz tripod`` or ``--gait_csv .../tripod_extendedquad_sim.csv``) the
-scripted spine term is additionally swapped from the analytic RL traveling wave (WAVE 1)
-to the anti-phase tripod body wave (WAVE 2: ``FrontLink = +-A_SPINE*sin(w*t - pi/4)``,
-``BackLink`` the negation) -- the wave that gait's leg-contact schedule was designed
-around, regenerated analytically from the MATLAB gait generator -- exactly as that eval
-baseline does.
+The gait-bits path drives the same env and bit decode as the ``BASE_tripod_csv_bits`` baseline of
+``eval_protocol.py``. For the reference tripod replay (``--gait_npz tripod`` or ``--gait_csv
+.../tripod_extendedquad_sim.csv``) the scripted spine is also swapped from Wave 1 to the anti-phase tripod
+wave (Wave 2), exactly as that baseline does.
 
-Receding-horizon goal (opt-in: ``--receding_horizon`` + ``--goal_ahead_m``, default OFF)
---------------------------------------------------------------------------------------
-By default the goal env resets when the robot reaches the fixed ~2 m point ahead
-(``reach_goal`` -> ``reached_goal_done``, radius ``REACH_RADIUS`` = 0.2 m), so a PLAY run
-is a single dash-and-stop.  With ``--receding_horizon`` the ``pose_command`` target is
-re-pinned ``--goal_ahead_m`` (default 2.0 m) ahead of the robot along world +x every
-step, so the body-frame ``pose_command`` stays ~[goal_ahead, 0, 0, 0] and the robot
-walks continuously -- turning the run into a *sustained* gait-quality read (BL/cycle,
-straightness, fall behaviour over a long window) instead of one arrival.
+Receding-horizon goal (opt-in: ``--receding_horizon`` + ``--goal_ahead_m``)
+---------------------------------------------------------------------------
+By default the episode ends when the robot reaches the goal ~2 m ahead, so a play run is one dash and stop. With
+``--receding_horizon`` the ``pose_command`` target is re-pinned ``--goal_ahead_m`` (default 2.0) ahead of the
+robot along world +x every step, so it walks continuously, which is useful for judging a gait over many cycles.
+This mutates the running command / termination managers of this play script only; no env config changes.
 
-Is this a good idea?  YES, but only as an opt-in for visual / long-horizon gait
-inspection, kept OFF by default:
-
-  * What it buys: play/eval then measures sustained locomotion instead of a single
-    dash-and-stop -- the right thing for eyeballing a gait over many cycles.
-  * The quantitative harness does NOT need it: ``eval_protocol.py`` already sidesteps
-    the stop differently -- it pins ``--goal_distance 2.0`` (far enough that
-    ``reach_goal`` cannot fire inside its 300-step / 6-cycle window), takes NO resets,
-    and neutralises every termination (``tm.base_contact.params["threshold"] = 1e12``).
-    Receding horizon is deliberately kept OUT of ``eval_protocol.py``.
-  * ``progress_to_goal`` telescopes to ``weight*(initial_dist - final_dist)`` per
-    episode; advancing the goal mid-episode would score a spurious large negative
-    progress step unless its ``env._goal_prev_dist`` bookkeeping is re-seeded on the
-    jump (mirroring the "first-post-reset step seeds prev_dist = curr_dist" logic in
-    ``hexapod_goal_rewards.py::progress_to_goal``).  This script re-seeds it; in PLAY
-    the reward is only printed, but it is kept clean.
-  * Training is unaffected -- this is a live mutation of the running command /
-    termination managers in this PLAY script only.  No env config class is touched.
-  * Prior art: ``scripts/sim2real_transfer`` already ships an analogous
-    ``goal.mode: receding`` + ``lookahead_m`` (``deployment.binary.example.yaml`` /
-    ``command_source.py::RecedingGoalCommand``).  This flag matches that *semantics*
-    (goal held a fixed distance ahead every step); the CLI name is ``--goal_ahead_m``
-    rather than ``lookahead_m`` (sim2real is YAML, this is argparse) -- same meaning.
-
-Caveats: the goal recedes exactly with the robot, so ``progress`` reads ~0 every step
-(honest: the robot never closes distance to a moving goal) and ``reach_goal`` is
-neutralised (radius -> -1) so it can never fire.  ``--receding_horizon`` is rejected
-with ``--gait_csv_pos`` (that path forces the continuous velocity task, which has no
-``pose_command``).
-
-Runs on the Play variant of the task and records an MP4 through the regular render
-pipeline (real robot mesh + ground plane), camera tracking the robot root.
+  * ``eval_protocol.py`` does not need it: it pins a far goal, takes no resets and neutralises every termination.
+  * ``progress_to_goal`` telescopes over an episode, so moving the goal mid-episode would score a spurious
+    negative step; the script re-seeds ``env._goal_prev_dist`` on each jump.
+  * ``progress`` reads ~0 every step (the goal recedes with the robot) and ``reach_goal`` is disabled (radius -1).
+  * It matches ``goal.mode: receding`` of ``scripts/sim2real_transfer`` (``--goal_ahead_m`` = ``lookahead_m``).
+  * It is rejected with ``--gait_csv_pos``, whose continuous velocity task has no ``pose_command``.
 
 Sim-to-real diagnostic export (opt-in: ``--checkpoint`` + ``--export_gait_csv PATH``)
---------------------------------------------------------------------------------------
-Writes a real-robot-units CSV of exactly what the loaded checkpoint commands for one
-gait cycle (50 steps at 50 Hz control / ``GAIT_PERIOD_S`` = 1.0 s), by default the first
-50 steps after ``env.reset()`` -- the same rollout that produces this script's video.
-Each row is converted through the identical ``scripts/sim2real_transfer`` path a real
-deployment uses (``sim2real.binary_profile.BinaryActionAdapter.targets_sim`` ->
-``sim2real.joint_mapping.JointMapping.clip_to_soft_limits`` / ``sim_rad_to_real_rad``),
-so the CSV can be replayed open-loop on the physical servos to check whether the sim
-video's motion reproduces on hardware -- isolating a policy/conversion bug from a
-downstream closed-loop-control/sensor/localization bug. Only meaningful with
-``--checkpoint``; rejected together with ``--gait_npz``/``--gait_csv``/``--gait_csv_pos``
-(those are already literal, human-readable CSVs/NPZs). ``--deployment_config`` selects
-the sim2real YAML used for the conversion (default:
-``scripts/sim2real_transfer/config/deployment.binary.example.yaml``).
-``--gait_csv_start_step`` (default 0) moves the 50-step recording window later in the
-rollout, e.g. ``--gait_csv_start_step 50`` records the SECOND gait cycle instead of the
-first -- useful since ``reset_base`` does not randomize spawn height, so every episode
-free-falls ~0.145 m onto its legs before settling, and cycle 1 may still carry that
-landing transient. The CSV's ``t_s`` column is always absolute elapsed time since reset
-(``step_index * step_dt``), never renormalized to the window start. A permanent safety
-check (see the per-step loop) warns if env 0 resets/terminates before the recording
-window closes, since that would mean the window is not one continuous rollout.
+-------------------------------------------------------------------------------------
+Writes a real-robot-units CSV of what the checkpoint commands for one gait cycle (50 steps at 50 Hz, i.e.
+``GAIT_PERIOD_S`` = 1.0 s), by default the first 50 steps after ``env.reset()``, in the same rollout as the
+video. Each row goes through the path a real deployment uses (``sim2real.binary_profile.BinaryActionAdapter``,
+``sim2real.joint_mapping.JointMapping``), so the CSV can be replayed open-loop on the servos to tell a
+policy/conversion bug from a closed-loop control, sensor or localization bug. Only valid with ``--checkpoint``.
+``--deployment_config`` selects the sim2real YAML (default ``deployment.binary.example.yaml``).
+``--gait_csv_start_step`` moves the window later, e.g. 50 records the second cycle, since every episode first
+free-falls ~0.145 m onto its legs and cycle 1 may carry that landing transient. ``t_s`` is always the absolute
+time since reset. The script warns if env 0 resets before the window closes.
 
-Run (from IsaacLab root, .venv active):
+A second file, ``<PATH minus .csv>_actual.csv``, holds the MEASURED joint positions of env 0 at the end of each
+step (the response to that step's command). Its ``<joint>_real_rad`` columns use the same real-robot order and
+conversion as the commanded CSV but are not soft-limit clipped, ``<joint>_sim_rad`` are the raw sim angles, and
+joints are remapped by name from the live articulation order (the script refuses to run if the sets differ).
+``root_x_m/root_y_m/root_z_m`` (env-local base position) help choose gait windows and ``root_quat_0..3`` (raw
+``robot.data.root_quat_w`` order) allow comparing body tilt against a real IMU log.
+
+Run (from the repo root):
   isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
       --gait_npz tripod --video_length 600
   isaaclab.bat -p scripts/reinforcement_learning/binary_rl/play_discrete_closeup.py ^
@@ -231,6 +172,15 @@ parser.add_argument(
     "absolute elapsed time since reset (step_index * step_dt) -- it is NOT renormalized to "
     "start at 0. Only valid together with --export_gait_csv.",
 )
+parser.add_argument(
+    "--gait_csv_cycles",
+    type=int,
+    default=1,
+    help="opt-in with --export_gait_csv: number of consecutive 50-step gait cycles to record "
+    "(default 1). Use >1 to check whether the policy's contact pattern repeats cycle to cycle "
+    "(a robot-ready loop needs it to). Needs --steps >= start_step + 50 * cycles. Only valid "
+    "together with --export_gait_csv.",
+)
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 
@@ -260,10 +210,12 @@ if args.gait_csv_start_step != 0 and not args.export_gait_csv:
     parser.error("--gait_csv_start_step is only meaningful together with --export_gait_csv")
 if args.gait_csv_start_step < 0:
     parser.error("--gait_csv_start_step must be >= 0")
+if args.gait_csv_cycles < 1:
+    parser.error("--gait_csv_cycles must be >= 1")
+if args.gait_csv_cycles != 1 and not args.export_gait_csv:
+    parser.error("--gait_csv_cycles is only meaningful together with --export_gait_csv")
 
-# --gait_csv_pos needs a continuous-JointPositionAction env (the binary env's action space
-# is 6 leg bits + a zero-width spine term). Default to the same env playReal.py uses unless
-# the caller pinned --task explicitly.
+# --gait_csv_pos needs a continuous JointPositionAction env, so default to the one playReal.py uses
 if args.gait_csv_pos and args.task == parser.get_default("task"):
     args.task = "Isaac-Velocity-Flat-Hexapod-Play-v0"
 
@@ -331,10 +283,10 @@ if not args.gait_csv_pos:
 device = env.device
 
 
-# architecture is auto-detected from the checkpoint's state-dict keys/shapes:
-#   - plain MLP [128,128,128]+ELU -> 64      (DQN / DDQN / PPO of train_discrete*.py)
-#   - Linear->LayerNorm->ReLU blocks -> 64   (PQN, train_discrete_pqn.py)
-#   - plain MLP -> 64*atoms logits           (C51, train_discrete_c51.py; greedy uses expected Q)
+# The architecture is detected from the checkpoint's state-dict keys/shapes:
+#   - plain MLP [128,128,128] + ELU -> 64      (DQN / DDQN / PPO)
+#   - Linear -> LayerNorm -> ReLU blocks -> 64 (PQN)
+#   - plain MLP -> 64 * atoms logits           (C51; greedy uses the expected Q)
 def build_qnet(state: dict, obs_dim: int, hidden=(128, 128, 128)):
     has_layernorm = "1.weight" in state and state["1.weight"].dim() == 1
     out_dim = state[max((k for k in state if k.endswith(".weight")), key=lambda k: int(k.split(".")[0]))].shape[0]
@@ -357,10 +309,8 @@ obs_dim = int(obs_space.shape[-1])
 # CSV Sim-DOF layout: [0 BackLink, 1 FrontLink, 2 ML, 3 MR, 4 BL, 5 BR, 6 FL, 7 FR].
 _LEG_COLS_BIT_ORDER = [7, 6, 3, 2, 5, 4]  # FR, FL, MR, ML, BR, BL
 
-# Set true for the reference tripod replay: its LEG contact schedule is designed around the
-# anti-phase tripod body wave (WAVE 2: BackLink = -FrontLink), NOT the analytic RL traveling
-# wave (WAVE 1), so the scripted spine term is swapped to WAVE 2 after the env is built (see
-# below), exactly as eval_protocol.py's BASE_tripod_csv_bits anchor does.
+# True for the reference tripod replay: its leg schedule is designed around the anti-phase Wave 2, so the spine
+# is swapped to it after the env is built, as in eval_protocol.py's BASE_tripod_csv_bits.
 _tripod_spine_swap = False
 
 
@@ -373,23 +323,17 @@ def _gait_table_from_bits(bits_np: np.ndarray) -> torch.Tensor:
     return (bt * (1 << shifts)).sum(dim=1)  # [P]
 
 
-# --- raw-CSV -> per-joint position-target conversion (--gait_csv_pos) --------------------
-# Constants mirror hexapod_binary_env_cfg.py. Leg levels: STANCE_POS / LIFT_POS /
-# GAIT_PERIOD_S. Spine: the env's analytic "Wave 1" traveling body wave --
-#   FrontLink_Joint: q(t) = 0.0 - 0.9162978573 * sin(2*pi*t / 1.0)
-#   BackLink_Joint : q(t) = 0.0 - 0.9162978573 * sin(2*pi*t / 1.0 + pi/2)  (i.e. FrontLink + 90 deg)
-# expressed below as OFFSET + AMPLITUDE * sin(2*pi*t / PERIOD + PHASE). This is NOT the old
-# anti-phase tripod_B11BL0 CSV fit. Keep in sync with hexapod_binary_env_cfg.py (A_SPINE /
-# OFFSET_SPINE / SPINE_SIN_COEF / SPINE_COS_COEF). The negative amplitude is the HexapI
-# global spine-joint-sign flip (SPINE_SIN_COEF / SPINE_COS_COEF carry -A_SPINE); magnitude
-# is the exact open-loop gait-generator value deg2rad(70) * 12/16 = deg2rad(52.5) = 0.9162978572970227 rad.
+# --- raw CSV -> per-joint position targets (--gait_csv_pos) ---
+# Keep in sync with hexapod_binary_env_cfg.py (STANCE_POS, LIFT_POS, GAIT_PERIOD_S and Wave 1, the spine below):
+#   q(t) = OFFSET + AMPLITUDE * sin(2*pi*t / PERIOD + PHASE), AMPLITUDE = -A_SPINE on both joints,
+#   BackLink phase +pi/2 (a cosine), FrontLink phase 0.
 _STANCE_POS = 0.460194236365692  # leg joint angle, foot DOWN [rad]
 _LIFT_POS = 1.180398216278  # leg joint angle, foot UP [rad]
 _GAIT_PERIOD_S = 1.0
 _SPINE_AMPLITUDE = {"BackLink_Joint": -0.9162978573, "FrontLink_Joint": -0.9162978573}
 _SPINE_PHASE = {"BackLink_Joint": 1.5707963267948966, "FrontLink_Joint": 0.0}
 _SPINE_OFFSET = {"BackLink_Joint": 0.0, "FrontLink_Joint": 0.0}
-# author (old pre-HexapI) Sim-DOF CSV column -> runtime leg-joint name
+# old pre-HexapI sim-DOF CSV column of each leg joint
 _POS_LEG_COL_BY_NAME = {
     "MiddleLeft_Joint": 2,
     "MiddleRight_Joint": 3,
@@ -484,10 +428,17 @@ if args.checkpoint:
                 break
     # skrl Model state dict prefixes layers with "net."
     state = {(k[4:] if k.startswith("net.") else k): v for k, v in state.items()}
+    # Masked PPO stores its legal-action mask as a buffer ("_action_mask") beside the Sequential
+    # layers. Pull it out so the net loads, and restrict the greedy argmax to it like eval_protocol.
+    action_mask = state.pop("_action_mask", None)
+    state = {k: v for k, v in state.items() if k.split(".")[0].isdigit()}
     qnet, out_dim, arch = build_qnet(state, obs_dim)
     qnet = qnet.to(device)
     qnet.load_state_dict(state)
     qnet.eval()
+    legal_mask = action_mask.to(device=device, dtype=torch.bool) if action_mask is not None else None
+    if legal_mask is not None:
+        print(f"[play_discrete] masked policy: {int(legal_mask.sum())} legal actions")
     n_atoms = out_dim // 64 if out_dim > 64 else 1
     support = torch.linspace(args.v_min, args.v_max, n_atoms, device=device) if n_atoms > 1 else None
     print(f"[play_discrete] loaded checkpoint: {args.checkpoint} (arch: {arch}, out_dim {out_dim})")
@@ -510,6 +461,8 @@ if args.checkpoint:
         q = qnet(x)
         if support is not None:  # C51: greedy over expected Q of the distribution
             q = (torch.softmax(q.view(-1, 64, n_atoms), dim=-1) * support).sum(-1)
+        if legal_mask is not None:  # masked PPO: never pick an action outside the legal set
+            q = q.masked_fill(~legal_mask, float("-inf"))
         return torch.argmax(q, dim=1)
 
     # --- opt-in: build the sim2real conversion path for --export_gait_csv ---------------
@@ -537,10 +490,8 @@ if args.checkpoint:
                 f"--export_gait_csv: {_deploy_cfg_path} has no 'binary' section -- pass a "
                 "binary-profile deployment config (see deployment.binary.example.yaml)"
             )
-        # Safety check: the exported CSV's raw leg-bit columns are recorded straight from
-        # DiscreteBitsActionWrapper.decode() (bit i -> hardware bit i+1, fixed order), so the
-        # deployment config's leg_joint_order MUST agree with that order, or the CSV's leg-bit
-        # columns and the angles converted from them would silently be mislabeled.
+        # The CSV leg-bit columns come straight from DiscreteBitsActionWrapper.decode(), so the deployment
+        # config's leg_joint_order must match, or the columns would be mislabeled.
         _expected_leg_order = ["FrontRight", "FrontLeft", "MiddleRight", "MiddleLeft", "BackRight", "BackLeft"]
         if list(_deploy_cfg.binary.leg_joint_order) != _expected_leg_order:
             raise SystemExit(
@@ -587,8 +538,7 @@ else:
         raw = np.loadtxt(args.gait_csv, delimiter=",")
         if raw.ndim != 2 or raw.shape[1] != 8:
             raise SystemExit(f"{args.gait_csv}: expected a [T, 8] Sim-DOF CSV, got {raw.shape}")
-        # drop the wrap row if the CSV is written closed (row[-1] duplicates row[0]), so the
-        # table is exactly one period -- same rule as extract_bit_demos.py (period = T - 1).
+        # drop the wrap row of a closed CSV (row[-1] == row[0]), as extract_bit_demos.py does
         if len(raw) > 1 and np.allclose(raw[0], raw[-1]):
             raw = raw[:-1]
         legs = raw[:, _LEG_COLS_BIT_ORDER]  # [T, 6]
@@ -614,8 +564,7 @@ else:
 
 _eye = np.asarray(args.eye, dtype=float)
 _look = np.asarray(args.lookat, dtype=float)
-# DiscreteBitsActionWrapper exposes the sim env as .base_env; .unwrapped does NOT
-# reach the ManagerBasedRLEnv here (it stops at the wrapper), so ask for base_env first.
+# the wrapper exposes the sim env as .base_env; .unwrapped stops at the wrapper
 base = getattr(env, "base_env", None)
 if base is None or not hasattr(base, "scene"):
     base = env
@@ -624,12 +573,8 @@ if base is None or not hasattr(base, "scene"):
 if not hasattr(base, "scene"):
     raise SystemExit("could not reach the sim env (no .scene); camera tracking impossible")
 
-# --- tripod baseline: swap the scripted spine to WAVE 2 (anti-phase tripod body wave) ---
-# The tripod LEG contact schedule (tripod_bit_demos.npz / tripod_extendedquad_sim.csv) is
-# designed around the anti-phase tripod body wave (WAVE 2: BackLink = -FrontLink), NOT the
-# analytic RL traveling wave (WAVE 1) the binary env plays by default. Swap it here so the
-# video shows the same gait eval_protocol.py's BASE_tripod_csv_bits anchor scores. Single
-# run, no restore needed.
+# Tripod baseline: swap the scripted spine to Wave 2 (anti-phase), so the video shows the gait that
+# eval_protocol.py's BASE_tripod_csv_bits scores. Single run, so no restore.
 if _tripod_spine_swap and not args.gait_csv_pos:
     _am = base.action_manager
     _sw = None
@@ -677,7 +622,7 @@ if args.receding_horizon:
         print("[play_discrete_closeup] receding horizon ON: reach_goal neutralised (radius -> -1)")
     except (KeyError, ValueError):
         print("[play_discrete_closeup] receding horizon ON: no reach_goal termination to neutralise")
-    # keep the cfg range consistent with the live buffers for any internal resample
+    # keep the cfg range consistent with the live buffers
     _pose_cmd.cfg.ranges.pos_x = (args.goal_ahead_m, args.goal_ahead_m)
     print(f"[play_discrete_closeup]   goal held {args.goal_ahead_m:.2f} m ahead (world +x) every step")
 
@@ -685,10 +630,8 @@ if args.receding_horizon:
 def _advance_receding_goal():
     """Re-pin pose_command --goal_ahead_m ahead of the robot along world +x.
 
-    Mutates the live command term's world-frame buffers; ``command_manager.compute()`` on the
-    next ``env.step()`` rebuilds the base-frame command (and the obs) from them. Re-seeds
-    ``progress_to_goal``'s ``env._goal_prev_dist`` so the goal jump scores no spurious progress
-    (mirrors the first-post-reset seeding in ``hexapod_goal_rewards.py``).
+    Mutates the command term's world-frame buffers (the next ``env.step()`` rebuilds the base-frame command
+    from them) and re-seeds ``env._goal_prev_dist`` so the jump scores no spurious progress.
     """
     rp = base.scene["robot"].data.root_pos_w
     rp = rp.torch if hasattr(rp, "torch") else rp
@@ -719,25 +662,58 @@ def _follow_cam():
     tgt_w = o + _look
     base.sim.set_camera_view(eye=tuple(eye_w), target=tuple(tgt_w))
     if set_kit_renderer_camera_view is not None:
-        # this is the camera the video recorder actually reads from
+        # the camera the video recorder reads from
         set_kit_renderer_camera_view(eye=eye_w, target=tgt_w, camera_prim_path="/OmniverseKit_Persp")
 
 
-# --- opt-in: --export_gait_csv bookkeeping (see module docstring) ----------------------
+# --export_gait_csv bookkeeping (see the module docstring)
 _export_rows: list[dict] | None = None
+_export_actual_rows: list[dict] | None = None
 _export_start_step = _export_end_step = _export_safety_end_step = None
 _export_env0_reset_steps: list[int] = []
 if args.export_gait_csv:
+    # Remap the live articulation joints (named "FrontLink_Joint") by name into the deployment sim_order, and
+    # refuse to run if the sets differ.
+    _live_names = [str(n) for n in base.scene["robot"].data.joint_names]
+    _live_key = [n.removesuffix("_Joint") for n in _live_names]
+    _cfg_sim_order = list(_deploy_cfg.joints.sim_order)
+    if sorted(_live_key) != sorted(_cfg_sim_order):
+        raise SystemExit(
+            f"--export_gait_csv: live sim joints {_live_names} do not match deployment sim_order "
+            f"{_cfg_sim_order}; the actual-position CSV would be mislabeled"
+        )
+    _export_live_idx = np.array([_live_key.index(n) for n in _cfg_sim_order], dtype=np.int64)
+    _export_real_cols = ["FrontLink", "BackLink"] + list(_expected_leg_order)
+    print(f"[play_discrete_closeup] --export_gait_csv: live sim joint order     : {_live_names}")
+    print(f"[play_discrete_closeup] --export_gait_csv: deployment sim_order    : {_cfg_sim_order}")
+    print(
+        "[play_discrete_closeup] --export_gait_csv: sim order "
+        + ("matches" if _live_key == _cfg_sim_order else "DIFFERS from (remapped by name)")
+        + " deployment sim_order"
+    )
+    print(
+        f"[play_discrete_closeup] --export_gait_csv: CSV column order {_export_real_cols} "
+        + ("matches" if _export_real_cols == list(_deploy_cfg.joints.real_order) else "DIFFERS from")
+        + f" deployment real_order {list(_deploy_cfg.joints.real_order)}"
+    )
+    _export_real_order_idx = {n: list(_deploy_cfg.joints.real_order).index(n) for n in _export_real_cols}
+    _export_actual_rows = []
     _export_step_dt = float(base.step_dt)
-    _export_num_steps = round(GAIT_PERIOD_S / _export_step_dt)
-    if abs(_export_num_steps * _export_step_dt - GAIT_PERIOD_S) > 1e-6:
+    _export_cycle_steps = round(GAIT_PERIOD_S / _export_step_dt)
+    _export_num_steps = _export_cycle_steps * args.gait_csv_cycles
+    if abs(_export_cycle_steps * _export_step_dt - GAIT_PERIOD_S) > 1e-6:
         print(
             f"[play_discrete_closeup] WARNING: --export_gait_csv: env step_dt={_export_step_dt:.6f}s does "
-            f"not evenly divide GAIT_PERIOD_S={GAIT_PERIOD_S}s ({_export_num_steps} steps covers "
-            f"{_export_num_steps * _export_step_dt:.4f}s)"
+            f"not evenly divide GAIT_PERIOD_S={GAIT_PERIOD_S}s ({_export_cycle_steps} steps covers "
+            f"{_export_cycle_steps * _export_step_dt:.4f}s)"
         )
     _export_start_step = args.gait_csv_start_step
     _export_end_step = _export_start_step + _export_num_steps  # exclusive
+    if _export_end_step > args.steps:
+        raise SystemExit(
+            f"--export_gait_csv: recording window ends at step {_export_end_step} but --steps is "
+            f"{args.steps}; raise --steps (and --video_length) to at least {_export_end_step}"
+        )
     # Safety window covers both "the first 100 steps" (the usual landing-transient concern)
     # AND the actual export window itself, whichever is larger -- so a --gait_csv_start_step
     # past 100 is still fully covered.
@@ -763,7 +739,7 @@ for t in range(args.steps):
     if not args.gait_csv_pos:  # discrete int actions only
         action_counts += torch.bincount(a.cpu(), minlength=64)
     if _export_rows is not None and _export_start_step <= t < _export_end_step:
-        # env-0 bits, exactly as commanded this step -- same policy_fn call as the video.
+        # env-0 bits as commanded this step (same policy_fn call as the video)
         bits_pm1 = env.decode(a)[0].detach().cpu().numpy()  # [6] +-1, DiscreteBitsActionWrapper order
         t_seconds = t * _export_step_dt  # absolute elapsed time since reset, not window-relative
         sim_target = _export_adapter.targets_sim(bits_pm1, t_seconds)
@@ -778,10 +754,34 @@ for t in range(args.steps):
             row[f"{_name}_real_rad"] = float(real_rad[_export_leg_real_idx[_name]])
         _export_rows.append(row)
     obs, rew, terminated, truncated, _ = env.step(a)
-    # --- permanent safety check (only active with --export_gait_csv): a reset/termination
-    # of env 0 inside the safety window means the requested export window is not part of one
-    # continuous rollout, and the resulting CSV would be misleading. Cheap (two bool reads/
-    # step), so this stays on for every future --export_gait_csv run, not just this one.
+    if _export_actual_rows is not None and _export_start_step <= t < _export_end_step:
+        # Measured joint positions at the END of this step, i.e. the sim's response to the
+        # command recorded for the same step index in the commanded CSV.
+        _q = base.scene["robot"].data.joint_pos
+        _q = _q.torch if hasattr(_q, "torch") else _q
+        _q_sim = _q[0].detach().cpu().numpy().astype(np.float64)[_export_live_idx]  # deployment sim_order
+        _q_real = _export_mapping.sim_rad_to_real_rad(_q_sim)  # same conversion as the commands, unclipped
+        _rp = base.scene["robot"].data.root_pos_w
+        _rp = _rp.torch if hasattr(_rp, "torch") else _rp
+        _rp = (_rp[0] - base.scene.env_origins[0]).detach().cpu().numpy().astype(np.float64)
+        _arow = {
+            "step": t,
+            "t_s": t * _export_step_dt,
+            "root_x_m": float(_rp[0]),  # env-local base position at the end of the step (progress + landing)
+            "root_y_m": float(_rp[1]),
+            "root_z_m": float(_rp[2]),
+        }
+        _rq = base.scene["robot"].data.root_quat_w
+        _rq = _rq.torch if hasattr(_rq, "torch") else _rq
+        # raw base orientation exactly as the sim returns it (component order is the sim's own; see module docstring)
+        for _qi, _qv in enumerate(_rq[0].detach().cpu().numpy().astype(np.float64)):
+            _arow[f"root_quat_{_qi}"] = float(_qv)
+        for _name in _export_real_cols:
+            _arow[f"{_name}_real_rad"] = float(_q_real[_export_real_order_idx[_name]])
+        for _name in _export_real_cols:
+            _arow[f"{_name}_sim_rad"] = float(_q_sim[_cfg_sim_order.index(_name)])
+        _export_actual_rows.append(_arow)
+    # A reset of env 0 inside the safety window means the export window is not one continuous rollout.
     if _export_safety_end_step is not None and t < _export_safety_end_step:
         if bool(terminated[0]) or bool(truncated[0]):
             _export_env0_reset_steps.append(t)
@@ -792,8 +792,7 @@ for t in range(args.steps):
             )
     if args.receding_horizon:
         _advance_receding_goal()
-        # rebuild base-frame command + obs from the new world target (dt=0.0: nothing
-        # moves), mirroring eval_protocol.py's post-reset command/obs recompute.
+        # rebuild the base-frame command and obs from the new world target (dt=0: nothing moves)
         base.command_manager.compute(dt=0.0)
         obs = base.observation_manager.compute()
     total_rew += rew
@@ -838,6 +837,59 @@ if _export_rows is not None:
         f"[play_discrete_closeup] --export_gait_csv: wrote {len(_export_rows)} rows -> "
         f"{os.path.abspath(args.export_gait_csv)}"
     )
+    # companion file: <name>.csv -> <name>_actual.csv (run_discrete_pipeline.py relies on this name)
+    _actual_path = os.path.splitext(os.path.abspath(args.export_gait_csv))[0] + "_actual.csv"
+    _actual_fields = list(_export_actual_rows[0].keys()) if _export_actual_rows else []
+    with open(_actual_path, "w", newline="") as _f:
+        _writer = csv.DictWriter(_f, fieldnames=_actual_fields)
+        _writer.writeheader()
+        _writer.writerows(_export_actual_rows)
+    print(
+        f"[play_discrete_closeup] --export_gait_csv: wrote {len(_export_actual_rows)} actual-position rows -> "
+        f"{_actual_path}"
+    )
+
+    # Robot-ready file for LiBR-hexapi/scripts/run_opt_gait.py / physics_gait_di.py, laid out like
+    # analysis/export_optimized_gaits.py: no header row, '#' comment lines, columns body_1, body_2, FR, FL, MR, ML,
+    # HR, HL. physics_gait_di.py negates body_1/body_2 before converting to encoder counts, so body_k = -real_rad
+    # of the commanded FrontLink/BackLink; legs are stored as 0/1 contact bits.
+    _robot_path = os.path.splitext(os.path.abspath(args.export_gait_csv))[0] + "_robot.csv"
+    if _export_rows:
+        _body = np.array([[-r["FrontLink_real_rad"], -r["BackLink_real_rad"]] for r in _export_rows])
+        _bits = np.array([[r[f"{n}_bit"] for n in _expected_leg_order] for r in _export_rows], dtype=int)
+        _hdr = [
+            "play_discrete_closeup.py --export_gait_csv | RL policy gait (sim rollout, env 0)",
+            f"checkpoint: {args.checkpoint}",
+            f"steps {_export_start_step}-{_export_end_step - 1} at {1.0 / _export_step_dt:.0f} Hz "
+            f"({args.gait_csv_cycles} cycle(s) of {_export_cycle_steps} rows)",
+            "contact order (cyclic, [FR FL MR ML HR HL]): "
+            + " -> ".join(dict.fromkeys("".join(str(int(b)) for b in row) for row in _bits)),
+            "body: scripted RL spine wave (Wave 1), raw/unnegated like export_optimized_gaits.py",
+            "columns: body_1, body_2, FR, FL, MR, ML, HR, HL",
+        ]
+        np.savetxt(
+            _robot_path,
+            np.column_stack([_body, _bits]),
+            delimiter=",",
+            fmt=["%.10f", "%.10f"] + ["%d"] * 6,
+            header=chr(10).join(_hdr),
+            comments="# ",
+        )
+        print(f"[play_discrete_closeup] --export_gait_csv: wrote robot-ready gait ({len(_bits)} rows) -> {_robot_path}")
+        if args.gait_csv_cycles > 1:
+            _per = _export_cycle_steps
+            _same = [
+                bool(np.array_equal(_bits[k * _per : (k + 1) * _per], _bits[:_per]))
+                for k in range(1, args.gait_csv_cycles)
+            ]
+            _diff = [
+                int((_bits[k * _per : (k + 1) * _per] != _bits[:_per]).any(axis=1).sum())
+                for k in range(1, args.gait_csv_cycles)
+            ]
+            print(
+                f"[play_discrete_closeup] periodicity: cycle k identical to cycle 1 (k=2..): {_same}; "
+                f"rows differing from cycle 1: {_diff}"
+            )
 
 env.close()
 simulation_app.close()

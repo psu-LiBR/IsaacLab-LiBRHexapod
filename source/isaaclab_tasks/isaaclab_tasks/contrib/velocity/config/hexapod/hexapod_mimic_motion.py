@@ -3,33 +3,18 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
-# All rights reserved.
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Reference motion data for hexapod imitation learning.
 
-Provides a MotionReference that returns target joint angles at a given gait phase.
-It can load from a CSV file (e.g. recorded via play.py) or fall back to a built-in
-sinusoidal tripod gait.
+Provides a MotionReference that returns target joint angles at a given gait phase, loaded from a CSV or
+generated as a built-in sinusoidal tripod gait.
 
-Joint ordering used throughout this module matches Isaac Lab's internal order for this
-robot as confirmed by playReal.py (Sim DOF order, determined by the USD articulation):
+Joint order is the sim DOF order of ``asset.data.joint_pos``:
 
     0 BackLink_Joint   1 FrontLink_Joint   2 MiddleLeft_Joint  3 MiddleRight_Joint
     4 BackLeft_Joint   5 BackRight_Joint   6 FrontLeft_Joint   7 FrontRight_Joint
 
-CSV format (headerless, Sim DOF order — matches play.py / playReal.py logs):
-    -0.702,-0.687,-0.7,-0.460,-0.460,-0.460,-0.7,-0.460
-    ...
-
-CSV format (with header, any column order — columns matched by name):
-    time,BackLink_Joint,FrontLink_Joint,MiddleLeft_Joint,MiddleRight_Joint,BackLeft_Joint,
-        BackRight_Joint,FrontLeft_Joint,FrontRight_Joint
-    0.00,0.0,0.0,-0.47,-0.47,-0.47,-0.47,-0.47,-0.47
-
-A leading "time" column is optional; if omitted, rows are assumed equally spaced over
-one gait period.
+CSV: either headerless rows in that order, or a header row with joint names (columns matched by name, any
+order). A leading "time" column is optional; without it the rows are spaced evenly over one gait period.
 
 Typical usage inside a reward function::
 
@@ -45,8 +30,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-# Joint ordering as used by Isaac Lab's asset.data.joint_pos for this robot.
-# Determined by the USD articulation definition, confirmed via playReal.py.
+# Sim DOF order, as in asset.data.joint_pos.
 JOINT_NAMES: list[str] = [
     "BackLink_Joint",  # 0  (spine)
     "FrontLink_Joint",  # 1  (spine)
@@ -59,15 +43,10 @@ JOINT_NAMES: list[str] = [
 ]
 NUM_JOINTS: int = 8
 
-# Tripod gait groupings (indices into JOINT_NAMES).
-# Standard alternating tripod: diagonal legs swing together.
+# Alternating tripod groups (indices into JOINT_NAMES).
 TRIPOD_A: list[int] = [3, 4, 6]  # MiddleRight_Joint, BackLeft_Joint, FrontLeft_Joint
 TRIPOD_B: list[int] = [2, 5, 7]  # MiddleLeft_Joint,  BackRight_Joint, FrontRight_Joint
 SPINE_IDX: list[int] = [0, 1]  # BackLink_Joint, FrontLink_Joint
-
-# SIM_DOF_TO_ALPHA is kept for reference but NOT used — asset.data.joint_pos
-# already matches the CSV column order (both are Sim DOF order).
-SIM_DOF_TO_ALPHA: list[int] = [4, 0, 5, 6, 1, 7, 2, 3]
 
 
 class MotionReference:
@@ -99,11 +78,8 @@ class MotionReference:
             gait_period:    Gait cycle duration in seconds.  Overridden if the
                             CSV has a time column spanning one cycle.
             num_interp_points: Resolution of the internal phase table.
-            csv_col_order:  Optional integer list that reorders CSV columns to
-                            Isaac Lab's alphabetical joint order before storing.
-                            Use SIM_DOF_TO_ALPHA if the CSV was produced by
-                            play.py / playReal.py or is a sim gait CSV.
-                            Example: csv_col_order=SIM_DOF_TO_ALPHA
+            csv_col_order:  Optional integer list that reorders the CSV columns to the sim DOF order
+                            (not needed for CSVs already in that order).
         """
         self.gait_period = gait_period
         self._n = num_interp_points

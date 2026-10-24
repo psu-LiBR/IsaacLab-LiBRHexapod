@@ -20,7 +20,7 @@ warm-up system.
 
 - Isaac Sim 6.0+ installed and on PATH (or at `_isaac_sim` symlink)
 - Python 3.11, PyTorch 2.7.0 + CUDA 12.8
-- Hexapod USD model at `hexapod-assets/USD/HexapiFlattened.usd` (repo-relative; a `Hexapod_Flattened.usd` path is commented out just above it in `hexapod.py`)
+- Hexapod USD model at `hexapod-assets/USD/HexapiFlattened.usd` (repo-relative, set in `hexapod.py`)
 - Data output directory at `C:/Users/jrh6552/Hexapod/IsaacLab/Position Files/`
 
 ## Common Commands
@@ -166,9 +166,7 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 
 **Robot asset:** `source/isaaclab_assets/isaaclab_assets/robots/hexapod.py`
 
-- USD path in `HEXAPOD_CFG.spawn.usd_path`: **currently** `"hexapod-assets/USD/HexapiFlattened.usd"`
-  (a `"hexapod-assets/USD/Hexapod_Flattened.usd"` line is present but commented out immediately above it —
-  verify which USD is actually active before relying on the path).
+- USD path in `HEXAPOD_CFG.spawn.usd_path`: `"hexapod-assets/USD/HexapiFlattened.usd"`.
 - 8 joints total: `FrontLink`, `BackLink` (spine), + 6 leg joints (`MiddleLeft/Right`, `BackLeft/Right`, `FrontLeft/Right`)
 - **Actuator model: `DCMotorCfg`** — migrated from `ImplicitActuatorCfg` (**breaking**: closed-loop
   joint dynamics change for every hexapod task, existing checkpoints must be retrained; see
@@ -199,12 +197,11 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
     PD+damping clamp); `body_joints` stiffness=80 ("too stiff -- small tracking lag generates huge
     torques; consistently saturates") and `velocity_limit_sim=5.5`; `leg_joints` stiffness=37 /
     damping=0.32 (max correctable error 1.4/37=0.038 rad before saturation) and `effort_limit_sim=1.4`.
-- Init pose: spine joints (`FrontLink_Joint`, `BackLink_Joint`) at 0.0 rad. Leg joints are **currently
-  +0.47 rad** under a `# For HEXAPI Implementation` block in `init_state.joint_pos`; an older
-  `# For Trad Hexapod Implementation` block using **-0.47 rad** is present but commented out directly
-  above it. Other parts of this doc (mimic gait tripod references, `playReal.py`'s `q_default_list`, the
-  MATLAB conversion notes) still assume the -0.47 rad convention — reconcile the authoritative sign
-  against `hexapod.py` directly before cross-referencing those sections.
+- **Servo command delay:** both groups are `DelayedDCMotorCfg` (legs 8–12, spine 11–15 physics steps, redrawn per env at reset; `HEXAPOD_ACTUATOR_DELAY = False` in `hexapod.py` restores the instantaneous DCMotor). `_PLAY` configs pin it to legs 10 / spine 13 via `with_fixed_actuator_delay`. **Breaking:** pre-delay checkpoints must be retrained.
+- Init pose: spine joints (`FrontLink_Joint`, `BackLink_Joint`) at 0.0 rad, leg joints at **+0.47 rad** (HexapI
+  convention, `init_state.joint_pos`). The pre-HexapI convention was -0.47 rad; other parts of this doc (mimic gait
+  tripod references, `playReal.py`'s `q_default_list`, the MATLAB conversion notes) still assume it, so reconcile
+  the sign against `hexapod.py` before cross-referencing those sections.
 
 **Gym registration:** `source/isaaclab_tasks/isaaclab_tasks/contrib/velocity/config/hexapod/__init__.py`
 
@@ -213,6 +210,7 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `Isaac-Velocity-Flat-Hexapod-Mimic-v0` / `Isaac-Velocity-Flat-Hexapod-Mimic-Play-v0`
 - `Isaac-Goal-Flat-Hexapod-v0` / `Isaac-Goal-Flat-Hexapod-Play-v0`
 - `Isaac-Goal-Flat-Hexapod-Binary-v0` / `Isaac-Goal-Flat-Hexapod-Binary-Play-v0` (binary contact-bit action space; **no `rsl_rl_cfg_entry_point`** — trained by the fork-only scripts in `scripts/reinforcement_learning/binary_rl/`, see **Binary-Contact RL System** below)
+- `Isaac-Goal-Flat-Hexapod-Binary-Servo-v0` / `Isaac-Goal-Flat-Hexapod-Binary-Servo-Play-v0` (opt-in binary variant with a fitted XL430 leg model, `ServoDCMotor`: leg stiffness 5.16 (x0.8-1.75), armature 8.6e-3, leg delay 3-5 steps, battery-voltage scale 0.85-1.0; Play is deterministic. The extra inertia is an effective parameter of unknown origin)
 - Reward-shaping/tuned variants (`Isaac-Velocity-Flat-Hexapod-Rshape-*`, `Isaac-Goal-Flat-Hexapod-BigStep-*`) —
   see `flat_env_cfg_rshape.py` / `hexapod_goal_tuned_env_cfg.py` below and the task-specific
   `config/hexapod/README.md` for the full parameter table
@@ -234,8 +232,8 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - Asymmetric actor-critic observations: actor sees proprioceptive-only (hardware-available), critic adds ground-truth base_lin_vel during training
 - `obs_groups = {"policy": ["policy"], "critic": ["critic"]}` routes groups to actor/critic in PPO runner
 - Action scale effectively 0.5: `q = q_default + 0.5 * action`
-- `q_default` for legs: currently +0.47 rad (matches `init_state`'s active "For HEXAPI Implementation" block; the -0.47 convention used elsewhere in this doc is unreconciled — see the Robot asset note above); spine joints: 0.0 rad
-- `track_ang_vel_z_exp` uses EMA (exponential moving average, alpha=0.98, ~33-step window) rather than instantaneous yaw rate — sinusoidal undulation produces zero net drift so the EMA reward stays near 1.0, while sustained turning shifts the mean and gets penalized
+- `q_default` for legs: currently +0.47 rad (matches `init_state`; the -0.47 convention used elsewhere in this doc is unreconciled — see the Robot asset note above); spine joints: 0.0 rad
+- `track_ang_vel_z_exp` uses `track_ang_vel_z_exp_deadzone` (deadzone 1.6) in the flat env and the EMA version (alpha=0.98, ~33-step window) in the Rshape variants, rather than instantaneous yaw rate — sinusoidal undulation produces zero net drift so the reward stays near 1.0, while sustained turning is penalized
 
 **Hexapod-specific files in config folder:**
 
@@ -254,7 +252,8 @@ The gym environment is instantiated by `ManagerBasedRLEnv` using these configs. 
 - `agents/rsl_rl_ppo_goal_cfg.py` — `HexapodGoalPPORunnerCfg`: 3000 iterations, `num_steps_per_env=96`, `gamma=0.999`, `entropy_coef=0.003`, logs to `logs/rsl_rl/hexapod_goal/`
 - `flat_env_cfg_rshape.py` — `HexapodFlatRshapeEnvCfg` (+ `_PLAY` and `Slide045/035/025` foot-slide-weight variants): reward-shaping on top of the flat baseline that trades short/rapid steps for longer swing phases (looser velocity-tracking std, higher `feet_air_time` weight/threshold, added `feet_slide` penalty, higher ground friction)
 - `hexapod_goal_tuned_env_cfg.py` — `HexapodGoalBigStepEnvCfg` family (+ `Slide06/035`, `Minimal`, `_PLAY`): carries the same flat-shaping deltas over to the goal-reaching task
-- `hexapod_binary_env_cfg.py` — `HexapodBinaryEnvCfg` / `HexapodBinaryEnvCfg_PLAY`: `HexapodGoalEnvCfg` with the 8-dim continuous joint action replaced by 6 leg contact bits + a scripted spine wave, and six inherited reward weights rebalanced by `_rebalance_binary_rewards()`; also holds the "CANONICAL SPINE-WAVE DEFINITION" block (Wave 1 / Wave 2 coefficients); see **Binary-Contact RL System** below
+- `hexapod_binary_env_cfg.py` — `HexapodBinaryEnvCfg` / `HexapodBinaryEnvCfg_PLAY`: `HexapodGoalEnvCfg` with the 8-dim continuous joint action replaced by 6 leg contact bits + a scripted spine wave, and six inherited reward weights rebalanced by `_rebalance_binary_rewards()`; also holds the "CANONICAL SPINE-WAVE DEFINITION" block (Wave 1 / Wave 2 coefficients); see **Binary-Contact RL System** below; also defines the `HexapodBinaryServoEnvCfg` / `_PLAY` variant (`SERVO_*` constants)
+- `isaaclab_assets/robots/hexapod_actuators.py` — `DelayedDCMotor` / `DelayedDCMotorCfg` (DCMotor torque-speed clip plus a per-env random command delay in physics steps), `ServoDCMotor` / `ServoDCMotorCfg` (adds per-env stiffness and battery-voltage draws), `with_servo_model()` and `with_fixed_actuator_delay()` (pins a delayed config to the middle of its range; called by every `_PLAY` config)
 - `hexapod_binary_actions.py` — `SpineSineAction` / `SpineSineActionCfg`: zero-width (`action_dim == 0`) scripted action term that plays a truncated Fourier spine wave every step (no RL slot); `sin_coef`/`cos_coef` cfg fields, plus `set_waveform()` to swap Wave 1 → Wave 2 at runtime
 - `README.md` — task-variant reference table (which reward params each `-Rshape-*`/`-BigStep-*` task ID changes) and CLI examples; kept current with the registrations in `__init__.py`
 
@@ -278,13 +277,13 @@ On first call, `joint_pos_imitation` validates that `asset.data.joint_names` mat
 Tripod A (swing first half-cycle): indices 3, 4, 6 (MiddleRight, BackLeft, FrontLeft).
 Tripod B (swing second half-cycle): indices 2, 5, 7 (MiddleLeft, BackRight, FrontRight).
 
-`MIMIC_CSV_PATH` defaults to `hexapod-assets/Sim Gaits/forward3_lleg30_amp65_sim.csv`. If the file is absent, the built-in sinusoidal tripod gait is used automatically — no CSV needed to start training.
+`MIMIC_CSV_PATH` defaults to `hexapod-assets/Sim Gaits/forward3_lleg35_amp65_sim.csv`. If the file is absent, the built-in sinusoidal tripod gait is used automatically — no CSV needed to start training.
 
 PPO tuning for mimic: `init_noise_std`/`entropy_coef` are intentionally left at the inherited flat/rough defaults (1.0 / 0.01, see `rsl_rl_ppo_cfg.py`) rather than lowered, per the May 2026 working run configuration.
 
 **Goal-Reaching System** (`hexapod_goal_env_cfg.py`, `hexapod_goal_curriculum.py`, `hexapod_goal_rewards.py`, `hexapod_goal_obs_cfg.py`, `hexapod_goal_tuned_env_cfg.py`):
 
-`HexapodGoalEnvCfg` inherits `HexapodFlatEnvCfg` and replaces the velocity-tracking task with "reach a fixed point N meters forward as fast as possible". Module-level constants (`hexapod_goal_env_cfg.py`, current on-disk — the earlier `(1.0, 2.0, 3.5, 5.0)` / `0.3` / `45.0` values are commented out directly above each): `GOAL_DISTANCES = (0.5, 1.0, 1.5, 2.0)` m, `REACH_RADIUS = 0.2` m, `EPISODE_LENGTH_S = 25.0` s, `CURRICULUM_SUCCESS_THRESHOLD = 0.7`, `CURRICULUM_DEMOTION_THRESHOLD = 0.4`, `CURRICULUM_WINDOW_FRACTIONS = (1.0, 1.0, 1.0, 1.0)` (per-stage fraction of `scene.num_envs` pooled into one curriculum window; all stages currently use a full window).
+`HexapodGoalEnvCfg` inherits `HexapodFlatEnvCfg` and replaces the velocity-tracking task with "reach a fixed point N meters forward as fast as possible". Module-level constants (`hexapod_goal_env_cfg.py`, current on-disk): `GOAL_DISTANCES = (0.5, 1.0, 1.5, 2.0)` m, `REACH_RADIUS = 0.2` m, `EPISODE_LENGTH_S = 25.0` s, `CURRICULUM_SUCCESS_THRESHOLD = 0.7`, `CURRICULUM_DEMOTION_THRESHOLD = 0.4`, `CURRICULUM_WINDOW_FRACTIONS = (1.0, 1.0, 1.0, 1.0)` (per-stage fraction of `scene.num_envs` pooled into one curriculum window; all stages currently use a full window).
 
 - **Command**: `commands.base_velocity = None`; `commands.pose_command` is a `UniformPose2dCommandCfg` with `resampling_time_range=(25.0, 25.0)` (== `episode_length_s`, so it never resamples mid-episode) and `ranges.pos_x` pinned to `(distance, distance)` for the active curriculum stage (`pos_y`/`heading` fixed at 0). The curriculum term mutates `command_term.cfg.ranges.pos_x` directly on every call — distance is set externally, never sampled.
 - **Observations** (`HexapodGoalObservationsCfg`): `PolicyCfg` (6 terms, `enable_corruption=True`): `base_ang_vel` (`mdp.imu_ang_vel`, Unoise ±0.2), `projected_gravity` (Unoise ±0.05), `pose_command` (`mdp.generated_commands`, 4-dim: x, y, z, heading in robot base frame, no noise), `joint_pos` (`joint_pos_rel`, Unoise ±0.01), `joint_vel` (`joint_vel_rel`, Unoise ±1.5), `actions` (`last_action`). `CriticCfg` prepends `base_lin_vel` (ground-truth, Unoise ±0.1, `enable_corruption=False` for the whole critic group) ahead of the same 6 terms — asymmetric actor/critic as in the flat task.
@@ -312,7 +311,7 @@ PPO tuning for mimic: `init_noise_std`/`entropy_coef` are intentionally left at 
 
 - **6 leg contact bits** — one `BinaryJointPositionActionCfg` term per leg (policy action vector is 6-dim; the `binary_rl` scripts wrap it as `Discrete(64)` via `discrete_action_wrapper.py`). Convention: **1 / positive = stance (foot down), `STANCE_POS = 0.460` rad; 0 / negative = lift (foot up), `LIFT_POS = 1.180` rad** (leg limits `[-0.0873, +1.9199]` rad in the HexapI positive-leg convention). Bit / action-index order (matches hardware bit numbering; bits 2 & 4 inferred, pending hardware confirmation): `idx 0..5 = FrontRight, FrontLeft, MiddleRight, MiddleLeft, BackRight, BackLeft`.
 - **Scripted spine wave** (`SpineSineAction`, **not** RL-controlled): a zero-width action term that drives the two spine joints every step from a truncated Fourier series `q(t) = offset + Σ_k [sin_coef[k]·sin((k+1)·w·t) + cos_coef[k]·cos((k+1)·w·t)]`, `w = 2π/period`, `period = GAIT_PERIOD_S = 1.0` s. There are **two distinct waves**, deliberately not unified (canonical definition + coefficients in `hexapod_binary_env_cfg.py`, "CANONICAL SPINE-WAVE DEFINITION" block):
-  - **Wave 1 — the RL-env wave**, played during `Isaac-Goal-Flat-Hexapod-Binary-v0` training and `-Play-v0`: a fixed **analytic traveling body wave**, *not* fitted to any CSV. `FrontLink_Joint` is a pure sine `-0.9162978573·sin(2π·t/1.0)`; `BackLink_Joint` is the same sine shifted +90° (`-0.9162978573·cos(...)`) — magnitude `A_SPINE = 0.9162978573` rad (the **exact** open-loop gait-generator value: `deg2rad(70) · 12/16 = deg2rad(52.5)`) carried with the HexapI global spine-joint-sign flip so `sin_coef`/`cos_coef` hold **`-A_SPINE`** (corrected 2026-09-10 — a positive coefficient walked every re-evaluated policy backward; the old fitted wave had this flip as a negative amplitude and Wave 2's sim check independently confirmed the negative front-joint sign), shared offset `0.0`, only the phase differs by a quarter cycle, so the wave travels down the body. (Single-harmonic: `sin_coef`/`cos_coef` each hold one entry.) The BackLink-leads-FrontLink phase direction was confirmed correct on real hardware 2026-09-15 (physical spine motion matched against the training video/eval with this phase relationship unchanged) — no flip needed.
+  - **Wave 1 — the RL-env wave**, played during `Isaac-Goal-Flat-Hexapod-Binary-v0` training and `-Play-v0`: a fixed **analytic traveling body wave**, *not* fitted to any CSV. `FrontLink_Joint` is a pure sine `-0.9162978573·sin(2π·t/1.0)`; `BackLink_Joint` is the same sine shifted +90° (`-0.9162978573·cos(...)`) — magnitude `A_SPINE = 0.9162978573` rad (the **exact** open-loop gait-generator value: `deg2rad(70) · 12/16 = deg2rad(52.5)`) carried with the HexapI global spine-joint-sign flip so `sin_coef`/`cos_coef` hold **`-A_SPINE`** (corrected 2026-09-10 — a positive coefficient walked every re-evaluated policy backward; the old fitted wave had this flip as a negative amplitude and Wave 2's sim check independently confirmed the negative front-joint sign), shared offset `0.0`, only the phase differs by a quarter cycle, so the wave travels down the body. (Single-harmonic: `sin_coef`/`cos_coef` each hold one entry.) The BackLink-leads-FrontLink phase direction was confirmed correct on real hardware 2026-09-15 (physical spine motion matched against the training video/eval with this phase relationship unchanged) — no flip needed. **Real-mount sign (settled 2026-10-20):** `binary.spine.amplitude` carries the sim's wave verbatim (−A_SPINE on both joints) and BOTH spine joints use correction group `negate` (real = −sim; BackLink's soft limits mirrored accordingly), so the real encoders follow FrontLink = +A·sin, BackLink = +A·cos (hardware-confirmed). Do not compensate with per-joint amplitude signs: that drives the motors correctly but makes the encoder read-back convert BackLink with the wrong sign, so the policy's joint_pos/joint_vel observations stop matching training. Earlier `deployment.binary.example.yaml` had `+A_SPINE` on both joints with FrontLink `negate`/BackLink `unchanged`, which exported a reversed wave: open-loop replays needed `--shiftnum` 9–15 and yawed left. Gait CSVs exported before 2026-10-20 carry that wave; fix them by negating the `body_1` column (equivalently `--shiftnum 25` on a `body_2`-negated copy).
   - **Wave 2 — the tripod-baseline wave**: a single-harmonic **analytic** body wave regenerated straight from the MATLAB gait generator (**not** a CSV fit), **anti-phase** across the two spine joints (`BackLink_Joint = -FrontLink_Joint`, MATLAB `body_phase = π`): `FrontLink_Joint(t) = -A_SPINE·sin(w·t − π/4)`, `BackLink_Joint(t)` its negation (`_TRIPOD_FRONT_SIGN = -1.0`, sim-verified 2026-09-10 to walk the tripod baseline forward +0.83 m; the opposite sign walks it backward). Same `A_SPINE` amplitude (70°) and `0.0` offset as Wave 1. `tripod_extendedquad_sim.csv`'s byte-identical in-phase spine columns are a MATLAB→Sim export artifact (it folded the anti-phase pair onto one column) that Wave 2 deliberately does **not** reproduce. Used by `eval_protocol.py`'s `BASE_tripod_csv_bits` anchor **and** `play_discrete_closeup.py`'s `--gait_npz tripod` replay, swapped into the live `SpineSineAction` via `SpineSineAction.set_waveform`; never played by the RL env. The tripod baseline's *leg* contact-bit timing comes from `tripod_extendedquad_sim.csv` via `tripod_bit_demos.npz` (the npz never carried the spine).
   - `SpineSineActionCfg` fields are `sin_coef` / `cos_coef` (`dict[str, list[float]]`, one list entry per Fourier harmonic) plus unchanged `offset` / `period` — this **replaces** the earlier `amplitude` / `phase` (`dict[str, float]`) scalar fields.
   - **Breaking**: existing `Isaac-Goal-Flat-Hexapod-Binary-*` checkpoints must be retrained — the spine trajectory changed (was a per-joint sinusoid fitted to `tripod_B11BL0_sim.csv`'s spine columns, DOF-index-swapped and globally sign-flipped). Changelog fragment: `source/isaaclab_tasks/changelog.d/hexapod-binary-spine-wave.rst`.
@@ -531,3 +530,5 @@ When a config references e.g. `mdp.feet_air_time`, look in the locomotion mdp di
   files, apply the same kind of change across N configs), use the `/fable-team` skill —
   it delegates to `fable-orchestrator` (Fable 5), which plans the breakdown and fans it
   out to up to 5 parallel Sonnet subagents, then integrates their results.
+- `/opus-team` is the same fan-out pattern with `opus-orchestrator` (Opus 5.5) as the planner and
+  Sonnet 5.5 workers; use it when you want Opus's planning instead of Fable's.

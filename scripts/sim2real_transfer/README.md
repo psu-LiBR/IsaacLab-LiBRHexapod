@@ -90,8 +90,9 @@ profile (`velocity`, `goal`, or `binary`).
   old-USD `unchanged` map; spine emitted through the calibrated body
   correction). The example file's header shows the full derivation; both spine
   bring-up questions (wave phase direction, body-bend direction) were resolved on
-  real hardware 2026-09-15 -- phase direction confirmed correct as-is, body-bend
-  direction required negating `binary.spine.amplitude` for the real mount.
+  real hardware -- the sim's wave is used verbatim (`binary.spine.amplitude` -A on both
+  joints) and both spine joints use correction group `negate`, so the real encoders follow
+  FrontLink = +A*sin, BackLink = +A*cos (settled 2026-10-20; see the example file's header).
 
 ## Continuous forward walking (goal / binary)
 

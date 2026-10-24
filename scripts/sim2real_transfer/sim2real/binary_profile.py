@@ -5,43 +5,27 @@
 
 """Binary contact-bit profile: policy-action decode + host-side spine wave.
 
-The binary-contact env (``Isaac-Goal-Flat-Hexapod-Binary-v0``) hands the policy six leg
-contact bits. Each bit snaps its leg joint to one of two fixed angles
-(``STANCE_POS`` / ``LIFT_POS`` in ``hexapod_binary_env_cfg.py``); the two spine joints
-are driven by a fixed analytic traveling body wave the policy never sees
-(``SpineSineAction``, playing the "CANONICAL SPINE-WAVE DEFINITION" / Wave 1 block in
-``hexapod_binary_env_cfg.py``). Wave 1 is a single harmonic, period ``GAIT_PERIOD_S`` =
-1.0 s, magnitude ``A_SPINE`` = ``deg2rad(70) * 12/16`` = ``deg2rad(52.5)`` =
-0.9162978573 rad (exact open-loop gait-generator value) carried with the HexapI global
-spine-joint-sign flip (``-A_SPINE``), and shared offset 0.0 rad on both spine joints; only
-the phase differs -- ``FrontLink_Joint`` is a pure sine ``-A_SPINE*sin(w*t)`` and
-``BackLink_Joint`` is the same shape shifted +pi/2 (``-A_SPINE*sin(w*t + pi/2)`` ==
-``-A_SPINE*cos(w*t)``), a quarter-cycle wave travelling down the body. It is NOT fitted to
-any CSV (the earlier fit to ``tripod_B11BL0_sim.csv`` is gone).
+The binary env (``Isaac-Goal-Flat-Hexapod-Binary-v0``) gives the policy six leg contact bits. Each bit snaps its
+leg joint to one of two fixed angles (``STANCE_POS`` / ``LIFT_POS`` in ``hexapod_binary_env_cfg.py``), and the two
+spine joints follow a fixed analytic wave the policy never sees (``SpineSineAction``, Wave 1 in the "CANONICAL
+SPINE-WAVE DEFINITION" block there): a single harmonic of period 1.0 s and amplitude ``-A_SPINE``
+(``A_SPINE`` = ``deg2rad(70) * 12/16`` = 0.9162978573 rad) on both joints, FrontLink = ``-A_SPINE*sin(w*t)`` and
+BackLink the same shifted by +pi/2 (``-A_SPINE*cos(w*t)``).
 
-This is the *sim-side* sign convention -- it does not automatically carry over to the
-deployment YAML. This robot's physical spine motors are mounted upside-down relative to
-the sim convention, so ``binary.spine.amplitude`` in ``deployment.binary.yaml`` needs a
-second, real-mount-only sign flip on top of the above (i.e. **positive** ``+A_SPINE`` on
-both joints, confirmed on hardware 2026-09-15) -- not simply mirroring sim's ``-A_SPINE``.
-The phase relationship (BackLink leads FrontLink by +pi/2) was separately confirmed
-correct as-is and needs no adjustment.
+``binary.spine.amplitude`` in the deployment YAML carries the sim's wave verbatim. The real spine motors are
+mounted opposite to the sim convention, so both spine joints use correction group ``negate`` (real = -sim) and the
+real encoders follow FrontLink = +A_SPINE*sin, BackLink = +A_SPINE*cos (hardware-confirmed 2026-10-20). Negating
+through the correction group, rather than flipping the amplitudes, also keeps the encoder read-back converting to
+the sim joint angles the policy was trained on.
 
-Because Wave 1 is single-harmonic the per-joint ``amplitude`` / ``phase`` / ``offset``
-representation below maps to it directly -- no Fourier refactor needed:
-``q(t) = offset + amplitude * sin(2*pi*t / period + phase)`` with ``t`` the elapsed
-episode time, ``FrontLink`` phase 0.0 and ``BackLink`` phase pi/2.
+The wave is single-harmonic, so a per-joint ``q(t) = offset + amplitude * sin(2*pi*t / period + phase)`` (FrontLink
+phase 0, BackLink phase pi/2) represents it directly.
 
-On hardware the exported ONNX graph emits the six-dim ``+-1`` bit vector directly (argmax
-over the 64 gait patterns, decoded to bits -- see
-``scripts/reinforcement_learning/binary_rl/export_binary_onnx.py``). This module turns
-that bit vector plus an elapsed-time value into the full eight-joint, sim-DOF-order
-position target the servo bus needs, recreating ``SpineSineAction`` host-side.
-
-Nothing here touches encoder ticks or the sim<->real DOF permutation -- the target it
-returns is in the *sim* joint convention and flows through the same
-``JointMapping.clip_to_soft_limits`` -> ``sim_target_to_ticks`` path as every other
-profile's target.
+On hardware the exported ONNX graph emits the six-dim ``+-1`` bit vector (see
+``scripts/reinforcement_learning/binary_rl/export_binary_onnx.py``). This module turns that vector plus the
+elapsed time into the full eight-joint, sim-DOF-order position target, recreating ``SpineSineAction`` host-side.
+The target is in the sim joint convention and flows through the usual ``JointMapping.clip_to_soft_limits`` ->
+``sim_target_to_ticks`` path; nothing here touches encoder ticks or the sim<->real DOF permutation.
 """
 
 from __future__ import annotations
@@ -54,16 +38,10 @@ import numpy as np
 
 @dataclass(frozen=True)
 class BinarySpineCfg:
-    """Per-joint parameters for the fixed analytic traveling spine wave.
+    """Per-joint parameters of Wave 1, ``q(t) = offset + amplitude * sin(2*pi*t / period + phase)``.
 
-    Mirrors Wave 1 ("CANONICAL SPINE-WAVE DEFINITION") in ``hexapod_binary_env_cfg.py``:
-    a single-harmonic wave, ``q(t) = offset + amplitude * sin(2*pi*t / period + phase)``,
-    with shared amplitude/offset/period and only the phase differing between joints
-    (``BackLink`` = ``FrontLink`` + pi/2). Not fitted to a CSV.
-
-    ``amplitude`` / ``phase`` / ``offset`` are ``{joint_name: value}`` maps (radians);
-    ``joint_name`` uses the sim-DOF names (``BackLink`` / ``FrontLink``, no ``_Joint``
-    suffix). ``period`` is one gait cycle in seconds.
+    ``amplitude`` / ``phase`` / ``offset`` are ``{joint_name: value}`` maps [rad] keyed by the sim-DOF names
+    (``BackLink`` / ``FrontLink``, no ``_Joint`` suffix); ``period`` is one gait cycle [s].
     """
 
     amplitude: dict[str, float]

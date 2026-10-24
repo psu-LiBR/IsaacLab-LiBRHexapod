@@ -3,16 +3,10 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
-# All rights reserved.
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Imitation-learning reward terms for the LiBR Hexapod.
 
-Reward params must contain only OmegaConf-compatible primitives (str, float,
-list[int], etc.) so that Isaac Lab's Hydra config serialization does not fail.
-The MotionReference object is built lazily on the first reward call and cached
-in a module-level dict keyed by the config primitives.
+Reward params hold only OmegaConf-compatible primitives (str, float, list[int]) so Hydra serialization works;
+the MotionReference is built lazily on the first call and cached by those primitives.
 """
 
 from __future__ import annotations
@@ -26,13 +20,10 @@ from isaaclab.managers import SceneEntityCfg
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
-# Module-level cache: built once per unique (csv_path, gait_period, col_order).
+# MotionReference per (csv_path, gait_period, col_order).
 _MOTION_REF_CACHE: dict = {}
 
-# Per-asset joint reorder index cache.
-# Maps asset object id -> LongTensor of column indices that reorder
-# asset.data.joint_pos columns to match JOINT_NAMES (Sim DOF order).
-# None means no reordering needed (ordering already matches).
+# Per asset id: column indices that reorder asset.data.joint_pos to JOINT_NAMES order (None = already matching).
 _JOINT_IDX_CACHE: dict[int, torch.Tensor | None] = {}
 
 
@@ -118,9 +109,7 @@ def joint_pos_imitation(
         csv_path:      Path to reference gait CSV, or None to use the built-in
                        sinusoidal tripod gait.
         gait_period:   Duration of one gait cycle in seconds.
-        csv_col_order: Integer list to reorder CSV columns to Isaac Lab's
-                       alphabetical joint order.  Pass SIM_DOF_TO_ALPHA if the
-                       CSV was produced by play.py / playReal.py.
+        csv_col_order: Integer list that reorders the CSV columns to the sim DOF order, or None.
         joint_sigma:   Gaussian width in radians.  Smaller -> stricter tracking.
         asset_cfg:     Scene entity config for the robot articulation.
     """

@@ -3,27 +3,12 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+"""Reward-tuning variants layered on :class:`HexapodGoalEnvCfg`.
 
-"""Reward-tuning variants layered on top of the hexapod goal-reaching environment.
-
-Base: `HexapodGoalEnvCfg` (hexapod_goal_env_cfg.py, unmodified).
-
-These configs carry the flat-locomotion reward shaping (longer swing phase, smoother
-actions, optional foot-slide penalty) over to the goal-reaching task.
-
-Two details the base class forces us to handle explicitly:
-
-1. `HexapodGoalEnvCfg` only tweaks ``rewards.feet_air_time.weight``/threshold, so
-   the term is rebuilt here (rather than edited in place) to also swap its
-   ``command_name`` param (see point 2) in one shot.
-2. The default term in ``velocity_env_cfg.py`` hardcodes
-   ``command_name="base_velocity"``. The goal environment replaces that command with
-   ``pose_command``, so reusing the default parameters raises
-   ``KeyError: base_velocity`` at startup.
+They carry the flat-locomotion reward shaping of ``flat_env_cfg_rshape.py`` (longer swing phase, smoother
+actions, optional foot-slide penalty) over to the goal task. ``feet_air_time`` is rebuilt rather than edited
+because the default term hardcodes ``command_name="base_velocity"``, which the goal env replaces with
+``pose_command``.
 
 Variants (each trained for 3000 iterations, 4096 envs, single seed)
 ------------------------------------------------------------------
@@ -34,15 +19,8 @@ Variants (each trained for 3000 iterations, 4096 envs, single seed)
 | HexapodGoalBigStepSlide035EnvCfg  | -0.03          | 2.5 @ 0.16 s  | -0.35      |
 | HexapodGoalBigStepMinimalEnvCfg   | inherited      | 2.5 @ 0.16 s  | none       |
 
-The `feet_air_time` weight/threshold and the `feet_slide` term follow
-`flat_env_cfg_rshape.py`.
-
-Dependency note
----------------
-These variants were trained on the goal environment revision from the
-`sihan-physical-goal-training` branch (distance-proportional goal command). The
-classes below override reward terms only, so they also apply to the revision
-currently on `main`, but the recorded training results correspond to the former.
+The results were recorded on the earlier `sihan-physical-goal-training` goal env (distance-proportional goal
+command), not necessarily the current one.
 """
 
 from isaaclab.managers import RewardTermCfg as RewTerm

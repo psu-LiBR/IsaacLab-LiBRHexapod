@@ -44,6 +44,27 @@ goal-env revision on the `sihan-physical-goal-training` branch (a distance-propo
 they override reward terms only, so they also apply on top of the current `HexapodGoalEnvCfg`, but the
 recorded training results correspond to that earlier revision, not necessarily current behavior.
 
+## Servo command delay (all tasks)
+
+`HEXAPOD_CFG` (`isaaclab_assets/robots/hexapod.py`) uses `DelayedDCMotor` actuators, so every hexapod task
+sees the real servos' late start: a per-env command delay in physics steps, redrawn at every reset (legs 8-12,
+spine 11-15; 5 ms per step). The delay sits inside the actuator model, so it hits RL actions and the scripted
+spine wave alike. All `_PLAY` configs pin it to the middle of the range (legs 10, spine 13) with
+`with_fixed_actuator_delay`. Set `HEXAPOD_ACTUATOR_DELAY = False` in `hexapod.py` for the old instantaneous
+DCMotor. Values come from the 2026-10-19 robot logs and are a delay-only stop-gap (part of the fitted delay may
+be servo read-back latency). **Breaking:** policies trained without the delay must be retrained.
+
+## Servo-realistic binary task
+
+| Task id | Base | Differs from base by |
+|---|---|---|
+| `Isaac-Goal-Flat-Hexapod-Binary-Servo-v0` | `Isaac-Goal-Flat-Hexapod-Binary-v0` | fitted XL430 leg model (`ServoDCMotor`): stiffness 5.16 N m/rad x U(0.8, 1.75), armature 8.6e-3 kg m^2, leg delay 3-5 steps, battery-voltage scale U(0.85, 1.0); spine keeps the robot-wide delay |
+| `Isaac-Goal-Flat-Hexapod-Binary-Servo-Play-v0` | `Isaac-Goal-Flat-Hexapod-Binary-Play-v0` | deterministic: stiffness 5.16, leg delay 4 steps, voltage scale 0.925 |
+
+The firmware-default P gain with a larger effective inertia and a short delay fits the real leg step response
+better than the long pure delay above. The extra inertia is an effective parameter of unknown origin. Constants
+are in `hexapod_binary_env_cfg.py` (`SERVO_*`); covered by `source/isaaclab_tasks/test/test_hexapod_binary_servo.py`.
+
 ## Running them
 
 ```bash
