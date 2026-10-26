@@ -51,7 +51,7 @@ def track_ang_vel_z_exp_deadzone(
     """
     asset: RigidObject = env.scene[asset_cfg.name]
     commanded_yaw = env.command_manager.get_command(command_name)[:, 2]
-    measured_yaw = asset.data.root_ang_vel_b[:, 2]
+    measured_yaw = asset.data.root_ang_vel_b.torch[:, 2]
 
     error = measured_yaw - commanded_yaw
     # Clip error to zero inside the dead zone; penalise only the excess beyond it

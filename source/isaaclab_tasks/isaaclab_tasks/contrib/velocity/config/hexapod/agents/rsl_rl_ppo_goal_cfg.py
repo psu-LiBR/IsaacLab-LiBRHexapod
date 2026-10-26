@@ -13,7 +13,7 @@ class HexapodGoalPPORunnerCfg(HexapodRoughPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.max_iterations = 3000
+        self.max_iterations = 1000
         self.num_steps_per_env = 96
         self.experiment_name = "hexapod_goal"
         self.policy.actor_hidden_dims = [128, 128, 128]

@@ -68,7 +68,7 @@ class MotionReference:
     def __init__(
         self,
         csv_path: str | None = None,
-        gait_period: float = 0.5,
+        gait_period: float = 1.0,
         num_interp_points: int = 200,
         csv_col_order: list[int] | None = None,
     ) -> None:
@@ -212,8 +212,8 @@ class MotionReference:
         phase = np.linspace(0.0, 1.0, self._n, endpoint=False)
         omega = 2.0 * np.pi * phase
 
-        LEG_OFFSET: float = -0.47  # rad  nominal standing pose for all leg joints
-        LEG_AMP: float = 0.30  # rad  peak swing amplitude above standing
+        LEG_OFFSET: float = 0.47  # rad  nominal standing pose for all leg joints (HexapI: legs positive)
+        LEG_AMP: float = 0.30  # rad  peak swing amplitude above standing (positive = foot lifts)
         SPINE_AMP: float = 0.10  # rad  lateral spine oscillation
 
         ref = np.zeros((self._n, NUM_JOINTS), dtype=np.float32)

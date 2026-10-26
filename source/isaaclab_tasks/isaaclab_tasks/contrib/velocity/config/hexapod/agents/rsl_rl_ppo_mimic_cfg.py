@@ -21,6 +21,6 @@ class HexapodMimicPPORunnerCfg(HexapodFlatPPORunnerCfg):
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        self.max_iterations = 3000
+        self.max_iterations = 1500
         self.experiment_name = "hexapod_mimic"
         self.save_interval = 50

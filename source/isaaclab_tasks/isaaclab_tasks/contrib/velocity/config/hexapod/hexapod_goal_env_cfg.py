@@ -79,7 +79,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # show excessive sliding.
         self.rewards.feet_slide = RewTerm(
             func=mdp.feet_slide,
-            weight=-0.1,
+            weight=-0.01,
             params={
                 "sensor_cfg": SceneEntityCfg(
                     "contact_forces",
@@ -94,7 +94,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # Body-level sideways drift, whatever its cause (feet_slide only covers planted feet).
         self.rewards.lin_vel_y_l2 = RewTerm(func=goal_rewards.lin_vel_y_l2, weight=-5.0e-4)
         self.rewards.dof_torques_l2.weight = -3.0e-4
-        self.rewards.dof_acc_l2.weight = -2.5e-7
+        self.rewards.dof_acc_l2.weight = -2.5e-9
         self.rewards.action_rate_l2.weight = -0.0005
         self.rewards.feet_air_time.weight = 0.2
         # The default feet_air_time gates on a velocity command; with pose_command it would become a position

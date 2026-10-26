@@ -18,36 +18,47 @@ missing, a built-in sinusoidal tripod gait is used. ``MIMIC_JOINT_SIGMA`` sets t
 ``hexapod_mimic_rewards.py``).
 """
 
-import isaaclab.envs.mdp as mdp
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.utils.configclass import configclass
 
 from isaaclab_assets.robots.hexapod_actuators import with_fixed_actuator_delay  # isort: skip
 
 from .flat_env_cfg import HexapodFlatEnvCfg
-from .hexapod_mimic_rewards import joint_pos_imitation
+from .hexapod_mimic_curriculum import ramp_reward_weight
+from .hexapod_mimic_rewards import joint_pos_imitation, reset_joints_to_mimic_reference
 
-MIMIC_CSV_PATH: str | None = "hexapod-assets/Sim Gaits/forward3_lleg35_amp65_sim.csv"
-"""Reference gait CSV; None uses the built-in tripod gait."""
+MIMIC_CSV_PATH: str | None = "hexapod-assets/Sim Gaits/SMOOTH_vertical_K3_NoNoise_rank1_lleg30-93_amp70_res50_hexapi_sim.csv"
+"""Reference gait CSV in sim DOF order and HexapI signs; None uses the built-in tripod gait."""
 
-MIMIC_GAIT_PERIOD: float = 0.5
+MIMIC_GAIT_PERIOD: float = 1.0
 """Duration of one reference gait cycle, s."""
 
-MIMIC_ITERATIONS: int = 800
+MIMIC_ITERATIONS: int = 500
 """PPO iterations of the imitation phase."""
 
 _STEPS_PER_ITER: int = 48  # must match RslRlOnPolicyRunnerCfg.num_steps_per_env
 MIMIC_DECAY_STEPS: int = MIMIC_ITERATIONS * _STEPS_PER_ITER
-"""Env steps after which the curriculum ends the imitation phase."""
+"""Env steps after which the curriculum starts blending the imitation phase into the RL phase."""
+
+MIMIC_BLEND_ITERATIONS: int = 200
+"""PPO iterations over which the imitation weight ramps to 0 and the RL weights ramp to full."""
+
+MIMIC_BLEND_END_STEPS: int = MIMIC_DECAY_STEPS + MIMIC_BLEND_ITERATIONS * _STEPS_PER_ITER
+"""Env steps at which the blend is complete."""
 
 MIMIC_WEIGHT: float = 3.0
 """Initial weight of the imitation reward."""
 
-MIMIC_JOINT_SIGMA: float = 0.4
+MIMIC_JOINT_SIGMA: float = 0.25
 """Per-joint Gaussian width, rad (the reward halves at about +-23 deg)."""
 
-MIMIC_RL_SCALE: float = 0.5
+MIMIC_SERVO_LAG_S: float = 0.06
+"""Servo delay compensation, s: the imitation reference is evaluated this far in the past. About the mean actuator
+command delay (legs 8-12 physics steps, spine 11-15, at sim.dt = 5 ms) plus a little for the DC-motor lag."""
+
+MIMIC_RL_SCALE: float = 0.25
 """RL reward scale during imitation: 0 = pure imitation, 1 = unscaled."""
 
 # RL terms scaled during imitation. The safety terms (dof_pos_limits, undesired_contacts) stay at full weight.
@@ -83,19 +94,34 @@ class HexapodMimicEnvCfg(HexapodFlatEnvCfg):
                 "gait_period": MIMIC_GAIT_PERIOD,
                 "csv_col_order": None,  # the CSV and asset.data.joint_pos share the sim DOF order
                 "joint_sigma": MIMIC_JOINT_SIGMA,
+                "servo_lag_s": MIMIC_SERVO_LAG_S,
             },
         )
 
+        # start every episode on the reference (the reward clock restarts at 0 on each reset)
+        self.events.reset_robot_joints = EventTerm(
+            func=reset_joints_to_mimic_reference,
+            mode="reset",
+            params={
+                "csv_path": MIMIC_CSV_PATH,
+                "gait_period": MIMIC_GAIT_PERIOD,
+                "csv_col_order": None,
+                "servo_lag_s": MIMIC_SERVO_LAG_S,
+            },
+        )
+
+        # Ramp imitation to 0 and the RL rewards to full weight over the blend window.
         self.curriculum.mimic_weight_decay = CurrTerm(
-            func=mdp.modify_reward_weight,
+            func=ramp_reward_weight,
             params={
                 "term_name": "joint_pos_imitation",
-                "weight": 0.0,
-                "num_steps": MIMIC_DECAY_STEPS,
+                "end_weight": 0.0,
+                "start_step": MIMIC_DECAY_STEPS,
+                "end_step": MIMIC_BLEND_END_STEPS,
             },
         )
 
-        # Scale the RL rewards down now and restore their full weight when imitation ends.
+        # Scale the RL rewards down now and restore their full weight over the same window.
         for term_name in _RL_REWARD_TERMS:
             term = getattr(self.rewards, term_name, None)
             if term is None:
@@ -106,11 +132,12 @@ class HexapodMimicEnvCfg(HexapodFlatEnvCfg):
                 self.curriculum,
                 f"restore_{term_name}",
                 CurrTerm(
-                    func=mdp.modify_reward_weight,
+                    func=ramp_reward_weight,
                     params={
                         "term_name": term_name,
-                        "weight": full_weight,
-                        "num_steps": MIMIC_DECAY_STEPS,
+                        "end_weight": full_weight,
+                        "start_step": MIMIC_DECAY_STEPS,
+                        "end_step": MIMIC_BLEND_END_STEPS,
                     },
                 ),
             )

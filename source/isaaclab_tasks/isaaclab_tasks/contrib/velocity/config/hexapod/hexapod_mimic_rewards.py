@@ -81,12 +81,64 @@ def _get_joint_reorder(asset) -> torch.Tensor | None:
     return idx_tensor
 
 
+def reset_joints_to_mimic_reference(
+    env: ManagerBasedRLEnv,
+    env_ids: torch.Tensor,
+    csv_path: str | None = None,
+    gait_period: float = 1.0,
+    csv_col_order: list[int] | None = None,
+    servo_lag_s: float = 0.0,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> None:
+    """Reset the joints to the reference gait pose (and velocity) the imitation reward expects at episode start.
+
+    ``joint_pos_imitation`` restarts its clock at every reset. Resetting to the default pose instead leaves the
+    robot ~1 rad away from the reference at step 0, so each episode begins with a catch-up transient. This starts the
+    robot on the reference at ``t = -servo_lag_s``, which is the reference time the reward uses at counter 0.
+
+    Args:
+        env: The RL environment.
+        env_ids: Environments being reset.
+        csv_path: Path to the reference gait CSV (same value as the imitation reward).
+        gait_period: Duration of one gait cycle [s].
+        csv_col_order: Integer list that reorders the CSV columns to the sim DOF order, or None.
+        servo_lag_s: Servo delay compensation [s], as in :func:`joint_pos_imitation`.
+        asset_cfg: Scene entity config for the robot articulation.
+    """
+    motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order)
+    asset = env.scene[asset_cfg.name]
+    joint_idx = _get_joint_reorder(asset)
+
+    device = asset.data.joint_pos.torch.device
+    t = torch.full((len(env_ids),), -servo_lag_s, device=device)
+    phase = motion_ref.get_phase(t)
+    q_ref = motion_ref.get_reference(phase)  # [n, 8] Sim DOF order
+    # forward difference over 2% of the cycle (4 table rows) for the joint velocity [rad/s]
+    dphi = 0.02
+    q_next = motion_ref.get_reference((phase + dphi) % 1.0)
+    dq_ref = (q_next - q_ref) / (dphi * motion_ref.gait_period)  # the table is periodic, so the wrap-around is fine
+
+    if joint_idx is not None:  # back from Sim DOF order to the asset's native order
+        inverse = torch.argsort(joint_idx).to(device)
+        q_ref = q_ref[:, inverse]
+        dq_ref = dq_ref[:, inverse]
+
+    pos_limits = asset.data.soft_joint_pos_limits.torch[env_ids]
+    joint_pos = q_ref.clamp(pos_limits[..., 0], pos_limits[..., 1])
+    vel_limits = asset.data.soft_joint_vel_limits.torch[env_ids]
+    joint_vel = dq_ref.clamp(-vel_limits, vel_limits)
+
+    asset.write_joint_position_to_sim_index(position=joint_pos, joint_ids=asset_cfg.joint_ids, env_ids=env_ids)
+    asset.write_joint_velocity_to_sim_index(velocity=joint_vel, joint_ids=asset_cfg.joint_ids, env_ids=env_ids)
+
+
 def joint_pos_imitation(
     env: ManagerBasedRLEnv,
     csv_path: str | None = None,
     gait_period: float = 0.5,
     csv_col_order: list[int] | None = None,
     joint_sigma: float = 0.25,
+    servo_lag_s: float = 0.0,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
     """Reward joint positions for matching a reference gait trajectory.
@@ -111,6 +163,9 @@ def joint_pos_imitation(
         gait_period:   Duration of one gait cycle in seconds.
         csv_col_order: Integer list that reorders the CSV columns to the sim DOF order, or None.
         joint_sigma:   Gaussian width in radians.  Smaller -> stricter tracking.
+        servo_lag_s:   Servo command-to-motion delay [s]. The reference is evaluated at ``t - servo_lag_s`` so a
+                       command issued at ``t`` is rewarded when it shows up at the joints, i.e. the policy only
+                       has to command the reference at its own current time (as playReal.py does).
         asset_cfg:     Scene entity config for the robot articulation.
     """
     motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order)
@@ -120,11 +175,11 @@ def joint_pos_imitation(
     # Validate/correct joint ordering on first call (cached after that).
     joint_idx = _get_joint_reorder(asset)
 
-    q_current = asset.data.joint_pos  # [N, num_joints] in asset's native order
+    q_current = asset.data.joint_pos.torch  # [N, num_joints] in asset's native order
     if joint_idx is not None:
         q_current = q_current[:, joint_idx.to(q_current.device)]  # reorder to Sim DOF
 
-    episode_time = env.episode_length_buf.float() * env.step_dt  # [N]
+    episode_time = env.episode_length_buf.float() * env.step_dt - servo_lag_s  # [N]; % wraps negatives
     phase = motion_ref.get_phase(episode_time)
     q_ref = motion_ref.get_reference(phase)  # [N, 8] Sim DOF order
 
@@ -155,7 +210,7 @@ def spine_pos_imitation(
 
     joint_idx = _get_joint_reorder(asset)
 
-    q_current = asset.data.joint_pos
+    q_current = asset.data.joint_pos.torch
     if joint_idx is not None:
         q_current = q_current[:, joint_idx.to(q_current.device)]
 

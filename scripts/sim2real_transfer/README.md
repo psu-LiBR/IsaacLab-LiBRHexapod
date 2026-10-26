@@ -136,3 +136,16 @@ profile (`velocity`, `goal`, or `binary`).
   (HexapI positive-leg convention + a `binary:` section).
 - `tests/` -- `python -m pytest tests/` from this directory, or
   `python -m pytest scripts/sim2real_transfer/tests/` from the repo root.
+
+## Converting real-robot gait CSVs for the mimic env
+
+`tools/real_gait_to_sim.py` turns a real-robot open-loop gait CSV (`body_1, body_2, FR, FL, MR, ML, HR, HL`,
+contact bits) into a headerless mimic reference CSV (8 joints, rad, mimic joint order) using the same tick
+conversion as the robot and this package's `JointMapping`:
+
+```bash
+python tools/real_gait_to_sim.py <gait.csv | gait_dir> [--out <file|dir>] [--zero_tick_mode nominal] --dry_run
+```
+
+Output defaults to `hexapod-assets/Sim Gaits/`. The cycle period is `rows * step_period` (printed); set
+`MIMIC_GAIT_PERIOD` in `hexapod_mimic_env_cfg.py` to it to replay at real-robot speed.
