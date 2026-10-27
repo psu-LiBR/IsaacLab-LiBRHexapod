@@ -17,15 +17,18 @@ The reference gait, its period, sigma, weight and phase length are shared with t
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.utils.configclass import configclass
 
 from isaaclab_assets.robots.hexapod_actuators import with_fixed_actuator_delay  # isort: skip
 
-from .agents.rsl_rl_ppo_goal_cfg import HexapodGoalPPORunnerCfg
-from .hexapod_goal_env_cfg import GOAL_DISTANCES, HexapodGoalEnvCfg
+from . import hexapod_goal_rewards as goal_rewards
+from .agents.rsl_rl_ppo_goal_mimic_cfg import HexapodGoalMimicPPORunnerCfg
+from .hexapod_goal_env_cfg import GOAL_DISTANCES, REACH_RADIUS, HexapodGoalEnvCfg
 from .hexapod_mimic_curriculum import ramp_reward_weight
 from .hexapod_mimic_env_cfg import (
     MIMIC_BLEND_ITERATIONS,
+    MIMIC_CSV_COL_ORDER,
     MIMIC_CSV_PATH,
     MIMIC_GAIT_PERIOD,
     MIMIC_ITERATIONS,
@@ -36,7 +39,7 @@ from .hexapod_mimic_env_cfg import (
 )
 from .hexapod_mimic_rewards import joint_pos_imitation, reset_joints_to_mimic_reference
 
-_STEPS_PER_ITER: int = HexapodGoalPPORunnerCfg().num_steps_per_env  # 96 for the goal task, not 48
+_STEPS_PER_ITER: int = HexapodGoalMimicPPORunnerCfg().num_steps_per_env  # 48, the mimic runner's rollout length
 GOAL_MIMIC_DECAY_STEPS: int = MIMIC_ITERATIONS * _STEPS_PER_ITER
 """Env steps after which the curriculum starts blending the imitation phase into the RL phase."""
 
@@ -44,13 +47,18 @@ GOAL_MIMIC_BLEND_END_STEPS: int = GOAL_MIMIC_DECAY_STEPS + MIMIC_BLEND_ITERATION
 """Env steps at which the blend is complete."""
 
 GOAL_MIMIC_ACTION_RATE_WEIGHT: float = -0.03
-"""``action_rate_l2`` weight for the whole run (imitation and RL phases). The goal env's -5e-4 costs about 1e-4 per
-step against a ~0.03 imitation reward, so it does not discourage per-step action chatter; -0.03 matches the
-``HexapodGoalBigStepEnvCfg`` value. Not scaled or restored by the curriculum."""
+"""``action_rate_l2`` weight once the blend is complete (matches ``HexapodGoalBigStepEnvCfg``)."""
+
+GOAL_MIMIC_ACTION_RATE_WEIGHT_IMITATION: float = -5.0e-3
+"""``action_rate_l2`` weight during imitation. At -0.03 the penalty on std-1 exploration noise (~0.0096/step)
+outweighs the imitation gain, so the policy collapses its action noise and stands still; at the goal env's own
+-5e-4 nothing discourages bang-bang chatter. -5e-3 sits between: the true gait's raw action-rate sum is ~0.137 per
+step, so it costs the gait only ~1.4e-5 reward/step, while bang-bang chatter (per-step action change ~1.3 per joint)
+is clearly penalized. The curriculum ramps it to :data:`GOAL_MIMIC_ACTION_RATE_WEIGHT` over the blend window."""
 
 # Shaping terms scaled during imitation. Goal terms and safety terms (dof_pos_limits, undesired_contacts) stay at
-# full weight, as does action_rate_l2 (see GOAL_MIMIC_ACTION_RATE_WEIGHT). Terms that are None in the goal env
-# (track_*) are skipped.
+# full weight; action_rate_l2 has its own ramp (see GOAL_MIMIC_ACTION_RATE_WEIGHT_IMITATION). Terms that are None in
+# the goal env (track_*) are skipped.
 _SHAPING_REWARD_TERMS: list[str] = [
     "feet_air_time",
     "feet_slide",
@@ -70,7 +78,7 @@ class HexapodGoalMimicEnvCfg(HexapodGoalEnvCfg):
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        self.rewards.action_rate_l2.weight = GOAL_MIMIC_ACTION_RATE_WEIGHT
+        self.rewards.action_rate_l2.weight = GOAL_MIMIC_ACTION_RATE_WEIGHT_IMITATION
 
         self.rewards.joint_pos_imitation = RewTerm(
             func=joint_pos_imitation,
@@ -78,7 +86,7 @@ class HexapodGoalMimicEnvCfg(HexapodGoalEnvCfg):
             params={
                 "csv_path": MIMIC_CSV_PATH,
                 "gait_period": MIMIC_GAIT_PERIOD,
-                "csv_col_order": None,  # the CSV and asset.data.joint_pos share the sim DOF order
+                "csv_col_order": MIMIC_CSV_COL_ORDER,
                 "joint_sigma": MIMIC_JOINT_SIGMA,
                 "servo_lag_s": MIMIC_SERVO_LAG_S,
             },
@@ -91,8 +99,9 @@ class HexapodGoalMimicEnvCfg(HexapodGoalEnvCfg):
             params={
                 "csv_path": MIMIC_CSV_PATH,
                 "gait_period": MIMIC_GAIT_PERIOD,
-                "csv_col_order": None,
+                "csv_col_order": MIMIC_CSV_COL_ORDER,
                 "servo_lag_s": MIMIC_SERVO_LAG_S,
+                "random_phase": True,  # random start phase per episode (PLAY pins it back to phase 0)
             },
         )
 
@@ -100,6 +109,18 @@ class HexapodGoalMimicEnvCfg(HexapodGoalEnvCfg):
         # be mostly start-up. Fix the goal at the final distance for the whole run.
         self.commands.pose_command.ranges.pos_x = (GOAL_DISTANCES[-1], GOAL_DISTANCES[-1])
         self.curriculum.goal_distance = None
+
+        # reach_goal would end the episode and forfeit the remaining imitation reward (worth more than the bonus), so
+        # it is off until the imitation weight has finished ramping to 0. reach_bonus reads this termination, so it
+        # is off too; the robot just keeps walking past the goal until time_out.
+        self.terminations.reach_goal = DoneTerm(
+            func=goal_rewards.reached_goal_done_after,
+            params={
+                "command_name": "pose_command",
+                "radius": REACH_RADIUS,
+                "start_step": GOAL_MIMIC_BLEND_END_STEPS,
+            },
+        )
 
         # Ramp imitation to 0 and the shaping terms to full weight over the blend window.
         self.curriculum.mimic_weight_decay = CurrTerm(
@@ -110,6 +131,20 @@ class HexapodGoalMimicEnvCfg(HexapodGoalEnvCfg):
                 "start_step": GOAL_MIMIC_DECAY_STEPS,
                 "end_step": GOAL_MIMIC_BLEND_END_STEPS,
             },
+        )
+
+        setattr(
+            self.curriculum,
+            "restore_action_rate_l2",
+            CurrTerm(
+                func=ramp_reward_weight,
+                params={
+                    "term_name": "action_rate_l2",
+                    "end_weight": GOAL_MIMIC_ACTION_RATE_WEIGHT,
+                    "start_step": GOAL_MIMIC_DECAY_STEPS,
+                    "end_step": GOAL_MIMIC_BLEND_END_STEPS,
+                },
+            ),
         )
 
         for term_name in _SHAPING_REWARD_TERMS:
@@ -147,6 +182,8 @@ class HexapodGoalMimicEnvCfg_PLAY(HexapodGoalMimicEnvCfg):
         self.observations.policy.enable_corruption = False
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+        # deterministic phase-0 start (training draws a random start phase)
+        self.events.reset_robot_joints.params["random_phase"] = False
         # same servo lag in every rollout (the robot asset draws it randomly for training)
         self.scene.robot.actuators = with_fixed_actuator_delay(self.scene.robot.actuators)
 
@@ -155,6 +192,6 @@ class HexapodGoalMimicEnvCfg_PLAY(HexapodGoalMimicEnvCfg):
         self.events.physics_material.params["dynamic_friction_range"] = (0.21, 0.21)
 
         # fixed world camera over the whole path
-        self.viewer.eye = (-1.0, -3.0, 1.5)
-        self.viewer.lookat = (2.5, 0.0, 0.2)
+        self.viewer.eye = (-0.75, -0.5, 0.5)
+        self.viewer.lookat = (0.8, 0.0, 0.0)
         self.viewer.origin_type = "world"

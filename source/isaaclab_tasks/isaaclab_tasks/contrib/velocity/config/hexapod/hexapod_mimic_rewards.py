@@ -81,28 +81,65 @@ def _get_joint_reorder(asset) -> torch.Tensor | None:
     return idx_tensor
 
 
+_CLOCK_OFFSET_ATTR = "_mimic_clock_offset"
+"""Name of the per-env reference-clock offset buffer [s], shape [num_envs], created lazily on the env."""
+
+
+def _lag_tensor(servo_lag_s: float | list[float], device: torch.device | str) -> torch.Tensor:
+    """Return the servo lag as a [8] tensor in sim DOF order [s] (a scalar is broadcast to every joint)."""
+    from .hexapod_mimic_motion import NUM_JOINTS
+
+    lag = torch.as_tensor(list(servo_lag_s) if not isinstance(servo_lag_s, (int, float)) else servo_lag_s)
+    lag = lag.to(device=device, dtype=torch.float32)
+    if lag.ndim == 0:
+        lag = lag.expand(NUM_JOINTS)
+    if lag.shape != (NUM_JOINTS,):
+        raise ValueError(f"servo_lag_s must be a float or a list of {NUM_JOINTS} floats, got shape {tuple(lag.shape)}")
+    return lag
+
+
+def _reference_at(motion_ref, clock: torch.Tensor, lag: torch.Tensor) -> torch.Tensor:
+    """Reference pose [N, 8] (sim DOF order) where joint j is evaluated at ``clock - lag[j]`` [s]."""
+    phase = motion_ref.get_phase(clock[:, None] - lag[None, :])  # [N, 8]; % wraps negatives
+    return motion_ref.get_reference_per_joint(phase)
+
+
+def _clock_offset(env: ManagerBasedRLEnv, device: torch.device | str) -> torch.Tensor | float:
+    """Per-env reference-clock offset [s] (shape [N]); 0.0 if the env has no reset event that sets one."""
+    offset = getattr(env, _CLOCK_OFFSET_ATTR, None)
+    return 0.0 if offset is None else offset.to(device)
+
+
 def reset_joints_to_mimic_reference(
     env: ManagerBasedRLEnv,
     env_ids: torch.Tensor,
     csv_path: str | None = None,
     gait_period: float = 1.0,
     csv_col_order: list[int] | None = None,
-    servo_lag_s: float = 0.0,
+    servo_lag_s: float | list[float] = 0.0,
+    random_phase: bool = False,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> None:
     """Reset the joints to the reference gait pose (and velocity) the imitation reward expects at episode start.
 
-    ``joint_pos_imitation`` restarts its clock at every reset. Resetting to the default pose instead leaves the
-    robot ~1 rad away from the reference at step 0, so each episode begins with a catch-up transient. This starts the
-    robot on the reference at ``t = -servo_lag_s``, which is the reference time the reward uses at counter 0.
+    ``joint_pos_imitation`` restarts its clock at every reset (``episode_length_buf`` is zeroed after the reset
+    events). The reference clock of an env is ``episode_length_buf * step_dt + offset``; this event draws the
+    per-env ``offset`` and places each joint ``j`` on the reference at ``offset - servo_lag_s[j]``, which is exactly
+    the reference time the reward uses at counter 0 (the first reward is computed at counter 1, one control step
+    later). Resetting to the default pose instead leaves the robot ~1 rad away from the reference at step 0, so each
+    episode would begin with a catch-up transient.
 
     Args:
-        env: The RL environment.
+        env: The RL environment. The offsets are stored in ``env._mimic_clock_offset`` (shape [num_envs], created
+            on first use and zero for envs that were never reset by this event).
         env_ids: Environments being reset.
         csv_path: Path to the reference gait CSV (same value as the imitation reward).
         gait_period: Duration of one gait cycle [s].
         csv_col_order: Integer list that reorders the CSV columns to the sim DOF order, or None.
-        servo_lag_s: Servo delay compensation [s], as in :func:`joint_pos_imitation`.
+        servo_lag_s: Servo delay compensation [s] as in :func:`joint_pos_imitation`: a float, or a list of 8 floats in
+            sim DOF order.
+        random_phase: If True, start every reset env at a uniformly random point of the gait cycle (offset drawn in
+            [0, ``gait_period``) s); if False the offset is 0 and every episode starts at phase 0.
         asset_cfg: Scene entity config for the robot articulation.
     """
     motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order)
@@ -110,12 +147,24 @@ def reset_joints_to_mimic_reference(
     joint_idx = _get_joint_reorder(asset)
 
     device = asset.data.joint_pos.torch.device
-    t = torch.full((len(env_ids),), -servo_lag_s, device=device)
-    phase = motion_ref.get_phase(t)
-    q_ref = motion_ref.get_reference(phase)  # [n, 8] Sim DOF order
+    num_envs = asset.data.joint_pos.torch.shape[0]
+    offsets = getattr(env, _CLOCK_OFFSET_ATTR, None)
+    if offsets is None or offsets.shape[0] != num_envs or offsets.device != device:
+        offsets = torch.zeros(num_envs, device=device)
+        setattr(env, _CLOCK_OFFSET_ATTR, offsets)
+    env_ids = torch.as_tensor(env_ids, device=device)
+    if random_phase:
+        offsets[env_ids] = torch.rand(len(env_ids), device=device) * motion_ref.gait_period
+    else:
+        offsets[env_ids] = 0.0
+
+    lag = _lag_tensor(servo_lag_s, device)
+    clock = offsets[env_ids]  # [n]
+    phase = motion_ref.get_phase(clock[:, None] - lag[None, :])  # [n, 8]
+    q_ref = motion_ref.get_reference_per_joint(phase)  # [n, 8] Sim DOF order
     # forward difference over 2% of the cycle (4 table rows) for the joint velocity [rad/s]
     dphi = 0.02
-    q_next = motion_ref.get_reference((phase + dphi) % 1.0)
+    q_next = motion_ref.get_reference_per_joint((phase + dphi) % 1.0)
     dq_ref = (q_next - q_ref) / (dphi * motion_ref.gait_period)  # the table is periodic, so the wrap-around is fine
 
     if joint_idx is not None:  # back from Sim DOF order to the asset's native order
@@ -138,7 +187,7 @@ def joint_pos_imitation(
     gait_period: float = 0.5,
     csv_col_order: list[int] | None = None,
     joint_sigma: float = 0.25,
-    servo_lag_s: float = 0.0,
+    servo_lag_s: float | list[float] = 0.0,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
     """Reward joint positions for matching a reference gait trajectory.
@@ -148,8 +197,9 @@ def joint_pos_imitation(
 
         r = exp( -||q - q_ref||^2 / sigma^2 )
 
-    The reference is indexed by gait phase = (episode_elapsed_time % gait_period)
-    / gait_period.
+    The reference of joint ``j`` is indexed by gait phase = (clock_j % gait_period) / gait_period with
+    ``clock_j = episode_elapsed_time + clock_offset - servo_lag_s[j]``. ``clock_offset`` is the per-env start phase
+    drawn by :func:`reset_joints_to_mimic_reference` (zero if the env has no such event).
 
     On the first call this function validates that the joint ordering returned by
     asset.data.joint_pos matches the Sim DOF order expected by MotionReference.
@@ -163,9 +213,10 @@ def joint_pos_imitation(
         gait_period:   Duration of one gait cycle in seconds.
         csv_col_order: Integer list that reorders the CSV columns to the sim DOF order, or None.
         joint_sigma:   Gaussian width in radians.  Smaller -> stricter tracking.
-        servo_lag_s:   Servo command-to-motion delay [s]. The reference is evaluated at ``t - servo_lag_s`` so a
-                       command issued at ``t`` is rewarded when it shows up at the joints, i.e. the policy only
-                       has to command the reference at its own current time (as playReal.py does).
+        servo_lag_s:   Servo command-to-motion delay [s]: a float, or a list of 8 floats in sim DOF order. Joint
+                       ``j``'s reference is evaluated at ``t - servo_lag_s[j]`` so a command issued at ``t`` is
+                       rewarded when it shows up at the joint, i.e. the policy only has to command the reference
+                       at its own current time (as playReal.py does).
         asset_cfg:     Scene entity config for the robot articulation.
     """
     motion_ref = _get_motion_ref(csv_path, gait_period, csv_col_order)
@@ -179,9 +230,8 @@ def joint_pos_imitation(
     if joint_idx is not None:
         q_current = q_current[:, joint_idx.to(q_current.device)]  # reorder to Sim DOF
 
-    episode_time = env.episode_length_buf.float() * env.step_dt - servo_lag_s  # [N]; % wraps negatives
-    phase = motion_ref.get_phase(episode_time)
-    q_ref = motion_ref.get_reference(phase)  # [N, 8] Sim DOF order
+    clock = env.episode_length_buf.float() * env.step_dt + _clock_offset(env, q_current.device)  # [N]
+    q_ref = _reference_at(motion_ref, clock, _lag_tensor(servo_lag_s, q_current.device))  # [N, 8] Sim DOF order
 
     # Per-joint Gaussian averaged across joints.  Summing squared errors across
     # all joints causes two high-amplitude spine joints to kill the gradient for
@@ -216,7 +266,7 @@ def spine_pos_imitation(
 
     q_current_spine = q_current[:, SPINE_COLS_SIM_DOF]  # [N, 2]
 
-    episode_time = env.episode_length_buf.float() * env.step_dt
+    episode_time = env.episode_length_buf.float() * env.step_dt + _clock_offset(env, q_current.device)
     phase = motion_ref.get_phase(episode_time)
     q_ref = motion_ref.get_reference(phase)[:, SPINE_COLS_SIM_DOF]  # [N, 2]
 
