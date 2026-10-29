@@ -51,6 +51,19 @@ def load_trace(path: str) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def merge_onnx_external_data(src: str, dst: str) -> str:
+    """Rewrite ``src`` (plus its ``<src>.data`` external weights) as one self-contained ONNX file at ``dst``."""
+    try:
+        import onnx
+    except ImportError:
+        print("[validate_onnx] --merge_onnx requires the `onnx` package (pip install onnx)", file=sys.stderr)
+        sys.exit(1)
+    model = onnx.load(src)  # resolves the .data file relative to src
+    onnx.save_model(model, dst, save_as_external_data=False)
+    print(f"[validate_onnx] merged '{src}' -> '{dst}'")
+    return dst
+
+
 def run_direct_check(rows: list[dict], policy: PolicyRunner, obs_dim: int, action_dim: int, tol: float) -> bool:
     max_err = 0.0
     worst_step = None
@@ -122,10 +135,21 @@ def main() -> None:
     parser.add_argument("--mode", choices=["direct", "pipeline"], default="direct")
     parser.add_argument("--config", default=None, help="deployment.yaml, required for --mode pipeline.")
     parser.add_argument("--tol", type=float, default=1e-3)
+    parser.add_argument(
+        "--merge_onnx",
+        default=None,
+        metavar="OUT_PATH",
+        help="Merge --policy and its external <policy>.data weights into one self-contained ONNX file at OUT_PATH, "
+        "then validate that merged file. Requires the `onnx` package.",
+    )
     args = parser.parse_args()
 
+    policy_path = args.policy
+    if args.merge_onnx is not None:
+        policy_path = merge_onnx_external_data(args.policy, args.merge_onnx)
+
     spec = PROFILES[args.profile]
-    policy = PolicyRunner(args.policy, spec)
+    policy = PolicyRunner(policy_path, spec)
     rows = load_trace(args.trace)
     if not rows:
         print(f"[validate_onnx] trace '{args.trace}' has no rows", file=sys.stderr)

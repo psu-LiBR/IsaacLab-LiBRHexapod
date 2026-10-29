@@ -61,7 +61,7 @@ MIMIC_BLEND_END_STEPS: int = MIMIC_DECAY_STEPS + MIMIC_BLEND_ITERATIONS * _STEPS
 MIMIC_WEIGHT: float = 3.0
 """Initial weight of the imitation reward."""
 
-MIMIC_JOINT_SIGMA: float = 0.4
+MIMIC_JOINT_SIGMA: float = 0.5
 """Per-joint Gaussian width, rad (the reward halves at about +-23 deg)."""
 
 MIMIC_SERVO_LAG_S: list[float] = [0.10, 0.10, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08]
@@ -94,6 +94,7 @@ _RL_REWARD_TERMS: list[str] = [
     "lin_vel_z_l2",
 ]
 # "feet_air_time",
+
 
 @configclass
 class HexapodMimicEnvCfg(HexapodFlatEnvCfg):
