@@ -11,7 +11,8 @@ curriculum are inherited unchanged. The goal terms (progress, reach bonus, fall 
 weight throughout; only the shaping terms in ``_SHAPING_REWARD_TERMS`` are scaled during imitation.
 
 The reference gait, its period, sigma, weight and phase length are shared with the flat mimic env (the
-``MIMIC_*`` constants in :mod:`hexapod_mimic_env_cfg`).
+``MIMIC_*`` constants in :mod:`hexapod_mimic_env_cfg`). The imitation term tracks the gait phase from the robot's
+pose rather than a clock (see ``GOAL_MIMIC_PHASE_TRACKING``).
 """
 
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
@@ -37,7 +38,7 @@ from .hexapod_mimic_env_cfg import (
     MIMIC_SERVO_LAG_S,
     MIMIC_WEIGHT,
 )
-from .hexapod_mimic_rewards import joint_pos_imitation, reset_joints_to_mimic_reference
+from .hexapod_mimic_rewards import joint_pos_imitation, joint_pos_imitation_phase, reset_joints_to_mimic_reference
 
 _STEPS_PER_ITER: int = HexapodGoalMimicPPORunnerCfg().num_steps_per_env  # 48, the mimic runner's rollout length
 GOAL_MIMIC_DECAY_STEPS: int = MIMIC_ITERATIONS * _STEPS_PER_ITER
@@ -55,6 +56,19 @@ outweighs the imitation gain, so the policy collapses its action noise and stand
 -5e-4 nothing discourages bang-bang chatter. -5e-3 sits between: the true gait's raw action-rate sum is ~0.137 per
 step, so it costs the gait only ~1.4e-5 reward/step, while bang-bang chatter (per-step action change ~1.3 per joint)
 is clearly penalized. The curriculum ramps it to :data:`GOAL_MIMIC_ACTION_RATE_WEIGHT` over the blend window."""
+
+GOAL_MIMIC_PHASE_TRACKING: bool = True
+"""If True, the imitation reward tracks the gait phase from the robot's pose (:func:`joint_pos_imitation_phase`) so
+the policy can choose its own gait frequency; False restores the time-locked :func:`joint_pos_imitation` (1 cycle per
+``MIMIC_GAIT_PERIOD``)."""
+
+GOAL_MIMIC_PHASE_MIN_STEP_ROWS: int = 2
+"""Minimum rows of the 200-row reference table the phase advances per control step. The nominal 1 s gait at 50 Hz is
+4 rows/step, so 2-6 rows (with :data:`GOAL_MIMIC_PHASE_MAX_STEP_ROWS`) is 0.5x-1.5x the reference speed."""
+
+GOAL_MIMIC_PHASE_MAX_STEP_ROWS: int = 6
+"""Maximum rows of the reference table the phase advances per control step (see
+:data:`GOAL_MIMIC_PHASE_MIN_STEP_ROWS`)."""
 
 # Shaping terms scaled during imitation. Goal terms and safety terms (dof_pos_limits, undesired_contacts) stay at
 # full weight; action_rate_l2 has its own ramp (see GOAL_MIMIC_ACTION_RATE_WEIGHT_IMITATION). Terms that are None in
@@ -80,17 +94,31 @@ class HexapodGoalMimicEnvCfg(HexapodGoalEnvCfg):
 
         self.rewards.action_rate_l2.weight = GOAL_MIMIC_ACTION_RATE_WEIGHT_IMITATION
 
-        self.rewards.joint_pos_imitation = RewTerm(
-            func=joint_pos_imitation,
-            weight=MIMIC_WEIGHT,
-            params={
-                "csv_path": MIMIC_CSV_PATH,
-                "gait_period": MIMIC_GAIT_PERIOD,
-                "csv_col_order": MIMIC_CSV_COL_ORDER,
-                "joint_sigma": MIMIC_JOINT_SIGMA,
-                "servo_lag_s": MIMIC_SERVO_LAG_S,
-            },
-        )
+        if GOAL_MIMIC_PHASE_TRACKING:
+            self.rewards.joint_pos_imitation = RewTerm(
+                func=joint_pos_imitation_phase,
+                weight=MIMIC_WEIGHT,
+                params={
+                    "csv_path": MIMIC_CSV_PATH,
+                    "gait_period": MIMIC_GAIT_PERIOD,
+                    "csv_col_order": MIMIC_CSV_COL_ORDER,
+                    "joint_sigma": MIMIC_JOINT_SIGMA,
+                    "min_step_rows": GOAL_MIMIC_PHASE_MIN_STEP_ROWS,
+                    "max_step_rows": GOAL_MIMIC_PHASE_MAX_STEP_ROWS,
+                },
+            )
+        else:
+            self.rewards.joint_pos_imitation = RewTerm(
+                func=joint_pos_imitation,
+                weight=MIMIC_WEIGHT,
+                params={
+                    "csv_path": MIMIC_CSV_PATH,
+                    "gait_period": MIMIC_GAIT_PERIOD,
+                    "csv_col_order": MIMIC_CSV_COL_ORDER,
+                    "joint_sigma": MIMIC_JOINT_SIGMA,
+                    "servo_lag_s": MIMIC_SERVO_LAG_S,
+                },
+            )
 
         # start every episode on the reference (the reward clock restarts at 0 on each reset)
         self.events.reset_robot_joints = EventTerm(

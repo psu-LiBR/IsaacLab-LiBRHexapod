@@ -30,5 +30,5 @@ class HexapodGoalMimicPPORunnerCfg(HexapodGoalPPORunnerCfg):
         self.algorithm.lam = 0.95
         self.algorithm.entropy_coef = 0.002
         # imitation gives a dense signal: start from a narrower action distribution than the inherited 1.0
-        self.max_iterations = 2000
+        self.max_iterations = 1500
         self.policy.init_noise_std = 0.6

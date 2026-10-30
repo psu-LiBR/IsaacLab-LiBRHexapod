@@ -143,6 +143,23 @@ class MotionReference:
         joints = torch.arange(NUM_JOINTS, device=phase.device).expand_as(indices)
         return self._ref_gpu[indices, joints]
 
+    @property
+    def num_points(self) -> int:
+        """Number of uniformly spaced phase samples (rows) in the reference table."""
+        return self._n
+
+    def get_reference_rows(self, rows: torch.Tensor) -> torch.Tensor:
+        """Return target joint positions for explicit rows of the phase table.
+
+        Args:
+            rows: Integer (long) tensor of any shape [...] with values in [0, :attr:`num_points`).
+        Returns:
+            Tensor of shape [..., 8] — target absolute joint angles [rad] in Sim DOF order.
+        """
+        if self._ref_gpu is None or self._ref_gpu.device != rows.device:
+            self._ref_gpu = torch.from_numpy(self._ref_np).to(rows.device)
+        return self._ref_gpu[rows]
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
