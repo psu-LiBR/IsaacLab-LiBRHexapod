@@ -45,14 +45,14 @@ to ``MIMIC_CSV_PATH``; the built-in gait is already in sim DOF order."""
 MIMIC_GAIT_PERIOD: float = 1.0
 """Duration of one reference gait cycle, s."""
 
-MIMIC_ITERATIONS: int = 400
+MIMIC_ITERATIONS: int = 300
 """PPO iterations of the imitation phase."""
 
 _STEPS_PER_ITER: int = 48  # must match RslRlOnPolicyRunnerCfg.num_steps_per_env
 MIMIC_DECAY_STEPS: int = MIMIC_ITERATIONS * _STEPS_PER_ITER
 """Env steps after which the curriculum starts blending the imitation phase into the RL phase."""
 
-MIMIC_BLEND_ITERATIONS: int = 200
+MIMIC_BLEND_ITERATIONS: int = 100
 """PPO iterations over which the imitation weight ramps to 0 and the RL weights ramp to full."""
 
 MIMIC_BLEND_END_STEPS: int = MIMIC_DECAY_STEPS + MIMIC_BLEND_ITERATIONS * _STEPS_PER_ITER

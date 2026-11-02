@@ -112,7 +112,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # meter advanced. It is uncapped, so a small weight limits the payoff of a leap at the goal.
         self.rewards.progress = RewTerm(
             func=goal_rewards.progress_to_goal,
-            weight=0.9,
+            weight=0.7,
             params={"command_name": "pose_command"},
         )
 

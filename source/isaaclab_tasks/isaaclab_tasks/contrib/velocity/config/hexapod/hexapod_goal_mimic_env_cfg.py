@@ -47,15 +47,13 @@ GOAL_MIMIC_DECAY_STEPS: int = MIMIC_ITERATIONS * _STEPS_PER_ITER
 GOAL_MIMIC_BLEND_END_STEPS: int = GOAL_MIMIC_DECAY_STEPS + MIMIC_BLEND_ITERATIONS * _STEPS_PER_ITER
 """Env steps at which the blend is complete."""
 
-GOAL_MIMIC_ACTION_RATE_WEIGHT: float = -0.03
-"""``action_rate_l2`` weight once the blend is complete (matches ``HexapodGoalBigStepEnvCfg``)."""
-
-GOAL_MIMIC_ACTION_RATE_WEIGHT_IMITATION: float = -5.0e-3
-"""``action_rate_l2`` weight during imitation. At -0.03 the penalty on std-1 exploration noise (~0.0096/step)
-outweighs the imitation gain, so the policy collapses its action noise and stands still; at the goal env's own
--5e-4 nothing discourages bang-bang chatter. -5e-3 sits between: the true gait's raw action-rate sum is ~0.137 per
-step, so it costs the gait only ~1.4e-5 reward/step, while bang-bang chatter (per-step action change ~1.3 per joint)
-is clearly penalized. The curriculum ramps it to :data:`GOAL_MIMIC_ACTION_RATE_WEIGHT` over the blend window."""
+GOAL_MIMIC_ACTION_RATE_WEIGHT: float = -5.0e-3
+"""``action_rate_l2`` weight for the whole run (no ramp). At -0.03 the penalty on std-1 exploration noise
+(~0.0096/step) outweighs the imitation gain, so the policy collapses its action noise and stands still; at -5e-4
+nothing discourages bang-bang chatter. -5e-3 sits between: the true gait's raw action-rate sum is ~0.137 per step, so
+it costs the gait only ~1.4e-5 reward/step, while bang-bang chatter (per-step action change ~1.3 per joint) is clearly
+penalized. It is no longer ramped up after the blend, so the RL phase is not pushed back toward the slow reference gait
+(faster gaits have larger action changes)."""
 
 GOAL_MIMIC_PHASE_TRACKING: bool = True
 """If True, the imitation reward tracks the gait phase from the robot's pose (:func:`joint_pos_imitation_phase`) so
@@ -71,7 +69,7 @@ GOAL_MIMIC_PHASE_MAX_STEP_ROWS: int = 6
 :data:`GOAL_MIMIC_PHASE_MIN_STEP_ROWS`)."""
 
 # Shaping terms scaled during imitation. Goal terms and safety terms (dof_pos_limits, undesired_contacts) stay at
-# full weight; action_rate_l2 has its own ramp (see GOAL_MIMIC_ACTION_RATE_WEIGHT_IMITATION). Terms that are None in
+# full weight; action_rate_l2 is held constant (see GOAL_MIMIC_ACTION_RATE_WEIGHT). Terms that are None in
 # the goal env (track_*) are skipped.
 _SHAPING_REWARD_TERMS: list[str] = [
     "feet_air_time",
@@ -92,7 +90,7 @@ class HexapodGoalMimicEnvCfg(HexapodGoalEnvCfg):
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        self.rewards.action_rate_l2.weight = GOAL_MIMIC_ACTION_RATE_WEIGHT_IMITATION
+        self.rewards.action_rate_l2.weight = GOAL_MIMIC_ACTION_RATE_WEIGHT
 
         if GOAL_MIMIC_PHASE_TRACKING:
             self.rewards.joint_pos_imitation = RewTerm(
@@ -159,20 +157,6 @@ class HexapodGoalMimicEnvCfg(HexapodGoalEnvCfg):
                 "start_step": GOAL_MIMIC_DECAY_STEPS,
                 "end_step": GOAL_MIMIC_BLEND_END_STEPS,
             },
-        )
-
-        setattr(
-            self.curriculum,
-            "restore_action_rate_l2",
-            CurrTerm(
-                func=ramp_reward_weight,
-                params={
-                    "term_name": "action_rate_l2",
-                    "end_weight": GOAL_MIMIC_ACTION_RATE_WEIGHT,
-                    "start_step": GOAL_MIMIC_DECAY_STEPS,
-                    "end_step": GOAL_MIMIC_BLEND_END_STEPS,
-                },
-            ),
         )
 
         for term_name in _SHAPING_REWARD_TERMS:
