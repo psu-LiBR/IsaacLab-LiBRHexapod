@@ -47,7 +47,10 @@ GAIT_PERIOD_S = 1.0
 """Spine wave period, s (one gait cycle)."""
 
 MIN_STANCE_LEGS = 4
-"""Minimum number of stance (foot-down) legs per step before the ``min_stance_legs`` penalty applies."""
+"""Minimum number of stance (foot-down) legs per step before the ``min_stance_legs`` penalty applies.
+
+May be 3 or 4 (current). At 4 the 3-legged reference tripods pay a deficit of 1 every step; at 3 they are free.
+"""
 
 MIN_STANCE_PENALTY_WEIGHT = -0.2
 """Weight of the ``min_stance_legs`` penalty (negative; a starting value, tune from a short training run)."""
@@ -198,9 +201,10 @@ def _rebalance_binary_rewards(rewards) -> None:
     rewards.time_penalty.weight = -0.003
 
     # min_stance_legs: new term, weight -0.2. Deployed policies produced steps with all six legs commanded to
-    # lift. The term charges max(0, MIN_STANCE_LEGS - n_stance) per step, so the two reference tripods (3 legs
-    # down) cost zero. RewardManager multiplies by step_dt (0.02 s) and an episode is 25 s = 1250 steps, so a
-    # sustained deficit of 1 costs ~25 * 0.2 = 5 per episode, an all-lift episode ~ -15, and a one-step glitch
+    # lift. The term charges max(0, MIN_STANCE_LEGS - n_stance) per step. MIN_STANCE_LEGS may be 3 or 4: at 4
+    # (current) the two reference tripods (3 legs down) pay a deficit of 1, at 3 they cost zero. RewardManager
+    # multiplies by step_dt (0.02 s) and an episode is 25 s = 1250 steps, so a sustained deficit of 1 costs
+    # ~25 * 0.2 = 5 per episode, an all-lift episode ~ -20 (-15 at 3), and a one-step glitch
     # ~ -0.004 * deficit; total progress for the 2 m course is only ~ +3.0 (weight 1.5). This is a STARTING value:
     # tune it from a short training run, and do not let it swamp progress.
     rewards.min_stance_legs = RewTerm(

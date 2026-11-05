@@ -161,9 +161,9 @@ with the commanded-bit switches per leg per complete 50-step gait cycle, the fra
 measured step sits at phase 0.
 
 **Minimum-stance penalty (`min_stance_legs`).** The env's reward rebalance (`_rebalance_binary_rewards`) adds a
-`min_stance_legs` term (`binary_rewards.min_stance_legs_penalty` in `hexapod_binary_rewards.py`, weight `-0.2`, `min_legs=3`). It counts the leg bits
-that are not negative (stance; exactly 0 is stance, as in the sim) among the six action columns and returns `max(0, 3 - n_stance)`, so all-six-lift costs a deficit of 3,
-the two reference tripods (3 legs down, actions `25` and `38`) cost 0, and 4+ stance legs cost 0. It exists because
+`min_stance_legs` term (`binary_rewards.min_stance_legs_penalty` in `hexapod_binary_rewards.py`, weight `-0.2`, `min_legs=4`; may be set to 3 or 4). It counts the leg bits
+that are not negative (stance; exactly 0 is stance, as in the sim) among the six action columns and returns `max(0, min_legs - n_stance)`, so all-six-lift costs a deficit of 4,
+the two reference tripods (3 legs down, actions `25` and `38`) cost 1, and 4+ stance legs cost 0. With `min_legs=3` the tripods cost 0 and all-six-lift costs 3. It exists because
 deployed policies produced steps with every leg commanded to lift. The weight is a starting value pending tuning: at
 `step_dt` 0.02 s over a 1250-step episode, a sustained deficit of 1 costs ~5, an all-lift episode ~-15, and a single
 glitch step ~-0.004 x deficit, against ~+3.0 total progress for the 2 m course. It shows up as
