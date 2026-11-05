@@ -13,27 +13,19 @@ class HexapodGoalPPORunnerCfg(HexapodRoughPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.max_iterations = 3000
+        self.max_iterations = 1000
         self.num_steps_per_env = 96
         self.experiment_name = "hexapod_goal"
         self.actor.hidden_dims = [128, 128, 128]
         self.critic.hidden_dims = [128, 128, 128]
         self.actor.obs_normalization = True
         self.critic.obs_normalization = True
-        # gamma/lam raised further above the 0.99/0.95 rough/flat baseline: the terminal
-        # reach_bonus/fall_penalty are an order of magnitude larger than any per-step term,
-        # and at the old gamma=0.999 they were already discounted to ~10% of value by early
-        # episode states (0.999**2250 ~= 0.10 over the ~2250-step, 45s episode) -- pushing
-        # both further out extends the horizon over which that terminal credit propagates.
+        # Longer horizon than the 0.99/0.95 flat baseline, so the sparse terminal reach_bonus / fall_penalty
+        # propagate back over the ~1250-step episode.
         self.algorithm.gamma = 0.9995
         self.algorithm.lam = 0.97
-        # Raising this to the rough/flat baseline of 0.01 caused runaway action std (>10):
-        # the entropy term in PPO's loss (-entropy_coef * entropy.mean()) pulls std up
-        # unconditionally every step, and the only counterweight is the surrogate loss's
-        # advantage-driven pull downward -- which is unusually noisy here because of the
-        # sparse +-2500/-1250 terminal rewards (reach_bonus/fall_penalty) combined with the
-        # raised gamma/lam above. Kept below the rough/flat baseline to keep that pull weak
-        # enough for the surrogate loss to counteract it reliably.
+        # Below the 0.01 baseline: at 0.01 the action std ran away (>10), because the surrogate loss is too noisy
+        # with sparse terminal rewards and a long horizon to counter the entropy bonus.
         self.algorithm.entropy_coef = 0.003
-        # Route asymmetric observations: actor sees "policy" group, critic sees "critic" group
+        # asymmetric observations: the actor sees "policy", the critic "critic"
         self.obs_groups = {"actor": ["policy"], "critic": ["critic"]}

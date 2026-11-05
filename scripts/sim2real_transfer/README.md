@@ -90,8 +90,9 @@ profile (`velocity`, `goal`, or `binary`).
   old-USD `unchanged` map; spine emitted through the calibrated body
   correction). The example file's header shows the full derivation; both spine
   bring-up questions (wave phase direction, body-bend direction) were resolved on
-  real hardware 2026-09-15 -- phase direction confirmed correct as-is, body-bend
-  direction required negating `binary.spine.amplitude` for the real mount.
+  real hardware -- the sim's wave is used verbatim (`binary.spine.amplitude` -A on both
+  joints) and both spine joints use correction group `negate`, so the real encoders follow
+  FrontLink = +A*sin, BackLink = +A*cos (settled 2026-10-20; see the example file's header).
 
 ## Continuous forward walking (goal / binary)
 
@@ -135,3 +136,16 @@ profile (`velocity`, `goal`, or `binary`).
   (HexapI positive-leg convention + a `binary:` section).
 - `tests/` -- `python -m pytest tests/` from this directory, or
   `python -m pytest scripts/sim2real_transfer/tests/` from the repo root.
+
+## Converting real-robot gait CSVs for the mimic env
+
+`tools/real_gait_to_sim.py` turns a real-robot open-loop gait CSV (`body_1, body_2, FR, FL, MR, ML, HR, HL`,
+contact bits) into a headerless mimic reference CSV (8 joints, rad, mimic joint order) using the same tick
+conversion as the robot and this package's `JointMapping`:
+
+```bash
+python tools/real_gait_to_sim.py <gait.csv | gait_dir> [--out <file|dir>] [--zero_tick_mode nominal] --dry_run
+```
+
+Output defaults to `hexapod-assets/Sim Gaits/`. The cycle period is `rows * step_period` (printed); set
+`MIMIC_GAIT_PERIOD` in `hexapod_mimic_env_cfg.py` to it to replay at real-robot speed.

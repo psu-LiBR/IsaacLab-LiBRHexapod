@@ -87,8 +87,28 @@ gym.register(
 )
 
 # ---------------------------------------------------------------------------
-# Goal-reaching environment (reach 5m forward, as fast as possible)
+# Goal-reaching environment (reach a point straight ahead as fast as possible)
 # ---------------------------------------------------------------------------
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Mimic-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_goal_mimic_env_cfg:HexapodGoalMimicEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_goal_mimic_cfg:HexapodGoalMimicPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Mimic-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_goal_mimic_env_cfg:HexapodGoalMimicEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_goal_mimic_cfg:HexapodGoalMimicPPORunnerCfg",
+    },
+)
 
 gym.register(
     id="Isaac-Goal-Flat-Hexapod-v0",
@@ -111,9 +131,8 @@ gym.register(
 )
 
 ##
-# Reward-tuning variants (Robin, 2026-07). Flat: foot-slide weight scan on top of
-# the reward-shaping config. Goal: the same shaping carried to the goal-reaching task.
-# See REWARD_SHAPING.md for what each arm changes and what was measured.
+# Reward-tuning variants: foot-slide weight scan on the flat reward-shaping config, and the same shaping on the
+# goal task. See README.md for what each one changes.
 ##
 
 gym.register(
@@ -216,11 +235,8 @@ gym.register(
     },
 )
 
-# ---------------------------------------------------------------------------
-# Binary (contact-bit) action-space variant of the goal-reaching environment.
-# Action-space swap only: 6 leg bits (RL) + scripted spine sinusoid.
-# No RL library config wired up yet (deliberate -- algorithm choice pending).
-# ---------------------------------------------------------------------------
+# Binary (contact-bit) goal task: 6 leg bits (RL) + scripted spine wave. No rsl_rl config: it is trained by the
+# scripts in scripts/reinforcement_learning/binary_rl/.
 
 gym.register(
     id="Isaac-Goal-Flat-Hexapod-Binary-v0",
@@ -237,5 +253,26 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.hexapod_binary_env_cfg:HexapodBinaryEnvCfg_PLAY",
+    },
+)
+
+# Opt-in servo-realistic binary variant (ServoDCMotor): fitted XL430 leg model plus per-env gain and battery
+# voltage randomisation.
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Binary-Servo-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_binary_env_cfg:HexapodBinaryServoEnvCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Binary-Servo-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_binary_env_cfg:HexapodBinaryServoEnvCfg_PLAY",
     },
 )

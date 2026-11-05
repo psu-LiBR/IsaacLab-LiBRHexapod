@@ -9,15 +9,17 @@ import importlib.util
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 HEXAPOD_DIR = Path(__file__).parents[1] / "isaaclab_tasks" / "contrib" / "velocity" / "config" / "hexapod"
 REPO_ROOT = Path(__file__).parents[3]
-GAIT_CSV = REPO_ROOT / "hexapod-assets" / "Sim Gaits" / "forward3_lleg35_amp65_sim.csv"
+GAIT_CSV = (
+    REPO_ROOT / "hexapod-assets" / "Sim Gaits" / "SMOOTH_vertical_K3_NoNoise_rank1_lleg30-93_amp70_res50_hexapi_sim.csv"
+)
 
 # HexapiFlattened.usd leg limits are [-5, 110] deg
 HEXAPI_LEG_LIMITS = (np.deg2rad(-5.0), np.deg2rad(110.0))
 LEG_COLS = slice(2, 8)
+CSV_COL_ORDER = [1, 0, 2, 3, 6, 7, 4, 5]  # MIMIC_CSV_COL_ORDER: asset order -> sim DOF order
 
 
 def _load_motion_module():
@@ -31,18 +33,17 @@ def _load_motion_module():
 motion = _load_motion_module()
 
 
-def test_legacy_csv_is_negated_into_hexapi_leg_limits():
-    ref = motion.MotionReference(str(GAIT_CSV), csv_convention="legacy")._ref_np
+def test_hexapi_csv_is_used_as_is_within_hexapi_leg_limits():
+    ref = motion.MotionReference(str(GAIT_CSV), csv_col_order=CSV_COL_ORDER)._ref_np
     assert ref[:, LEG_COLS].min() >= HEXAPI_LEG_LIMITS[0]
     assert ref[:, LEG_COLS].max() <= HEXAPI_LEG_LIMITS[1]
-    assert ref[:, LEG_COLS].mean() > 0.0
+    assert ref[:, LEG_COLS].mean() > 0.0  # positive-leg convention; a negated load would be < 0
 
 
-def test_hexapi_convention_uses_csv_as_is():
-    legacy = motion.MotionReference(str(GAIT_CSV), csv_convention="legacy")._ref_np
-    as_is = motion.MotionReference(str(GAIT_CSV), csv_convention="hexapi")._ref_np
-    np.testing.assert_allclose(legacy, -as_is)
-    assert as_is[:, LEG_COLS].max() < 0.0  # the legacy legs read raw are outside the HexapI limits
+def test_csv_col_order_moves_asset_order_to_sim_dof_order():
+    raw = motion.MotionReference(str(GAIT_CSV))._ref_np
+    reordered = motion.MotionReference(str(GAIT_CSV), csv_col_order=CSV_COL_ORDER)._ref_np
+    np.testing.assert_allclose(reordered, raw[:, CSV_COL_ORDER])
 
 
 def test_builtin_gait_stands_in_hexapi_convention():
@@ -50,8 +51,3 @@ def test_builtin_gait_stands_in_hexapi_convention():
     np.testing.assert_allclose(ref[:, LEG_COLS].mean(), 0.47, atol=1e-3)
     assert ref[:, LEG_COLS].min() >= HEXAPI_LEG_LIMITS[0]
     assert ref[:, LEG_COLS].max() <= HEXAPI_LEG_LIMITS[1]
-
-
-def test_unknown_convention_is_rejected():
-    with pytest.raises(ValueError, match="csv_convention"):
-        motion.MotionReference(None, csv_convention="bogus")

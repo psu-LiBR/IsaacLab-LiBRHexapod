@@ -3,40 +3,18 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
-# All rights reserved.
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Reference motion data for hexapod imitation learning.
 
-Provides a MotionReference that returns target joint angles at a given gait phase.
-It can load from a CSV file (e.g. recorded via play.py) or fall back to a built-in
-sinusoidal tripod gait.
+Provides a MotionReference that returns target joint angles at a given gait phase, loaded from a CSV or
+generated as a built-in sinusoidal tripod gait.
 
-Joint ordering used throughout this module matches Isaac Lab's internal order for this
-robot as confirmed by playReal.py (Sim DOF order, determined by the USD articulation):
+Joint order is the sim DOF order of ``asset.data.joint_pos``:
 
     0 BackLink_Joint   1 FrontLink_Joint   2 MiddleLeft_Joint  3 MiddleRight_Joint
     4 BackLeft_Joint   5 BackRight_Joint   6 FrontLeft_Joint   7 FrontRight_Joint
 
-CSV format (headerless, Sim DOF order). The committed ``hexapod-assets/Sim Gaits`` files are in the
-**legacy** joint convention of the old Hexapod_Flattened.usd (legs stance -0.46 / lift -1.18 rad), e.g.:
-
-    -0.702,-0.687,-0.7,-0.460,-0.460,-0.460,-0.7,-0.460
-    ...
-
-The active HexapiFlattened.usd mirrors every joint (legs stance +0.46 / lift +1.18 rad, spine sign-flipped), so
-``MotionReference`` negates all eight columns of a ``csv_convention="legacy"`` CSV on load. CSVs recorded from the
-current robot (play-script ``HexapodRL_Rad_*.csv`` logs) are already in the HexapI convention: load them with
-``csv_convention="hexapi"``.
-
-CSV format (with header, any column order — columns matched by name):
-    time,BackLink_Joint,FrontLink_Joint,MiddleLeft_Joint,MiddleRight_Joint,BackLeft_Joint,
-        BackRight_Joint,FrontLeft_Joint,FrontRight_Joint
-    0.00,0.0,0.0,0.47,0.47,0.47,0.47,0.47,0.47
-
-A leading "time" column is optional; if omitted, rows are assumed equally spaced over
-one gait period.
+CSV: either headerless rows in that order, or a header row with joint names (columns matched by name, any
+order). A leading "time" column is optional; without it the rows are spaced evenly over one gait period.
 
 Typical usage inside a reward function::
 
@@ -52,8 +30,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-# Joint ordering as used by Isaac Lab's asset.data.joint_pos for this robot.
-# Determined by the USD articulation definition, confirmed via playReal.py.
+# Sim DOF order, as in asset.data.joint_pos.
 JOINT_NAMES: list[str] = [
     "BackLink_Joint",  # 0  (spine)
     "FrontLink_Joint",  # 1  (spine)
@@ -66,20 +43,10 @@ JOINT_NAMES: list[str] = [
 ]
 NUM_JOINTS: int = 8
 
-# Tripod gait groupings (indices into JOINT_NAMES).
-# Standard alternating tripod: diagonal legs swing together.
+# Alternating tripod groups (indices into JOINT_NAMES).
 TRIPOD_A: list[int] = [3, 4, 6]  # MiddleRight_Joint, BackLeft_Joint, FrontLeft_Joint
 TRIPOD_B: list[int] = [2, 5, 7]  # MiddleLeft_Joint,  BackRight_Joint, FrontRight_Joint
 SPINE_IDX: list[int] = [0, 1]  # BackLink_Joint, FrontLink_Joint
-
-# Joint-sign conventions a reference CSV can be written in (see MotionReference).
-#   "legacy": old Hexapod_Flattened.usd (committed Sim Gaits CSVs); negated to the HexapI convention on load.
-#   "hexapi": current HexapiFlattened.usd (play-script joint logs); used as is.
-CSV_CONVENTIONS: tuple[str, ...] = ("legacy", "hexapi")
-
-# SIM_DOF_TO_ALPHA is kept for reference but NOT used — asset.data.joint_pos
-# already matches the CSV column order (both are Sim DOF order).
-SIM_DOF_TO_ALPHA: list[int] = [4, 0, 5, 6, 1, 7, 2, 3]
 
 
 class MotionReference:
@@ -91,8 +58,8 @@ class MotionReference:
 
     Args:
         csv_path:  Path to CSV file with reference joint trajectory.
-                   If None or the file is absent, a built-in sinusoidal tripod
-                   gait is generated instead.
+                   If None, a built-in sinusoidal tripod gait is generated
+                   instead. A path that does not exist raises FileNotFoundError.
         gait_period: Duration of one gait cycle in seconds.  If a time column is
                      present in the CSV this value is overwritten by the data.
         num_interp_points: Number of uniformly spaced phase samples in the table.
@@ -101,10 +68,9 @@ class MotionReference:
     def __init__(
         self,
         csv_path: str | None = None,
-        gait_period: float = 0.5,
+        gait_period: float = 1.0,
         num_interp_points: int = 200,
         csv_col_order: list[int] | None = None,
-        csv_convention: str = "legacy",
     ) -> None:
         """
         Args:
@@ -112,19 +78,9 @@ class MotionReference:
             gait_period:    Gait cycle duration in seconds.  Overridden if the
                             CSV has a time column spanning one cycle.
             num_interp_points: Resolution of the internal phase table.
-            csv_col_order:  Optional integer list that reorders CSV columns to
-                            Isaac Lab's alphabetical joint order before storing.
-                            Use SIM_DOF_TO_ALPHA if the CSV was produced by
-                            play.py / playReal.py or is a sim gait CSV.
-                            Example: csv_col_order=SIM_DOF_TO_ALPHA
-            csv_convention: Joint-sign convention of the CSV: ``"legacy"`` (the committed Sim Gaits CSVs, written
-                            for the old USD; all eight columns are negated to match HexapiFlattened.usd) or
-                            ``"hexapi"`` (already in the robot's current convention, used as is). Ignored for the
-                            built-in gait, which is generated directly in the HexapI convention.
+            csv_col_order:  Optional integer list that reorders the CSV columns to the sim DOF order
+                            (not needed for CSVs already in that order).
         """
-        if csv_convention not in CSV_CONVENTIONS:
-            raise ValueError(f"csv_convention must be one of {CSV_CONVENTIONS}, got '{csv_convention}'.")
-        self.csv_convention = csv_convention
         self.gait_period = gait_period
         self._n = num_interp_points
         self._csv_col_order = csv_col_order
@@ -136,9 +92,10 @@ class MotionReference:
             if p.exists():
                 self._ref_np = self._load_csv(str(p))
             else:
-                print(
-                    f"[MimicMotion] WARNING: CSV not found at '{csv_path}'. "
-                    "Falling back to generated sinusoidal tripod gait."
+                raise FileNotFoundError(
+                    f"Mimic reference CSV not found at '{csv_path}' (resolved against the current directory "
+                    f"'{Path.cwd()}'; relative paths assume you launch from the repo root). Pass csv_path=None "
+                    "to use the built-in sinusoidal tripod gait instead."
                 )
 
         if self._ref_np is None:
@@ -171,6 +128,37 @@ class MotionReference:
             self._ref_gpu = torch.from_numpy(self._ref_np).to(phase.device)
         indices = (phase * self._n).long().clamp(0, self._n - 1)
         return self._ref_gpu[indices]  # [num_envs, 8]
+
+    def get_reference_per_joint(self, phase: torch.Tensor) -> torch.Tensor:
+        """Return target joint positions with a separate phase for every joint.
+
+        Args:
+            phase: Tensor of shape [num_envs, 8] with values in [0, 1); column j is the phase joint j is read at.
+        Returns:
+            Tensor of shape [num_envs, 8] — joint j taken from the table at ``phase[:, j]`` [rad].
+        """
+        if self._ref_gpu is None or self._ref_gpu.device != phase.device:
+            self._ref_gpu = torch.from_numpy(self._ref_np).to(phase.device)
+        indices = (phase * self._n).long().clamp(0, self._n - 1)  # [N, 8]
+        joints = torch.arange(NUM_JOINTS, device=phase.device).expand_as(indices)
+        return self._ref_gpu[indices, joints]
+
+    @property
+    def num_points(self) -> int:
+        """Number of uniformly spaced phase samples (rows) in the reference table."""
+        return self._n
+
+    def get_reference_rows(self, rows: torch.Tensor) -> torch.Tensor:
+        """Return target joint positions for explicit rows of the phase table.
+
+        Args:
+            rows: Integer (long) tensor of any shape [...] with values in [0, :attr:`num_points`).
+        Returns:
+            Tensor of shape [..., 8] — target absolute joint angles [rad] in Sim DOF order.
+        """
+        if self._ref_gpu is None or self._ref_gpu.device != rows.device:
+            self._ref_gpu = torch.from_numpy(self._ref_np).to(rows.device)
+        return self._ref_gpu[rows]
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -225,14 +213,9 @@ class MotionReference:
                     f"or {NUM_JOINTS + 1} (time + joints)."
                 )
 
-        # Reorder columns to Isaac Lab alphabetical joint order if requested.
+        # Reorder columns to the sim DOF order if requested.
         if self._csv_col_order is not None:
             data = data[:, self._csv_col_order]
-
-        # HexapiFlattened.usd mirrors every joint of the old USD (legs: stance -0.46 -> +0.46 rad, lift -1.18 -> +1.18
-        # rad; spine: the HexapI global sign flip), so a legacy CSV is the negation of the HexapI trajectory.
-        if self.csv_convention == "legacy":
-            data = -data
 
         # Resample to uniform phase grid via linear interpolation.
         grid = np.linspace(0.0, 1.0, self._n, endpoint=False)
@@ -261,8 +244,8 @@ class MotionReference:
         phase = np.linspace(0.0, 1.0, self._n, endpoint=False)
         omega = 2.0 * np.pi * phase
 
-        LEG_OFFSET: float = 0.47  # rad  nominal standing pose for all leg joints (HexapI positive-leg convention)
-        LEG_AMP: float = 0.30  # rad  peak swing amplitude above standing
+        LEG_OFFSET: float = 0.47  # rad  nominal standing pose for all leg joints (HexapI: legs positive)
+        LEG_AMP: float = 0.30  # rad  peak swing amplitude above standing (positive = foot lifts)
         SPINE_AMP: float = 0.10  # rad  lateral spine oscillation
 
         ref = np.zeros((self._n, NUM_JOINTS), dtype=np.float32)

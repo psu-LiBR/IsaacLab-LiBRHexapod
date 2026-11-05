@@ -138,3 +138,16 @@ def reached_goal_done(env: ManagerBasedRLEnv, command_name: str, radius: float) 
     command = env.command_manager.get_command(command_name)
     distance = torch.norm(command[:, :3], dim=1)
     return distance < radius
+
+
+def reached_goal_done_after(
+    env: ManagerBasedRLEnv, command_name: str, radius: float, start_step: int
+) -> torch.Tensor:
+    """Termination: :func:`reached_goal_done`, but off until ``env.common_step_counter`` reaches ``start_step``.
+
+    Used by the mimic-goal env so that arriving at the goal cannot end an episode (and forfeit the remaining
+    imitation reward) while the imitation term is still active.
+    """
+    if env.common_step_counter < start_step:
+        return torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+    return reached_goal_done(env, command_name, radius)

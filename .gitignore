@@ -110,3 +110,18 @@ eval_results*.json
 # binary-contact RL working notes (local only, not shared repo content)
 scripts/reinforcement_learning/binary_rl/PROGRESS_fable.md
 scripts/reinforcement_learning/binary_rl/REVIEW_binary_rl.md
+
+# local hexapod sim-to-real tuning data and scripts (not shared repo content)
+friction_sweep_*
+imu_yaw_check.csv
+stage*_trace.csv
+reward-tuning-v2-*/
+scripts/reinforcement_learning/binary_rl/videos_gait/
+scripts/reinforcement_learning/binary_rl/algorithms_explained.html
+scripts/reinforcement_learning/binary_rl/compare_actuator_models.py
+scripts/reinforcement_learning/binary_rl/compare_robot_log.py
+scripts/reinforcement_learning/binary_rl/fit_servo_latency.py
+scripts/reinforcement_learning/binary_rl/make_robot_gait.py
+scripts/reinforcement_learning/binary_rl/validate_sim_latency.py
+scripts/sim2real_transfer/tools/real_gait_to_sim.py
+scripts/sim2real_transfer/tests/test_real_gait_to_sim.py

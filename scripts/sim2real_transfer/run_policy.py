@@ -39,14 +39,21 @@ from sim2real.logging_utils import CsvRunLogger  # noqa: E402
 from sim2real.policy_runner import PolicyRunner  # noqa: E402
 from sim2real.profiles import PROFILES, make_obs_builder  # noqa: E402
 
-_DEFAULT_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "deployment.example.yaml")
+_CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config")
+_DEFAULT_CONFIG = os.path.join(_CONFIG_DIR, "deployment.yaml")
+_DEFAULT_BINARY_CONFIG = os.path.join(_CONFIG_DIR, "deployment.binary.yaml")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--policy", required=True, help="Path to an exported policy.onnx checkpoint.")
     parser.add_argument("--profile", required=True, choices=sorted(PROFILES), help="Obs schema to use.")
-    parser.add_argument("--config", default=_DEFAULT_CONFIG, help="Path to deployment.yaml.")
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="Path to the deployment yaml (default: config/deployment.yaml, or config/deployment.binary.yaml "
+        "for --profile binary).",
+    )
     parser.add_argument("--rate-hz", type=float, default=None, help="Overrides control.rate_hz from config.")
     parser.add_argument("--log-csv", default=None, help="Optional path to write a per-step CSV run log.")
     parser.add_argument(
@@ -67,6 +74,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--duration", type=float, default=None, help="Auto-stop after this many seconds.")
     parser.add_argument(
+        "--cycles",
+        type=float,
+        default=None,
+        help="Auto-stop after this many gait cycles (counted from the end of the soft-start ramp). "
+        "Cannot be combined with --duration.",
+    )
+    parser.add_argument(
+        "--cycle-period",
+        type=float,
+        default=None,
+        help="Seconds per gait cycle for --cycles (default: the spine period from the binary config, else 1.0).",
+    )
+    parser.add_argument(
         "--action-scale-mult",
         type=float,
         default=None,
@@ -78,9 +98,14 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    if args.config == _DEFAULT_CONFIG:
-        print(f"[run_policy] --config not given, using bundled example config: {_DEFAULT_CONFIG}")
-        print("[run_policy] this contains '# CALIBRATE' placeholders -- do not trust it on real hardware.")
+    if args.config is None:
+        args.config = _DEFAULT_BINARY_CONFIG if args.profile == "binary" else _DEFAULT_CONFIG
+        print(f"[run_policy] --config not given, using {args.config}")
+    if not os.path.isfile(args.config):
+        raise SystemExit(
+            f"config file not found: {args.config}\n"
+            "Copy the matching config/*.example.yaml to it and calibrate it, or pass --config."
+        )
 
     cfg = load_deployment_config(args.config)
     joint_mapping = JointMapping(cfg.joints)
@@ -97,6 +122,20 @@ def main() -> None:
         else None
     )
     command_source = make_command_source(args.profile, cfg.commands, localizer=localizer)
+
+    duration_s = args.duration
+    if args.cycles is not None:
+        if args.duration is not None:
+            raise SystemExit("use either --cycles or --duration, not both")
+        if args.cycles <= 0:
+            raise SystemExit("--cycles must be positive")
+        cycle_period = args.cycle_period
+        if cycle_period is None:
+            cycle_period = cfg.binary.spine.period if args.profile == "binary" and cfg.binary is not None else 1.0
+        if cycle_period <= 0:
+            raise SystemExit("--cycle-period must be positive")
+        duration_s = args.cycles * cycle_period
+        print(f"[run_policy] --cycles {args.cycles:g} x {cycle_period:g} s = {duration_s:g} s of policy control")
 
     binary_adapter = None
     if args.profile == "binary":
@@ -139,7 +178,7 @@ def main() -> None:
             enable_torque=not args.no_torque,
             rate_hz=args.rate_hz,
             action_scale_multiplier=args.action_scale_mult,
-            duration_s=args.duration,
+            duration_s=duration_s,
             binary_adapter=binary_adapter,
         )
     finally:
