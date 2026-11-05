@@ -112,3 +112,5 @@ scripts/reinforcement_learning/binary_rl/compare_robot_log.py
 scripts/reinforcement_learning/binary_rl/fit_servo_latency.py
 scripts/reinforcement_learning/binary_rl/make_robot_gait.py
 scripts/reinforcement_learning/binary_rl/validate_sim_latency.py
+scripts/sim2real_transfer/tools/real_gait_to_sim.py
+scripts/sim2real_transfer/tests/test_real_gait_to_sim.py

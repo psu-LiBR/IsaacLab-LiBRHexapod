@@ -94,9 +94,9 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # Body-level sideways drift, whatever its cause (feet_slide only covers planted feet).
         self.rewards.lin_vel_y_l2 = RewTerm(func=goal_rewards.lin_vel_y_l2, weight=-5.0e-4)
         self.rewards.dof_torques_l2.weight = -3.0e-4
-        self.rewards.dof_acc_l2.weight = -2.5e-7
-        self.rewards.action_rate_l2.weight = -0.0005
-        self.rewards.feet_air_time.weight = 0.2
+        self.rewards.dof_acc_l2.weight = -2.5e-8
+        self.rewards.action_rate_l2.weight = -0.01
+        self.rewards.feet_air_time.weight = 0.15
         # The default feet_air_time gates on a velocity command; with pose_command it would become a position
         # gate that zeroes the reward near the goal. The goal task has no stand-still state, so drop the gate.
         self.rewards.feet_air_time.func = goal_rewards.feet_air_time_ungated
@@ -112,7 +112,7 @@ class HexapodGoalEnvCfg(HexapodFlatEnvCfg):
         # meter advanced. It is uncapped, so a small weight limits the payoff of a leap at the goal.
         self.rewards.progress = RewTerm(
             func=goal_rewards.progress_to_goal,
-            weight=0.2,
+            weight=0.7,
             params={"command_name": "pose_command"},
         )
 

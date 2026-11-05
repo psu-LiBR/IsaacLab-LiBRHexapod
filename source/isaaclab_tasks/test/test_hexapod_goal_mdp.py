@@ -220,15 +220,17 @@ def test_phase_one_source_configuration():
     agent_source = (HEXAPOD_DIR / "agents" / "rsl_rl_ppo_goal_cfg.py").read_text()
 
     for expected in (
-        "GOAL_DISTANCES = (1.0, 2.0, 3.5, 5.0)",
-        "EPISODE_LENGTH_S = 45.0",
+        "GOAL_DISTANCES = (0.5, 1.0, 1.5, 2.0)",
+        "EPISODE_LENGTH_S = 25.0",
         "CURRICULUM_DEMOTION_THRESHOLD = 0.4",
-        "weight=10.0",
-        "weight=2500.0",
-        "weight=-1250.0",
+        "weight=0.2",
+        "weight=2.0",
         "weight=-1.0",
-        "self.rewards.action_rate_l2.weight = -0.002",
-        "self.rewards.feet_air_time.weight = 1.0",
+        "weight=-0.005",
+        "weight=-0.01",
+        "self.rewards.action_rate_l2.weight = -0.0005",
+        "self.rewards.dof_acc_l2.weight = -2.5e-9",
+        "self.rewards.feet_air_time.weight = 0.2",
         "self.rewards.dof_pos_limits.weight = -1.0",
         "self.curriculum.goal_distance = None",
     ):
@@ -236,9 +238,22 @@ def test_phase_one_source_configuration():
 
     assert "class PolicyCfg" in obs_source and "self.enable_corruption = True" in obs_source
     assert "class CriticCfg" in obs_source and "self.enable_corruption = False" in obs_source
+    assert "self.max_iterations = 1000" in agent_source
     assert "self.num_steps_per_env = 96" in agent_source
     assert "self.algorithm.gamma = 0.9995" in agent_source
     assert "self.algorithm.lam = 0.97" in agent_source
     assert "self.algorithm.entropy_coef = 0.003" in agent_source
     assert "self.policy.actor_obs_normalization = True" in agent_source
     assert "self.policy.critic_obs_normalization = True" in agent_source
+
+
+def test_reached_goal_done_after_is_gated_by_step_counter():
+    command = torch.tensor([[0.1, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]])
+    env = SimpleNamespace(command_manager=FakeCommandManager(command), num_envs=2, device="cpu", common_step_counter=99)
+
+    early = goal_rewards.reached_goal_done_after(env, "pose_command", 0.2, 100)
+    assert not early.any()
+
+    env.common_step_counter = 100
+    late = goal_rewards.reached_goal_done_after(env, "pose_command", 0.2, 100)
+    assert late.tolist() == [True, False]

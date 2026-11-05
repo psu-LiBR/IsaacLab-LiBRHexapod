@@ -58,8 +58,8 @@ class MotionReference:
 
     Args:
         csv_path:  Path to CSV file with reference joint trajectory.
-                   If None or the file is absent, a built-in sinusoidal tripod
-                   gait is generated instead.
+                   If None, a built-in sinusoidal tripod gait is generated
+                   instead. A path that does not exist raises FileNotFoundError.
         gait_period: Duration of one gait cycle in seconds.  If a time column is
                      present in the CSV this value is overwritten by the data.
         num_interp_points: Number of uniformly spaced phase samples in the table.
@@ -68,7 +68,7 @@ class MotionReference:
     def __init__(
         self,
         csv_path: str | None = None,
-        gait_period: float = 0.5,
+        gait_period: float = 1.0,
         num_interp_points: int = 200,
         csv_col_order: list[int] | None = None,
     ) -> None:
@@ -92,9 +92,10 @@ class MotionReference:
             if p.exists():
                 self._ref_np = self._load_csv(str(p))
             else:
-                print(
-                    f"[MimicMotion] WARNING: CSV not found at '{csv_path}'. "
-                    "Falling back to generated sinusoidal tripod gait."
+                raise FileNotFoundError(
+                    f"Mimic reference CSV not found at '{csv_path}' (resolved against the current directory "
+                    f"'{Path.cwd()}'; relative paths assume you launch from the repo root). Pass csv_path=None "
+                    "to use the built-in sinusoidal tripod gait instead."
                 )
 
         if self._ref_np is None:
@@ -127,6 +128,37 @@ class MotionReference:
             self._ref_gpu = torch.from_numpy(self._ref_np).to(phase.device)
         indices = (phase * self._n).long().clamp(0, self._n - 1)
         return self._ref_gpu[indices]  # [num_envs, 8]
+
+    def get_reference_per_joint(self, phase: torch.Tensor) -> torch.Tensor:
+        """Return target joint positions with a separate phase for every joint.
+
+        Args:
+            phase: Tensor of shape [num_envs, 8] with values in [0, 1); column j is the phase joint j is read at.
+        Returns:
+            Tensor of shape [num_envs, 8] — joint j taken from the table at ``phase[:, j]`` [rad].
+        """
+        if self._ref_gpu is None or self._ref_gpu.device != phase.device:
+            self._ref_gpu = torch.from_numpy(self._ref_np).to(phase.device)
+        indices = (phase * self._n).long().clamp(0, self._n - 1)  # [N, 8]
+        joints = torch.arange(NUM_JOINTS, device=phase.device).expand_as(indices)
+        return self._ref_gpu[indices, joints]
+
+    @property
+    def num_points(self) -> int:
+        """Number of uniformly spaced phase samples (rows) in the reference table."""
+        return self._n
+
+    def get_reference_rows(self, rows: torch.Tensor) -> torch.Tensor:
+        """Return target joint positions for explicit rows of the phase table.
+
+        Args:
+            rows: Integer (long) tensor of any shape [...] with values in [0, :attr:`num_points`).
+        Returns:
+            Tensor of shape [..., 8] — target absolute joint angles [rad] in Sim DOF order.
+        """
+        if self._ref_gpu is None or self._ref_gpu.device != rows.device:
+            self._ref_gpu = torch.from_numpy(self._ref_np).to(rows.device)
+        return self._ref_gpu[rows]
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -212,8 +244,8 @@ class MotionReference:
         phase = np.linspace(0.0, 1.0, self._n, endpoint=False)
         omega = 2.0 * np.pi * phase
 
-        LEG_OFFSET: float = -0.47  # rad  nominal standing pose for all leg joints
-        LEG_AMP: float = 0.30  # rad  peak swing amplitude above standing
+        LEG_OFFSET: float = 0.47  # rad  nominal standing pose for all leg joints (HexapI: legs positive)
+        LEG_AMP: float = 0.30  # rad  peak swing amplitude above standing (positive = foot lifts)
         SPINE_AMP: float = 0.10  # rad  lateral spine oscillation
 
         ref = np.zeros((self._n, NUM_JOINTS), dtype=np.float32)
