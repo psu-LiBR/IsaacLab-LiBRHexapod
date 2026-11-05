@@ -111,11 +111,12 @@ class BinaryActionAdapter:
             )
 
     def leg_targets(self, bits_pm1: np.ndarray) -> np.ndarray:
-        """Six ``+-1`` bits -> six leg joint angles (``+1`` -> stance, ``<=0`` -> lift)."""
+        """Six ``+-1`` bits -> six leg joint angles (``<0`` -> lift, otherwise stance)."""
         bits_pm1 = np.asarray(bits_pm1, dtype=np.float64)
         if bits_pm1.shape != (6,):
             raise ValueError(f"bits_pm1 must be shape (6,), got {bits_pm1.shape}")
-        return np.where(bits_pm1 > 0.0, self.stance_pos, self.lift_pos)
+        # lift only when negative, exactly like the sim's BinaryJointAction (0 and NaN stay stance)
+        return np.where(bits_pm1 < 0.0, self.lift_pos, self.stance_pos)
 
     def spine_targets(self, t_seconds: float) -> np.ndarray:
         """The two spine joint angles at elapsed time ``t_seconds`` (radians)."""

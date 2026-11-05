@@ -48,6 +48,12 @@ def test_all_lift_bits_map_every_leg_to_lift():
     assert np.allclose(adapter.leg_targets(-np.ones(6)), LIFT)
 
 
+def test_zero_bit_maps_to_stance_like_the_sim():
+    # the sim lifts a leg only when its action is negative, so exactly 0 is stance
+    adapter = BinaryActionAdapter(_cfg(), _SIM_ORDER)
+    assert np.allclose(adapter.leg_targets(np.zeros(6)), STANCE)
+
+
 def test_bit_order_places_targets_at_the_right_sim_dof():
     adapter = BinaryActionAdapter(_cfg(), _SIM_ORDER)
     # only policy index 0 (FrontRight) in stance, rest lifted

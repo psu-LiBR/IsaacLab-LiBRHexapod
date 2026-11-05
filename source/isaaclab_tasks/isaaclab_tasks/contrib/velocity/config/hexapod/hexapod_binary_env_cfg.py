@@ -15,7 +15,8 @@ Inherits :class:`HexapodGoalEnvCfg` (observations, events, terminations, command
 - **2 spine joints, scripted** by a zero-width :class:`SpineSineAction` that plays a fixed analytic traveling
   wave (see the spine-wave block below).
 
-It also rebalances six inherited reward weights for the bit action space (see :func:`_rebalance_binary_rewards`).
+It also rebalances six inherited reward weights for the bit action space and adds a minimum-stance-legs penalty
+(see :func:`_rebalance_binary_rewards`).
 
 The action vector is ordered like the hardware bit numbering (bit n = action index n-1)::
 
@@ -28,9 +29,11 @@ The action vector is ordered like the hardware bit numbering (bit n = action ind
 from __future__ import annotations
 
 from isaaclab.envs.mdp.actions.actions_cfg import BinaryJointPositionActionCfg
+from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.utils.configclass import configclass
 
 from isaaclab_assets.robots.hexapod_actuators import with_servo_model  # isort: skip
+from . import hexapod_goal_rewards as goal_rewards
 from .hexapod_binary_actions import SpineSineActionCfg
 from .hexapod_goal_env_cfg import HexapodGoalEnvCfg, HexapodGoalEnvCfg_PLAY
 
@@ -42,6 +45,12 @@ LIFT_POS = 1.180398216278
 
 GAIT_PERIOD_S = 1.0
 """Spine wave period, s (one gait cycle)."""
+
+MIN_STANCE_LEGS = 4
+"""Minimum number of stance (foot-down) legs per step before the ``min_stance_legs`` penalty applies."""
+
+MIN_STANCE_PENALTY_WEIGHT = -0.2
+"""Weight of the ``min_stance_legs`` penalty (negative; a starting value, tune from a short training run)."""
 
 # =========================================================================
 # CANONICAL SPINE-WAVE DEFINITION (single source of truth)
@@ -145,7 +154,9 @@ class HexapodBinaryActionsCfg:
 
 
 def _rebalance_binary_rewards(rewards) -> None:
-    """Correct six inherited ``HexapodGoalEnvCfg`` reward weights for the contact-bit action space.
+    """Rebalance six inherited ``HexapodGoalEnvCfg`` reward weights and add a minimum-stance-legs penalty.
+
+    The six weights are corrected for the contact-bit action space; the ``min_stance_legs`` term is new.
 
     The goal-env weights were tuned for an 8-dim continuous action. With one stance/lift bit per leg, several
     shaping terms punish a clean walk and the goal progress is too weak to make it net-positive: the reference
@@ -185,6 +196,18 @@ def _rebalance_binary_rewards(rewards) -> None:
     # time_penalty: -0.005 -> -0.003. The old value integrated to a -0.125 floor over a 25 s episode that a
     # slow early policy cannot offset. Still negative so faster arrival is preferred once a walk emerges.
     rewards.time_penalty.weight = -0.003
+
+    # min_stance_legs: new term, weight -0.2. Deployed policies produced steps with all six legs commanded to
+    # lift. The term charges max(0, MIN_STANCE_LEGS - n_stance) per step, so the two reference tripods (3 legs
+    # down) cost zero. RewardManager multiplies by step_dt (0.02 s) and an episode is 25 s = 1250 steps, so a
+    # sustained deficit of 1 costs ~25 * 0.2 = 5 per episode, an all-lift episode ~ -15, and a one-step glitch
+    # ~ -0.004 * deficit; total progress for the 2 m course is only ~ +3.0 (weight 1.5). This is a STARTING value:
+    # tune it from a short training run, and do not let it swamp progress.
+    rewards.min_stance_legs = RewTerm(
+        func=goal_rewards.min_stance_legs_penalty,
+        weight=MIN_STANCE_PENALTY_WEIGHT,
+        params={"min_legs": MIN_STANCE_LEGS},
+    )
 
 
 @configclass

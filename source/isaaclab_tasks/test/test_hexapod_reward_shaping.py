@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import ast
+import re
 from pathlib import Path
 
 SOURCE_ROOT = Path(__file__).parents[2]
@@ -93,3 +95,50 @@ def test_reward_shaping_tasks_are_registered():
         "Isaac-Goal-Flat-Hexapod-BigStep-Play-v0",
     ):
         assert f'id="{task_id}"' in source
+
+
+def _binary_cfg_source() -> str:
+    return (HEXAPOD_CFG_DIR / "hexapod_binary_env_cfg.py").read_text(encoding="utf-8")
+
+
+def _module_constant(source: str, name: str):
+    for node in ast.parse(source).body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == name for t in node.targets):
+            return ast.literal_eval(node.value)
+    raise AssertionError(f"{name} not assigned at module level")
+
+
+def test_binary_cfg_registers_min_stance_legs_term():
+    source = _binary_cfg_source()
+    flat = re.sub(r"\s+", " ", source).replace("( ", "(").replace(", )", ")")
+
+    assert "rewards.min_stance_legs = RewTerm(func=goal_rewards.min_stance_legs_penalty" in flat
+    assert "weight=MIN_STANCE_PENALTY_WEIGHT" in flat
+    assert 'params={"min_legs": MIN_STANCE_LEGS}' in flat
+    assert _module_constant(source, "MIN_STANCE_LEGS") == 3
+    assert _module_constant(source, "MIN_STANCE_PENALTY_WEIGHT") < 0
+
+
+def test_binary_cfg_applies_min_stance_penalty_to_train_and_play():
+    tree = ast.parse(_binary_cfg_source())
+    classes = {n.name: n for n in tree.body if isinstance(n, ast.ClassDef)}
+
+    for cls_name in ("HexapodBinaryEnvCfg", "HexapodBinaryEnvCfg_PLAY"):
+        post_init = next(
+            n for n in classes[cls_name].body if isinstance(n, ast.FunctionDef) and n.name == "__post_init__"
+        )
+        assert "_rebalance_binary_rewards(self.rewards)" in [
+            ast.unparse(c) for c in ast.walk(post_init) if isinstance(c, ast.Call)
+        ], cls_name
+
+    # The term is added inside _rebalance_binary_rewards so both variants stay identical.
+    rebalance = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_rebalance_binary_rewards")
+    assert "rewards.min_stance_legs" in {
+        ast.unparse(t) for n in ast.walk(rebalance) if isinstance(n, ast.Assign) for t in n.targets
+    }
+
+
+def test_goal_rewards_defines_min_stance_legs_penalty():
+    source = (HEXAPOD_CFG_DIR / "hexapod_goal_rewards.py").read_text(encoding="utf-8")
+
+    assert "def min_stance_legs_penalty(" in source

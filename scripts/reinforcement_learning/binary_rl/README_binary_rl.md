@@ -49,8 +49,9 @@ The leg *levels* (`STANCE_POS` / `LIFT_POS`) are identical in `tripod_B11BL0_sim
 `tripod_extendedquad_sim.csv`; the open-loop **baseline** replayed by `eval_protocol.py` /
 `--gait_npz tripod` takes its leg contact timing from `tripod_extendedquad_sim.csv` (see §4).
 
-Everything else — observations, reward terms, network trunk, physics — is inherited
-unchanged from `HexapodGoalEnvCfg`. The action interface is the only structural change.
+Everything else — observations, network trunk, physics — is inherited unchanged from
+`HexapodGoalEnvCfg`; the action interface is the only structural change. (Rewards are inherited
+too, with six weights rebalanced and one term added; see "Minimum-stance penalty" below.)
 
 For reference: the tripod gait occupies only two of the 64 actions, `25` and `38`
 (complementary, `25 + 38 = 63`), alternating.
@@ -158,6 +159,25 @@ with the commanded-bit switches per leg per complete 50-step gait cycle, the fra
 `--max_switches_per_leg_cycle` (default 5), frozen legs (flagged, not failed), dwell times and single-step pulses, and a
 `basic_screen_pass`. It counts the commanded bits, not measured foot contact, and needs `--warmup >= 1` so that no
 measured step sits at phase 0.
+
+**Minimum-stance penalty (`min_stance_legs`).** The env's reward rebalance (`_rebalance_binary_rewards`) adds a
+`min_stance_legs` term (`goal_rewards.min_stance_legs_penalty`, weight `-0.2`, `min_legs=3`). It counts the leg bits
+that are not negative (stance; exactly 0 is stance, as in the sim) among the six action columns and returns `max(0, 3 - n_stance)`, so all-six-lift costs a deficit of 3,
+the two reference tripods (3 legs down, actions `25` and `38`) cost 0, and 4+ stance legs cost 0. It exists because
+deployed policies produced steps with every leg commanded to lift. The weight is a starting value pending tuning: at
+`step_dt` 0.02 s over a 1250-step episode, a sustained deficit of 1 costs ~5, an all-lift episode ~-15, and a single
+glitch step ~-0.004 x deficit, against ~+3.0 total progress for the 2 m course. It shows up as
+`Episode_Reward/min_stance_legs` in training logs and in `eval_protocol.py`'s per-term `reward_terms`.
+Breaking: binary checkpoints trained before this term should be retrained.
+
+It complements `--mask`, it does not replace it. The mask is a hard restriction of the action set but exists only for
+masked PPO (`train_discrete_ppo.py --mask`); its default legal set is every pattern with at least
+`DEFAULT_MIN_STANCE_LEGS = 4` legs in stance (22 of 64) plus a whitelist of the two tripods `25`/`38`
+(`TRIPOD_ACTIONS`, which have only 3 legs down), 24 actions in total (`--mask_min_stance` / `--mask_whitelist`
+override this). The penalty is soft reward shaping that applies to every algorithm (DQN/DDQN, PPO, masked PPO,
+SAC-D) and, unlike the mask's >= 4 rule, tolerates 3-leg tripods without a whitelist. To measure the fix,
+`eval_protocol.py` reports `frac_steps_below_3_stance` (fraction of steps with 0-2 stance legs) next to
+`mean_stance_legs` and `stance_hist`; it should be ~0 for a policy that respects the penalty.
 
 Quick wiring check (a couple of minutes, no GPU-heavy load):
 

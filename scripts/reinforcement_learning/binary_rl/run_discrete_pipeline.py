@@ -366,6 +366,7 @@ def rank(eval_json: Path) -> tuple[list[dict], dict | None, dict]:
                 "action_entropy_nats": r.get("action_entropy_nats"),
                 "mean_stance_legs": r.get("mean_stance_legs"),
                 "frac_5plus_stance": r.get("frac_5plus_stance"),
+                "frac_steps_below_3_stance": r.get("frac_steps_below_3_stance"),
                 "beats_tripod": bool(legit),
                 "reward_terms": r.get("reward_terms", {}),
                 "checkpoint": r.get("checkpoint"),
@@ -534,6 +535,7 @@ def _write_ranking_csv(path: Path, rows: list[dict], anchors: dict) -> None:
         "action_entropy_nats",
         "mean_stance_legs",
         "frac_5plus_stance",
+        "frac_steps_below_3_stance",
         "beats_tripod",
     ]
     lines = [",".join(cols)]
@@ -658,6 +660,7 @@ def log_eval_to_wandb(
         "action_entropy_nats",
         "mean_stance_legs",
         "frac_5plus_stance",
+        "frac_steps_below_3_stance",
         "beats_tripod",
     ]
     table = wandb.Table(columns=cols)
