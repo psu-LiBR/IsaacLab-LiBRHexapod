@@ -112,7 +112,7 @@ def test_binary_cfg_registers_min_stance_legs_term():
     source = _binary_cfg_source()
     flat = re.sub(r"\s+", " ", source).replace("( ", "(").replace(", )", ")")
 
-    assert "rewards.min_stance_legs = RewTerm(func=goal_rewards.min_stance_legs_penalty" in flat
+    assert "rewards.min_stance_legs = RewTerm(func=binary_rewards.min_stance_legs_penalty" in flat
     assert "weight=MIN_STANCE_PENALTY_WEIGHT" in flat
     assert 'params={"min_legs": MIN_STANCE_LEGS}' in flat
     assert _module_constant(source, "MIN_STANCE_LEGS") == 3
@@ -138,7 +138,14 @@ def test_binary_cfg_applies_min_stance_penalty_to_train_and_play():
     }
 
 
-def test_goal_rewards_defines_min_stance_legs_penalty():
-    source = (HEXAPOD_CFG_DIR / "hexapod_goal_rewards.py").read_text(encoding="utf-8")
+def test_binary_rewards_defines_min_stance_legs_penalty():
+    source = (HEXAPOD_CFG_DIR / "hexapod_binary_rewards.py").read_text(encoding="utf-8")
 
     assert "def min_stance_legs_penalty(" in source
+
+
+def test_goal_env_has_no_min_stance_legs_term():
+    for filename in ("hexapod_goal_rewards.py", "hexapod_goal_env_cfg.py"):
+        source = (HEXAPOD_CFG_DIR / filename).read_text(encoding="utf-8")
+        assert "min_stance_legs" not in source, filename
+        assert "min_stance_legs_penalty" not in source, filename

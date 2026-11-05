@@ -33,7 +33,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.utils.configclass import configclass
 
 from isaaclab_assets.robots.hexapod_actuators import with_servo_model  # isort: skip
-from . import hexapod_goal_rewards as goal_rewards
+from . import hexapod_binary_rewards as binary_rewards
 from .hexapod_binary_actions import SpineSineActionCfg
 from .hexapod_goal_env_cfg import HexapodGoalEnvCfg, HexapodGoalEnvCfg_PLAY
 
@@ -204,7 +204,7 @@ def _rebalance_binary_rewards(rewards) -> None:
     # ~ -0.004 * deficit; total progress for the 2 m course is only ~ +3.0 (weight 1.5). This is a STARTING value:
     # tune it from a short training run, and do not let it swamp progress.
     rewards.min_stance_legs = RewTerm(
-        func=goal_rewards.min_stance_legs_penalty,
+        func=binary_rewards.min_stance_legs_penalty,
         weight=MIN_STANCE_PENALTY_WEIGHT,
         params={"min_legs": MIN_STANCE_LEGS},
     )
