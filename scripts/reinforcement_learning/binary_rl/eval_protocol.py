@@ -34,6 +34,7 @@ Reported per policy
     mean_stance_legs        mean number of feet down (popcount of the 6-bit action)
     stance_hist             distribution over 0..6 stance legs
     frac_5plus_stance       fraction of steps with >= 5 feet down (standing detector)
+    frac_steps_below_3_stance  fraction of steps with < 3 feet down (min_stance_legs penalty regime)
     max_step_jump_m         teleport sentinel; must stay small
     disp_std_m              spread across envs
     x_disp_BL_per_cycle     x_displacement_m in body lengths per gait cycle (below)
@@ -601,6 +602,7 @@ def run(policy_fn, label, meta=None):
         "mean_stance_legs": round(float((POPCNT * (hist / hist.sum())).sum()), 3),
         "stance_hist": [round(float(v), 3) for v in sh],
         "frac_5plus_stance": round(float(sh[5] + sh[6]), 3),
+        "frac_steps_below_3_stance": round(float(sh[0] + sh[1] + sh[2]), 3),
         "max_step_jump_m": round(max_jump, 4),
         "disp_std_m": round(float(net.std()), 4),
         "n_terminated": term_n,
