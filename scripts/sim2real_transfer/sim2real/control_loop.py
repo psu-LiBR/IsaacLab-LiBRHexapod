@@ -78,9 +78,13 @@ def run(
     step = 0
 
     try:
-        soft_start_ramp(bus, joint_mapping, q_default_sim, cfg.control.soft_start_seconds, rate_hz)
+        # Torque on BEFORE the ramp: with torque off the servos don't move during the ramp,
+        # so enabling it afterwards would snap every joint to q_default at full speed
+        # (Profile Velocity 0). Goal = present position first so torque-on holds still.
         if enable_torque:
+            bus.write_goal_positions(bus.read_positions())
             bus.torque_enable(True)
+        soft_start_ramp(bus, joint_mapping, q_default_sim, cfg.control.soft_start_seconds, rate_hz)
         watchdog.feed()
 
         run_start = time.perf_counter()

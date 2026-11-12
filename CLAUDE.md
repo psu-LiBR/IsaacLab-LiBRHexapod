@@ -535,3 +535,7 @@ When a config references e.g. `mdp.feet_air_time`, look in the locomotion mdp di
   out to up to 5 parallel Sonnet subagents, then integrates their results.
 - `/opus-team` is the same fan-out pattern with `opus-orchestrator` (Opus 5.5) as the planner and
   Sonnet 5.5 workers; use it when you want Opus's planning instead of Fable's.
+- `/fable-pm-team` is a three-tier hierarchy for large objectives: `fable-pm` (Fable) plans and makes
+  all big decisions without doing hands-on work. `opus-pm` (Opus 5.5) mid-level PMs run individual
+  workstreams and escalate big decisions up. `sonnet-worker` (Sonnet 5.5) agents do the coding and
+  reading and make only low-level calls. All three agents are defined in `.claude/agents/`.

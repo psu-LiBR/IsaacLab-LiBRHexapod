@@ -110,6 +110,28 @@ gym.register(
     },
 )
 
+# Servo-realistic goal + mimic variant: the Binary-Servo fitted XL430 leg model on the continuous action space.
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Mimic-Servo-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_goal_mimic_env_cfg:HexapodGoalMimicServoEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_goal_mimic_cfg:HexapodGoalMimicServoPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Goal-Flat-Hexapod-Mimic-Servo-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hexapod_goal_mimic_env_cfg:HexapodGoalMimicServoEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_goal_mimic_cfg:HexapodGoalMimicServoPPORunnerCfg",
+    },
+)
+
 gym.register(
     id="Isaac-Goal-Flat-Hexapod-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",

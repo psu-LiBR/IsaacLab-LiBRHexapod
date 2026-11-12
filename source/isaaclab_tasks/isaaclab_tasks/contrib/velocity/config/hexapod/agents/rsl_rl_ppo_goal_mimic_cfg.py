@@ -32,3 +32,13 @@ class HexapodGoalMimicPPORunnerCfg(HexapodGoalPPORunnerCfg):
         # imitation gives a dense signal: start from a narrower action distribution than the inherited 1.0
         self.max_iterations = 1500
         self.policy.init_noise_std = 0.6
+
+
+@configclass
+class HexapodGoalMimicServoPPORunnerCfg(HexapodGoalMimicPPORunnerCfg):
+    """Runner config for HexapodGoalMimicServoEnvCfg: same PPO settings, logged to its own experiment."""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        self.experiment_name = "hexapod_goal_mimic_servo"

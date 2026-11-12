@@ -6,7 +6,7 @@
 import math
 
 import numpy as np
-from sim2real.localization import DeadReckoningLocalizer, wrap_to_pi
+from sim2real.localization import NOMINAL_GOAL_Z_B, DeadReckoningLocalizer, wrap_to_pi
 
 
 def test_wrap_to_pi():
@@ -48,6 +48,14 @@ def test_pose_command_at_origin_facing_goal():
     assert math.isclose(command[0], 5.0)
     assert math.isclose(command[1], 0.0)
     assert math.isclose(command[3], 0.0)
+
+
+def test_pose_command_z_matches_training_distribution():
+    # Training saw goal z - walking root z ~0.14 m; 0 is far outside that range.
+    loc = DeadReckoningLocalizer()
+    command = loc.get_pose_command(goal_xyz_world=np.array([5.0, 0.0, 0.0]), goal_heading_world=0.0)
+    assert math.isclose(command[2], NOMINAL_GOAL_Z_B)
+    assert 0.11 <= command[2] <= 0.17
 
 
 def test_pose_command_rotates_with_heading():

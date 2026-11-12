@@ -30,6 +30,14 @@ import math
 
 import numpy as np
 
+# m. Constant stand-in for the pose_command z term, which the real robot can't measure.
+# UniformPose2dCommand sets goal z to the default root height (0.2 m) and reports
+# goal z - current root z; the walking root sits ~0.06 m, so training saw ~0.14 m
+# (sim traces: mean 0.140-0.151, range 0.115-0.164). Sending 0 instead is ~4.7 std
+# off the goal-mimic policy's baked-in obs normalizer and shifts its actions by
+# >0.25 rad on almost every step.
+NOMINAL_GOAL_Z_B = 0.14
+
 
 def wrap_to_pi(angle: float) -> float:
     return (angle + math.pi) % (2.0 * math.pi) - math.pi
@@ -62,8 +70,8 @@ class DeadReckoningLocalizer:
         cos_h, sin_h = math.cos(self.heading), math.sin(self.heading)
         pos_b_x = cos_h * dx + sin_h * dy
         pos_b_y = -sin_h * dx + cos_h * dy
-        # No z estimate is tracked -- goal z is defined to equal the robot's own
-        # nominal height in sim, so this approximates to 0 by construction.
-        pos_b_z = 0.0
+        # No z estimate is tracked -- use the training-time nominal value (see
+        # NOMINAL_GOAL_Z_B), not 0.
+        pos_b_z = NOMINAL_GOAL_Z_B
         heading_b = wrap_to_pi(goal_heading_world - self.heading)
         return np.array([pos_b_x, pos_b_y, pos_b_z, heading_b])

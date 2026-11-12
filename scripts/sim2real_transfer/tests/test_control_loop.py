@@ -285,6 +285,50 @@ def test_imu_never_going_stale_does_not_trip_watchdog_early(tmp_path):
     assert bus.torque_on is False
 
 
+def test_torque_enabled_before_soft_start_ramp_moves_joints(tmp_path):
+    # Regression: enabling torque only AFTER the soft-start ramp meant the servos ignored
+    # the ramp and snapped to q_default at full speed on torque-on.
+    cfg, jm, policy, obs_builder, _bus, imu, command_source, localizer = _make_env(tmp_path, "velocity")
+
+    class RecordingBus(DryRunDynamixelBus):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.events = []
+
+        def torque_enable(self, on):
+            self.events.append(("torque", bool(on)))
+            super().torque_enable(on)
+
+        def write_goal_positions(self, ticks):
+            self.events.append(("write", np.round(ticks).astype(np.int64).copy()))
+            super().write_goal_positions(ticks)
+
+    start_ticks = np.full(8, 1500)
+    bus = RecordingBus(jm.motor_ids, initial_ticks=start_ticks)
+    control_loop.run(
+        cfg,
+        "velocity",
+        policy,
+        obs_builder,
+        jm,
+        bus,
+        imu,
+        command_source,
+        localizer=None,
+        dry_run=True,
+        rate_hz=50.0,
+        duration_s=0.05,
+    )
+    torque_on_idx = bus.events.index(("torque", True))
+    writes_before = [e[1] for e in bus.events[:torque_on_idx] if e[0] == "write"]
+    # Only "hold present pose" writes are allowed before torque-on.
+    assert all(np.array_equal(w, start_ticks) for w in writes_before)
+    first_move_idx = next(
+        i for i, e in enumerate(bus.events) if e[0] == "write" and not np.array_equal(e[1], start_ticks)
+    )
+    assert torque_on_idx < first_move_idx
+
+
 def test_dry_run_policy_actions_never_reach_bus(tmp_path):
     cfg, jm, policy, obs_builder, bus, imu, command_source, localizer = _make_env(
         tmp_path,

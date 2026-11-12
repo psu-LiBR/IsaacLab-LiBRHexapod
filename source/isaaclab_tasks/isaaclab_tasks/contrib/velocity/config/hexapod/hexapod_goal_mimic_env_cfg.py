@@ -21,10 +21,18 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.utils.configclass import configclass
 
-from isaaclab_assets.robots.hexapod_actuators import with_fixed_actuator_delay  # isort: skip
+from isaaclab_assets.robots.hexapod_actuators import with_fixed_actuator_delay, with_servo_model  # isort: skip
 
 from . import hexapod_goal_rewards as goal_rewards
 from .agents.rsl_rl_ppo_goal_mimic_cfg import HexapodGoalMimicPPORunnerCfg
+from .hexapod_binary_env_cfg import (
+    SERVO_LEG_LAG_PLAY_STEPS,
+    SERVO_LEG_LAG_RANGE_STEPS,
+    SERVO_STIFFNESS_SCALE_RANGE,
+    SERVO_VOLTAGE_SCALE_PLAY,
+    SERVO_VOLTAGE_SCALE_RANGE,
+    _servo_group_overrides,
+)
 from .hexapod_goal_env_cfg import GOAL_DISTANCES, REACH_RADIUS, HexapodGoalEnvCfg
 from .hexapod_mimic_curriculum import ramp_reward_weight
 from .hexapod_mimic_env_cfg import (
@@ -207,3 +215,36 @@ class HexapodGoalMimicEnvCfg_PLAY(HexapodGoalMimicEnvCfg):
         self.viewer.eye = (-0.75, -0.5, 0.5)
         self.viewer.lookat = (0.8, 0.0, 0.0)
         self.viewer.origin_type = "world"
+
+
+# ---------------------------------------------------------------------------
+# Servo-realistic variant: the same fitted XL430 leg model (firmware-default P gain, extra effective inertia, short
+# delay) and per-env gain / battery-voltage randomisation as the Binary-Servo task, so a continuous policy cannot rely
+# on the ~10x stiffer, ~30 Hz-bandwidth leg response of the default actuator. The SERVO_* values are shared with
+# hexapod_binary_env_cfg so both variants model the same servo.
+# ---------------------------------------------------------------------------
+
+
+@configclass
+class HexapodGoalMimicServoEnvCfg(HexapodGoalMimicEnvCfg):
+    """Goal + mimic task with the randomised servo model of :class:`HexapodBinaryServoEnvCfg`."""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.scene.robot.actuators = with_servo_model(
+            self.scene.robot.actuators,
+            _servo_group_overrides(SERVO_LEG_LAG_RANGE_STEPS, SERVO_STIFFNESS_SCALE_RANGE, SERVO_VOLTAGE_SCALE_RANGE),
+        )
+
+
+@configclass
+class HexapodGoalMimicServoEnvCfg_PLAY(HexapodGoalMimicEnvCfg_PLAY):
+    """Play/eval variant of :class:`HexapodGoalMimicServoEnvCfg`: fixed nominal gain, delays and voltage."""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        leg = (SERVO_LEG_LAG_PLAY_STEPS, SERVO_LEG_LAG_PLAY_STEPS)
+        volt = (SERVO_VOLTAGE_SCALE_PLAY, SERVO_VOLTAGE_SCALE_PLAY)
+        self.scene.robot.actuators = with_servo_model(
+            self.scene.robot.actuators, _servo_group_overrides(leg, (1.0, 1.0), volt)
+        )
