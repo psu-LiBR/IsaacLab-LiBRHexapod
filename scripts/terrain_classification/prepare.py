@@ -1,4 +1,5 @@
-﻿"""Build terrain features from CsvRunLogger recordings; requires NumPy only."""
+"""Build terrain features from CsvRunLogger recordings; requires NumPy only."""
+
 import argparse
 import csv
 from pathlib import Path
@@ -6,7 +7,8 @@ from pathlib import Path
 import numpy as np
 
 
-def build(manifest, output, window_s=1.0, stride_s=0.5, max_gap_s=0.1):
+def build(manifest: Path, output: Path, window_s: float = 1.0, stride_s: float = 0.5, max_gap_s: float = 0.1) -> None:
+    """Validate CSV runs and save windowed sensor features with their dataset splits."""
     if min(window_s, stride_s, max_gap_s) <= 0:
         raise ValueError("Window, stride and maximum gap must be positive")
     with manifest.open(newline="") as stream:
@@ -15,7 +17,7 @@ def build(manifest, output, window_s=1.0, stride_s=0.5, max_gap_s=0.1):
         raise ValueError("Manifest is empty")
     groups = {}
     features, labels, splits, sessions, starts, sources = [], [], [], [], [], []
-    names = None
+    names: list[str] = []
     for run in runs:
         session, split = run["session_id"], run["split"]
         if not session or split not in {"train", "validation", "test"}:
@@ -52,7 +54,9 @@ def build(manifest, output, window_s=1.0, stride_s=0.5, max_gap_s=0.1):
                 continue
             if times[0] - start > max_gap_s or start + window_s - times[-1] > max_gap_s:
                 continue
-            features.append(np.concatenate((values.mean(0), values.std(0), np.sqrt((values**2).mean(0)), np.ptp(values, axis=0))))
+            features.append(
+                np.concatenate((values.mean(0), values.std(0), np.sqrt((values**2).mean(0)), np.ptp(values, axis=0)))
+            )
             labels.append(run["label"])
             splits.append(split)
             sessions.append(session)
@@ -62,11 +66,20 @@ def build(manifest, output, window_s=1.0, stride_s=0.5, max_gap_s=0.1):
         if not count:
             raise ValueError(f"No valid windows in {path}; check duration and sampling gaps")
     output.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(output, X=np.asarray(features), y=np.asarray(labels),
-                        split=np.asarray(splits), session_id=np.asarray(sessions),
-                        start_s=np.asarray(starts), source=np.asarray(sources),
-                        feature_names=np.asarray(names), window_s=window_s,
-                        stride_s=stride_s, max_gap_s=max_gap_s, schema_version=1)
+    np.savez_compressed(
+        output,
+        X=np.asarray(features),
+        y=np.asarray(labels),
+        split=np.asarray(splits),
+        session_id=np.asarray(sessions),
+        start_s=np.asarray(starts),
+        source=np.asarray(sources),
+        feature_names=np.asarray(names),
+        window_s=window_s,
+        stride_s=stride_s,
+        max_gap_s=max_gap_s,
+        schema_version=1,
+    )
     print(f"Saved {len(features)} windows with {len(names)} features to {output}")
 
 

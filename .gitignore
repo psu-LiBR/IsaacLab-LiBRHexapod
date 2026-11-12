@@ -70,3 +70,6 @@ _build
 # checkpoints are per-robot/per-run, not tracked -- only the .example.yaml is.
 scripts/sim2real_transfer/config/deployment.yaml
 scripts/sim2real_transfer/policies/
+
+# Local terrain classifier data and trained artifacts
+/artifacts/terrain_classifier/
